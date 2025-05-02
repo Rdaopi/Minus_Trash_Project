@@ -8,21 +8,21 @@ const userSchema = new Schema({
         type: String,
         required: [true, "Username obbligatorio"],
         unique: true,
-        trim: true, // Corretto da "trime"
-        minlength: [3, "Lo username deve avere almeno 3 caratteri"], // Corretto da "minlenght"
-        maxlength: [30, "Lo username non può superare i 30 caratteri"], // Corretto da "maxlenght"
+        trim: true,
+        minlength: [3, "Lo username deve avere almeno 3 caratteri"],
+        maxlength: [30, "Lo username non può superare i 30 caratteri"], 
         match: [/^[a-zA-Z0-9_]+$/, "Sono ammessi solo lettere, numeri e underscore"]
     },
     fullName: [{ 
         name: { 
             type: String,
             required: [true, "Il nome è obbligatorio"],
-            trim: true // Corretto da "trime"
+            trim: true 
         }, 
         surname: {
             type: String,
             required: [true, "Il cognome è obbligatorio"],
-            trim: true // Corretto da "trime"
+            trim: true
         }
     }],
     email: {
@@ -41,7 +41,7 @@ const userSchema = new Schema({
     password: {
         type: String,
         required: [true, "Password obbligatoria"],
-        minlength: [8, "La password deve avere almeno 8 caratteri"], // Corretto da "minlenght"
+        minlength: [8, "La password deve avere almeno 8 caratteri"],
         select: false
     },
     passwordChangedAt: Date
