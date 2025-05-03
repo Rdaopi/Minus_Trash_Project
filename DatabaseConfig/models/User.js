@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import jsw  from 'jsonwebtoken';
 
 const { Schema } = mongoose;
 
@@ -13,7 +14,7 @@ const userSchema = new Schema({
         maxlength: [30, "Lo username non può superare i 30 caratteri"], 
         match: [/^[a-zA-Z0-9_]+$/, "Sono ammessi solo lettere, numeri e underscore"]
     },
-    fullName: [{ 
+    fullName: { 
         name: { 
             type: String,
             required: [true, "Il nome è obbligatorio"],
@@ -24,7 +25,7 @@ const userSchema = new Schema({
             required: [true, "Il cognome è obbligatorio"],
             trim: true
         }
-    }],
+    },
     email: {
         type: String,
         required: [true, "L'email è obbligatoria"],
@@ -44,21 +45,66 @@ const userSchema = new Schema({
         minlength: [8, "La password deve avere almeno 8 caratteri"],
         select: false
     },
+
+    authMethods: {
+        local: { type: Boolean, default: true },
+        google: {
+            id: String,
+            email: String
+        }
+    },
+
+    lastLogin: Date,
+    activeSessions: [{ 
+        device: String,
+        ip: String,
+        createdAt: Date
+    }],
     passwordChangedAt: Date
 }, {
-    timestamps: true
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
 });
+
+//----------------------------------------------------------------------------------------
+//METODI DATABASE
 
 // Middleware per hashare la password
 userSchema.pre('save', async function(next) {
     if (!this.isModified('password')) return next();
     this.password = await bcrypt.hash(this.password, 12);
+    // Imposta passwordChangedAt se non è un documento nuovo
+    if (!this.isNew) this.passwordChangedAt = Date.now() - 1000;
     next();
 });
 
 // Metodo per confrontare la password
 userSchema.methods.comparePassword = async function(candidatePassword) {
     return await bcrypt.compare(candidatePassword, this.password);
+};
+
+// Metodo per generare JWT
+userSchema.methods.generateAuthToken = function() {
+    return jwt.sign({ 
+            id: this._id, role: this.role 
+        },
+        process.env.JWT_SECRET,{
+            expiresIn: process.env.JWT_EXPIRES_IN
+        }
+    );
+};
+
+// Metodo per verificare se la password è stata cambiata dopo JWT
+userSchema.methods.changedPasswordAfter = function(JWTTimestamp) {
+    if (this.passwordChangedAt) {
+        const changedTimestamp = parseInt(
+            this.passwordChangedAt.getTime() / 1000,
+            10
+        );
+        return JWTTimestamp < changedTimestamp;
+    }
+    return false;
 };
 
 // Gestione errori per campi univoci
