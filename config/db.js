@@ -1,18 +1,33 @@
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
+import {config} from 'dotenv'; // Carica le variabili dal file .env
 
-dotenv.config();
-//Importo l'URI del DB
-const URI = process.env.MONGODB_URI;
+// Carica le variabili dal file .env nella cartella config
+config({ path: './config/.env' }); // <-- Percorso relativo esplicito
+
+const connectionOptions = {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  serverSelectionTimeoutMS: 5000,
+};
 
 const connectDB = async () => {
   try {
-    await mongoose.connect(URI);
-    console.log('Connesso a MongoDB');
-  } catch (err) {
-    console.error('Errore connessione MongoDB:', err.message);
+    if (mongoose.connection.readyState === 0) {
+      await mongoose.connect(process.env.MONGODB_URI, connectionOptions);
+      console.log('Connesso a MongoDB:', mongoose.connection.host);
+    }
+  } catch (error) {
+    console.error('Errore connessione MongoDB:', error.message);
     process.exit(1);
   }
 };
+
+mongoose.connection.on('connected', () => {
+  console.log('Connessione MongoDB attiva');
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('Connessione MongoDB interrotta');
+});
 
 export default connectDB;
