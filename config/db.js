@@ -1,12 +1,9 @@
 import mongoose from 'mongoose';
 import {config} from 'dotenv'; // Carica le variabili dal file .env
 
-// Carica le variabili dal file .env nella cartella config
-config({ path: './config/.env' }); // <-- Percorso relativo esplicito
+config({ path: '../.env' })
 
 const connectionOptions = {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
   serverSelectionTimeoutMS: 5000,
 };
 

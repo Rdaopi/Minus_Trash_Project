@@ -12,7 +12,7 @@ const userSchema = new Schema({
         trim: true,
         minlength: [3, "Lo username deve avere almeno 3 caratteri"],
         maxlength: [30, "Lo username non può superare i 30 caratteri"], 
-        match: [/^[a-zA-Z0-9_]+$/, "Sono ammessi solo lettere, numeri e underscore"]
+        match: [/^(?=\w{3,30}$)(?!.*[_]{2})[a-zA-Z0-9_]+$/, "Sono ammessi solo lettere, numeri e underscore"]
     },
     fullName: { 
         name: { 
@@ -32,7 +32,7 @@ const userSchema = new Schema({
         unique: true,
         trim: true,
         lowercase: true,
-        match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, "Email non valida"]
+        match: [/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,, "Email non valida"]
     },
     role: {
         type: String,
