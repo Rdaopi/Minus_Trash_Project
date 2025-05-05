@@ -5,17 +5,42 @@ import bcrypt from "bcryptjs";
 //Funzione per l'autenticazione di base
 const authenticateBasic = async(identifier, password) => {
     try{
-        const user = await (User.findOne({ email }).select('+password'));
+        // Determina se è email o username
+        const isEmail = /\S+@\S+\.\S+/.test(identifier);
+        const method = isEmail ? 'email' : 'username';
+        
+        const user = await (User.findOne({
+            $or : [
+            { email: identifier },
+            { username: identifier}
+            ]
+        }).select('+password'));
+
+        // Registra nel log con il metodo corretto
+        logger.info(`Tentativo login via ${method}: ${identifier}`);
 
         //Verifica utente e corrispondenza password
         if(!user || !(await bcrypt.compare(password, user.password))) {
-            logger.warn("Tentativo accesso fallito per: " + email);
-            return null;
+            await auditService.logFailedAttempt('login', new Error('Credenziali non valide'), {
+                identifier,
+                method,
+                ip: req.ip,
+                device: req.headers['user-agent']
+              });
+              return null;
         }
 
-        logger.info("Accesso riuscito per: " + email);
-        //Ritorna l'utente autenticato
-        return user;
+        // Registra login riuscito
+        await auditService.logEvent({
+            action: 'login',
+            user: user._id,
+            method,
+            ip: req.ip,
+            device: req.headers['user-agent']
+        });
+  
+        return user;//Ritorna l'utente autenticato
+
     } catch (error) {
         logger.error("Errore autenticazione: " + error.stack);
         throw error;
@@ -29,17 +54,17 @@ export const basicAuth = async (req, res, next) => {
         const authHeader = req.authHeader.authorization;
 
         //Verifica presenza e formato corretto dell'header
-        if(!authHeader?.startsWIth('Basic ')) {
+        if(!authHeader?.startsWith('Basic ')) {
             logger.debug("Header Authorizaion non valdio");
             return res.status(401).json({error: "Autenticazione richiesta"});
         }
 
         //Decodificazione credenziali
         const credentials = Buffer.from(authHeader.split(' ')[1], 'base64').toString();
-        const [email, password] = credentials.split(':'); //Separa mail e password
+        const [identifier, password] = credentials.split(':'); //Separa identifier e password
 
         //Esegue l'autenticazione
-        const user = await authenticateBasic(email, password);
+        const user = await authenticateBasic(identifier, password);
 
         //Gestione fallimento autenticazione
         if(!user) return res.status(401).json({ error: "Credenziali non valide" });

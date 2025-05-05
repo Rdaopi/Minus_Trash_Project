@@ -11,7 +11,7 @@ const validatePassword = (password) => {
 //Registazione nuovo utente
 export const register = async (req, res) => {
     try {
-        const { email, password} = req.body;
+        const { username, email, password} = req.body;
 
         //Validazione complessità password
         if(!validatePassword(password)) {
@@ -28,6 +28,12 @@ export const register = async (req, res) => {
             return res.status(409).json({
                 error: "Email già registrata"
             });
+        }
+
+        //Verifica unicità username
+        const existingUsername = await User.findOne( {username });
+        if(existingUsername) {
+            return res.status(409).json( { error: "Username già in uso" });
         }
 
         //Creazione utente con password hashata

@@ -116,4 +116,10 @@ userSchema.post('save', function(error, doc, next) {
     }
 });
 
+//Index
+userSchema.index( 
+    {email: 1, username: 1},
+    { unique: true}
+);
+
 export default mongoose.model('User', userSchema);
