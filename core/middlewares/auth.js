@@ -1,9 +1,11 @@
 import logger from "../utils/logger";
-import User from "../../modules/auth/models/User";
+import User from "../../modules/auth/models/User.js";
+import auditService from "../../modules/audit/services/audit.service.js"; //FIX: Aggiunto percorso per l'audit.service 
 import bcrypt from "bcryptjs";
 
 //Funzione per l'autenticazione di base
-const authenticateBasic = async(identifier, password) => {
+//FIX: La funzione accetta req come parametro 
+const authenticateBasic = async(identifier, password, req) => {
     try{
         // Determina se è email o username
         const isEmail = /\S+@\S+\.\S+/.test(identifier);

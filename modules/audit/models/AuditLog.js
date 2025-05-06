@@ -3,7 +3,7 @@ const { Schema } = mongoose;
 
 const auditLogSchema = new Schema({
   user: {
-    type: mongoose.Schema.Types.email,
+    type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: function() {
       return !['user_delete'].includes(this.action);

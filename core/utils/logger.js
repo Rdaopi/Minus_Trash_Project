@@ -28,15 +28,19 @@ const logger = winston.createLogger({
     new winston.transports.File({ 
       filename: 'logs/error.log', // File dedicato agli errori
       level: 'error', // Solo log di livello 'error' o superiore
-      maxsize: 5 * 1024 * 1024 // Rotazione automatica a 5MB
+      maxsize: 5 * 1024 * 1024, // Rotazione automatica a 5MB
+      maxFiles: 16 //CHANGE: Numero massimo di file fino a 16
     })
   ]
 });
 
 // 5. Middleware per Express
-export const logRequest = (req, res, next) => {
+export const logRequest = (req, next) => {
   logger.info(`${req.method} ${req.url}`); // Logga metodo e URL delle richieste
   next(); // Passa al prossimo middleware
 };
 
-export default logger;
+export default {
+  logger,
+  logRequest
+};

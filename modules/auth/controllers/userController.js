@@ -56,3 +56,8 @@ export const register = async (req, res) => {
         });
     }
 }
+
+//FIX: Esportazione dei metodi del controller
+export default {
+    register
+};

@@ -3,10 +3,17 @@ import {config} from 'dotenv'; // Carica le variabili dal file .env
 
 config({ path: '../.env' })
 
+//CHANGES: Aggiunte connectionOptions
 const connectionOptions = {
   serverSelectionTimeoutMS: 5000,
+  useNewUrlParser: true,
+  useUnifiedTopology: true
 };
 
+//FIX: Risolto caso in cui l'uri non sia configurato
+if(!process.env.MONGODB_URI){
+  throw new Error("MongoDB URI non configurato in .env");
+}
 const connectDB = async () => {
   try {
     if (mongoose.connection.readyState === 0) {
