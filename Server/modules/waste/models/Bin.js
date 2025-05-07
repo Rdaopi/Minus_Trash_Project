@@ -55,4 +55,4 @@ binsSchema.index({ location: '2dspere'});
 // Indice composto per query comuni (es: citta' + tipo rifiuto)
 binsSchema.index({ 'address.city': 1, trashType: 1 });
 
-export default mongoose.model('Bin', binsSchema);
+export default mongoose.model('Bin', binSchema);

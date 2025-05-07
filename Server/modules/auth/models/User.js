@@ -1,6 +1,4 @@
 import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
-import jsw  from 'jsonwebtoken';
 
 const { Schema } = mongoose;
 
@@ -18,12 +16,14 @@ const userSchema = new Schema({
         name: { 
             type: String,
             required: [true, "Il nome è obbligatorio"],
-            trim: true 
+            trim: true,
+            default: "Nome"
         }, 
         surname: {
             type: String,
             required: [true, "Il cognome è obbligatorio"],
-            trim: true
+            trim: true,
+            default: "Cognome"
         }
     },
     email: {
@@ -65,55 +65,6 @@ const userSchema = new Schema({
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true }
-});
-
-//----------------------------------------------------------------------------------------
-//METODI DATABASE
-
-// Middleware per hashare la password
-userSchema.pre('save', async function(next) {
-    if (!this.isModified('password')) return next();
-    this.password = await bcrypt.hash(this.password, 12);
-    // Imposta passwordChangedAt se non è un documento nuovo
-    if (!this.isNew) this.passwordChangedAt = Date.now() - 1000;
-    next();
-});
-
-// Metodo per confrontare la password
-userSchema.methods.comparePassword = async function(candidatePassword) {
-    return await bcrypt.compare(candidatePassword, this.password);
-};
-
-// Metodo per generare JWT
-userSchema.methods.generateAuthToken = function() {
-    return jwt.sign({ 
-            id: this._id, role: this.role 
-        },
-        process.env.JWT_SECRET,{
-            expiresIn: process.env.JWT_EXPIRES_IN
-        }
-    );
-};
-
-// Metodo per verificare se la password è stata cambiata dopo JWT
-userSchema.methods.changedPasswordAfter = function(JWTTimestamp) {
-    if (this.passwordChangedAt) {
-        const changedTimestamp = parseInt(
-            this.passwordChangedAt.getTime() / 1000,
-            10
-        );
-        return JWTTimestamp < changedTimestamp;
-    }
-    return false;
-};
-
-// Gestione errori per campi univoci
-userSchema.post('save', function(error, doc, next) {
-    if (error.name === 'MongoServerError' && error.code === 11000) {
-        next(new Error('Username o email già esistenti'));
-    } else {
-        next(error);
-    }
 });
 
 //Index

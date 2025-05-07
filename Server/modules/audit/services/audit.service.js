@@ -78,7 +78,7 @@ const auditService = {
   
         await AuditLog.create({
             action: `failed_${action}`,
-            method, // <-- Aggiunto
+            method,
             status: 'failed',
             metadata: {
                 identifier: context.identifier,

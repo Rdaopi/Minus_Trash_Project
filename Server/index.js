@@ -1,17 +1,19 @@
-// index.js (versione minimalista senza helmet/cors)
 import express from 'express';
 import connectDB from './config/db.js';
 import 'dotenv/config';
 import { logger, logRequest } from './core/utils/logger.js';
 import authRoutes from './modules/auth/routes.js';
+//import wasteRoutes from '.modules/waste/routes.js';
 
 const app = express();
 
 app.use(express.json());
 app.use(logRequest);
 
-//Routes
+//Routes per l'autenticazione
 app.use("/api/auth", authRoutes);
+//Routes per waste (parte principale)
+//app.use("api/waste", wasteRoutes);
 
 //Error Handling
 app.use((err, res) => {
