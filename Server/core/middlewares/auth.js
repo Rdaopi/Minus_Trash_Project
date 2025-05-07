@@ -53,7 +53,9 @@ const authenticateBasic = async(identifier, password, req) => {
 export const basicAuth = async (req, res, next) => {
     try {
         //Estrae l'header di autorizzazione
-        const authHeader = req.authHeader.authorization;
+        //const authHeader = req.authHeader.authorization;
+        // forse è questo
+        const authHeader = req.headers.authorization;
 
         //Verifica presenza e formato corretto dell'header
         if(!authHeader?.startsWith('Basic ')) {

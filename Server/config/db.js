@@ -7,7 +7,9 @@ config({ path: '../.env' })
 const connectionOptions = {
   serverSelectionTimeoutMS: 5000,
   useNewUrlParser: true,
-  useUnifiedTopology: true
+  useUnifiedTopology: true,
+  //forse questo serve
+  bufferCommands: false
 };
 
 //FIX: Risolto caso in cui l'uri non sia configurato
