@@ -3,6 +3,11 @@ node_modules/
 
 # Environment variables
 config/.env
+.env
+
+# Eventuali altri file sensibili
+*.env.local
+*.env.*.local
 
 # Logs
 *.log

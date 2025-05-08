@@ -72,11 +72,37 @@ const userSchema = new Schema({
 
 // Middleware per hashare la password
 userSchema.pre('save', async function(next) {
+    /*
     if (!this.isModified('password')) return next();
     this.password = await bcrypt.hash(this.password, 12);
     // Imposta passwordChangedAt se non è un documento nuovo
     if (!this.isNew) this.passwordChangedAt = Date.now() - 1000;
     next();
+    */
+    //----------------------------------------
+    // Hash password solo se modificata
+    if (this.isModified('password')) {
+        this.password = await bcrypt.hash(this.password, 12);
+        
+        // Aggiorna passwordChangedAt per invalidare token esistenti
+        if (!this.isNew) {
+            this.passwordChangedAt = Date.now() - 1000; 
+        }
+    }
+    
+    // Verifica modifiche a campi sensibili
+    if (this.isModified('email')) {
+        this.emailVerified = false; // Richiede nuova verifica email
+        this.authMethods.local = true; // Forza autenticazione locale
+    }
+    
+    // Sanificazione username
+    if (this.isModified('username')) {
+        this.username = this.username.trim().toLowerCase();
+    }
+    
+    next();
+    //-----------------------------------------
 });
 
 // Metodo per confrontare la password

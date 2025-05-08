@@ -22,10 +22,31 @@ const TokenSchema = new Schema({
       },
       expiresAt: {
         type: Date,
+        /*
         default: Date.now,
         expires: 600, // Cancella dopo 10 minuti
+        */
+        required: true
       },
-});
+      //----------------------------------------
+      user: {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+      },
+      refreshToken: {
+        type: String,
+        required: true
+      },
+      userAgent: String,
+      ipAddress: String,
+      revoked: {
+        type: Boolean,
+        default: false
+      }
+},{ timestamps: true });
+
+tokenSchema.index({ refreshToken: 1 }, { unique: true });
 
 // Metodo statico per generare e salvare token
 tokenSchema.statics.generateToken = async function (userId, type) {
