@@ -20,7 +20,7 @@ const options = {
       }
     }
   },
-  apis: ['./src/modules/*/routes.js'] //Specifica i file contenenti le annotazioni Swagger (JSDoc). da modificare 
+  apis: ['./src/modules/*/routes.js'] //Specifica i file contenenti le annotazioni Swagger (JSDoc). da modificare ***********************
 };
 
 export default swaggerJsdoc(options);   
