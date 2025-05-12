@@ -9,3 +9,6 @@ Server/.vscode
 
 #MongoDB
 Server/*.mongodb.js
+
+#Json
+Server/package-lock.json

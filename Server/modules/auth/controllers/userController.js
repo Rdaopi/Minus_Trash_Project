@@ -7,7 +7,7 @@ import auditOnSuccess from "../middlewares/withAudit.js"; //per generare gli aud
 const REGEX_PASSWORD = /^(?=.*[A-Z])(?=.*[!@#$%^&*])(?=.{8,})/;
 
 //Metodo di login
-export const login = (req, res) => {
+export const login = async(req, res) => {
     try {
     const user = req.user;   //dopo essersi autenticato
 
@@ -117,7 +117,7 @@ export const changePassword = [
                 const error = new Error("Password deve contenere 8+ caratteri, 1 maiuscola e 1 simbolo");
                 error.statusCode = 400;
                 throw error;
-            });
+            };
             
             if(!await bcrypt.compare(currentPassword, user.password)) {
                 const error = new Error("Password corrente non valida");

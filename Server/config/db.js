@@ -32,6 +32,7 @@ mongoose.connection.on('connected', () => {
 
 mongoose.connection.on('disconnected', () => {
   console.log('Connessione MongoDB interrotta');
+});
 export default connectDB; //Esporta la funzione connectDB per essere utilizzata altrove
 
 // Test chiamate multiple
