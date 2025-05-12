@@ -1,32 +1,40 @@
 import express from 'express';
-import { basicAuth } from '../../core/middlewares/auth.js'; //FIX: Correzione path
-import { register} from './controller/userController.js';
+import { basicAuth } from ".middlewares/basicAuth.js";
+import { login, register, changePassword, profile_update, user_delete } from './controllers/userController.js';
+//import { googleAuth } from "./middlewares/googleAuth.js";
+//import { jwtAuth } from "./middlewares/jwtAuth.js";
 
 const router = express.Router()
 
+//Registrazione classica
 router.post('/register', register);
 
-router.post('/login', basicAuth, (req, res) => {
-    res.json({ message: "Benvenuto " + req.user.username}); //FIX: correzione req.user.username al posto di res.user.username
-})
-//router.post('/login', login);
-router.post('/refresh-token', refreshToken);
-router.post('/logout', authMiddleware, logout);
-
-//--------------------------------------------
-
-import { updateCredentials, updateCredentialsValidator } from './controller/userController.js';
-
-router.patch(
-  '/profile/credentials',
-  basicAuth,
-  updateCredentialsValidator,
-  updateCredentials
+//Login classico
+router.post('/login', basicAuth, 
+    // Da fare: Rimpiazzare la stub con il login dello user una volta implementato in userController.js
+    (req, res) => res.status(501).json({ error: 'login non implementato' })
 );
-//-------------------------------------------
-//ANOTAZIONE JSDOC
-//---------------------------------
+
+//Registrazione/Login via google
+router.get('/googleOAuth/login',
+    // Da fare: Rimpiazzare la stub con googleAuth middleware una volta implementato
+    (req, res, next) => res.status(501).json({ error: 'googleAuth middleware non implementato' }),
+    // Da fare: Rimpiazzare la stub con il login dello user una volta implementato
+    (req, res) => res.status(501).json({ error: 'login non implementato' })
+);
+
+// Callback Google (GET)
+router.get('/googleOAuth/callback',
+    // Da fare: Rimpiazzare la stub con googleAuth middleware una volta implementato
+    (req, res, next) => res.status(501).json({ error: 'googleAuth middleware non implementato' }),
+    // Da fare: Rimpiazzare la stub con il login dello user una volta implementato
+    (req, res) => res.status(501).json({ error: 'login non implementato' })
+  );
+
+//Route Protette da JWT
+//Da implementare con il JWT, attualmente richiede autenticazione base
+router.post('/profile_update', basicAuth, login /*jwtAuth*/, profile_update);
+router.post('/change_password', basicAuth, login /*jwtAuth*/, changePassword);
+router.delete('/user_delete', basicAuth, login /*jwtAuth*/, user_delete);
 
 export default router;
-
-

@@ -1,0 +1,11 @@
+# Node modules
+node_modules/
+
+# Environment variables
+Server/config/.env
+
+#VcodeSetting
+Server/.vscode
+
+#MongoDB
+Server/*.mongodb.js
