@@ -3,7 +3,12 @@ import connectDB from './config/db.js';
 import 'dotenv/config';
 import { logger, logRequest } from './core/utils/logger.js';
 import authRoutes from './modules/auth/routes.js';
+
 //import wasteRoutes from '.modules/waste/routes.js';
+
+import swaggerUi from 'swagger-ui-express';
+import swaggerSpec from './config/swagger.js';
+
 
 const app = express();
 
@@ -14,6 +19,11 @@ app.use(logRequest);
 app.use("/api/auth", authRoutes);
 //Routes per waste (parte principale)
 //app.use("api/waste", wasteRoutes);
+
+app.use('/api-docs', 
+  swaggerUi.serve, 
+  swaggerUi.setup(swaggerSpec)
+);
 
 //Error Handling
 app.use((err, res) => {

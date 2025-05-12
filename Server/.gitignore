@@ -1,0 +1,43 @@
+# Node modules
+node_modules/
+
+# Environment variables
+config/.env
+.env
+
+# Eventuali altri file sensibili
+*.env.local
+*.env.*.local
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# VS Code settings
+.vscode/
+
+# MongoDB playground exports
+*.mongodb
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Dependency directories
+jspm_packages/
+
+# Build output
+dist/
+build/
+
+# Coverage directory used by testing tools
+coverage/

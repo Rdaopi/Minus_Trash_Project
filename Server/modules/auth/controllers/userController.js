@@ -1,3 +1,4 @@
+
 import User from "../models/User";
 import bcrypt from "bcryptjs"; //Password Hash
 import auditOnSuccess from "../middlewares/withAudit.js"; //per generare gli audit di registrazione
@@ -7,13 +8,36 @@ const REGEX_PASSWORD = /^(?=.*[A-Z])(?=.*[!@#$%^&*])(?=.{8,})/;
 
 //Metodo di login
 export const login = (req, res) => {
-    //Da fare: Generazione il token JWT a seguito dell'autenticazione dell'utente implementata attualmente in basicAuth.js 
+    try {
+    const user = req.user;   //dopo essersi autenticato
+
+    //Genera il JWT via metodo sullo schema
+    const token = user.generateAuthToken();
+
+    //Aggiorna lastLogin
+    user.lastLogin = Date.now();
+    await user.save();
+
+    logger.info(`Utente loggato (JWT emesso): ${user._id}`);
+    return res.json({
+      token,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
 }
 
 //Registazione nuovo utente con audit
 export const register = [
     auditOnSuccess('user_registration', ['email']),
     async (req, res) => {
+
     try {
         const { username, email, password} = req.body;
 
@@ -23,6 +47,7 @@ export const register = [
                 error: "Password deve contenere 8+ caratteri, 1 maiuscola e 1 simbolo"
             });
         }
+
 
         //Verifica unicità email nel database
         const existUser = await User.findOne({ email });
@@ -47,10 +72,9 @@ export const register = [
         });
 
         //Log evento e risposta "nuovo utente"
-        logger.info("Nuovo utente registrato: " + user_id);
+        logger.info("Nuovo utente registrato: " + user._id);
         res.status(201).json({
-            id: user_id,
-            username: user.email,
+            id: user._id,
             email: user.email
         });
 
@@ -68,7 +92,7 @@ export const profile_update = [
     async(req, res) => {
         try{
             const user = await User.findByIdAndUpdate(
-                req.user.user_id,
+                req.user._id,
                 { $set: req.body },
                 { new: true, runValidators: true}
             ).select('-password');
@@ -87,16 +111,23 @@ export const changePassword = [
     async(req, res) => {
         try{
             const {currentPassword, newPassword} = req.body;
-            const user = await User.findById(req.user.user_id).select('+password');
-
+            const user = await User.findById(req.user._id).select('+password');
+            //Validazione complessità password
+            if(!REGEX_PASSWORD.test(newPassword)) {
+                const error = new Error("Password deve contenere 8+ caratteri, 1 maiuscola e 1 simbolo");
+                error.statusCode = 400;
+                throw error;
+            });
+            
             if(!await bcrypt.compare(currentPassword, user.password)) {
                 const error = new Error("Password corrente non valida");
                 error.statusCode = 401;
                 throw error;
             }
 
-            user.password = await bcrypt.has(newPasseword,12);
+            user.password = await bcrypt.hash(newPassword,12);
             await user.save();
+            user.passwordChangedAt = Date.now();
 
             res.json( { message: "Passoword aggiornata con successo" });
         }catch(error){
@@ -112,7 +143,7 @@ export const user_delete = [
     auditOnSuccess('user_delete'),
     async(req,res) => {
         try {
-            await User.findByIdAndDelete(req.user.user_id);
+            await User.findByIdAndDelete(req.user._id);
             res.json( {message: "Utente eliminato con successo"});
         }catch(error) {
             error.statusCode = 500;

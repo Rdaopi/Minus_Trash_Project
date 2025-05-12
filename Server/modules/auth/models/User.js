@@ -1,4 +1,7 @@
 import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
+import jwt  from 'jsonwebtoken';
+
 
 const { Schema } = mongoose;
 
@@ -32,7 +35,7 @@ const userSchema = new Schema({
         unique: true,
         trim: true,
         lowercase: true,
-        match: [/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,, "Email non valida"]
+        match: [/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, "Email non valida"]
     },
     role: {
         type: String,
@@ -66,7 +69,6 @@ const userSchema = new Schema({
     toJSON: { virtuals: true },
     toObject: { virtuals: true }
 });
-
 //Index
 userSchema.index( 
     {email: 1, username: 1},
