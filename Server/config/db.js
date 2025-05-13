@@ -1,10 +1,14 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 
+//ATTENZIONE FONDAMENTALE:  Se si prova a connettersi ad ATLAS non utilizzare
+//                          il wifi dell'UNI, non si connette.
+//                          Utilizzare wifi differente.
+
 // Inizializza dotenv con il path corretto
 dotenv.config({ path: './config/.env' });
 
-// Check if MONGODB_URI is defined
+// Check se MONGODB_URI è definito
 if (!process.env.MONGODB_URI) {
   throw new Error('MONGODB_URI is not defined in environment variables');
 }
