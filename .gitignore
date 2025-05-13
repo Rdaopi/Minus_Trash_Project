@@ -1,14 +1,65 @@
-# Node modules
+# Dependencies
 node_modules/
+/.pnp
+.pnp.js
 
 # Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 Server/config/.env
 
-#VcodeSetting
-Server/.vscode
+# Build directories
+/build/
+/dist/
+/.next/
+/out/
 
-#MongoDB
-Server/*.mongodb.js
+# IDE and Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
 
-#Json
-Server/package-lock.json
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+debug.log
+logs/
+
+# Testing and coverage
+/coverage/
+
+# MongoDB
+*.mongodb.js
+*.mongodb
+dump/
+*.dump
+
+# Package manager files
+package-lock.json
+yarn.lock
+
+# Cache
+.cache/
+.temp/
+.eslintcache
+
+# Frontend specific
+Frontend/node_modules/
+Frontend/build/
+Frontend/dist/
+Frontend/.next/
+Frontend/coverage/
+Frontend/.cache/
+
+# Misc
+*.log
+*.pid
+*.seed
+*.pid.lock

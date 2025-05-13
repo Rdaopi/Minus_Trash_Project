@@ -1,58 +1,98 @@
 import mongoose from 'mongoose';
 const { Schema } = mongoose;
 
-const binsSchema = new Schema({
-    trashType: {
+const binSchema = new Schema({
+    type: {
         type: String,
         required: true,
-        enum: ['organico', 'carta', 'plastica', 'vetro', 'indifferenziato', 'raee', 'altro'],
-        index: true
+        enum: ['organico', 'plastica', 'carta', 'vetro', 'indifferenziato', 'raee', 'altro'],
     },
-    status: {
-        type: String,
-        required: true,
-        enum: ['aperto', 'chiuso', 'manutenzione'],
-        default: 'chiuso'
-    },
-    trashLevel: {
+    capacity: {
         type: Number,
+        required: true,
+        min: 0,
+    },
+    currentFillLevel: {
+        type: Number,
+        default: 0,
         min: 0,
         max: 100,
-        default: 0
     },
     location: {
         type: {
             type: String,
-            enum: ['Point'],
+            default: 'Point',
             required: true,
-            default: 'Point'
         },
         coordinates: {
-            type: [Number], //longitudine - latitudine
+            type: [Number],
             required: true,
-            validate: {
-                validator: (coords) => {
-                    return (
-                        coords.lenght == 2 &&
-                        coords[0] >= -100 && coords[0] <= 100 &&    //Longitudine valida
-                        coords[1] >= -90 &&  coords[2] <= 90        //Latitudine valida
-                    );
-                },
-                message: 'Coordinate non valide. Formato atteso [longitudine, latitudine]'
-            }
-        }
+        },
+        address: {
+            street: String,
+            city: String,
+            postalCode: String,
+            country: String,
+        },
     },
-    address: { // Struttura normalizzata per l'indirizzo
-        street: { type: String },
-        city: { type: String, required: true, default: 'Trento' },
-        postalCode: { type: String },
-        country: { type: String, default: 'Italia' }
-    }
+    status: {
+        type: String,
+        enum: ['attivo', 'manutenzione', 'inattivo'],
+        default: 'attivo',
+    },
+    lastEmptied: {
+        type: Date,
+        default: Date.now,
+    },
+    maintenanceSchedule: {
+        lastMaintenance: Date,
+        nextMaintenance: Date,
+    },
+    serialNumber: {
+        type: String,
+        required: true,
+        unique: true,
+    },
+    manufacturer: {
+        type: String,
+        required: true,
+    },
+    installationDate: {
+        type: Date,
+        required: true,
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now,
+    },
+    updatedAt: {
+        type: Date,
+        default: Date.now,
+    },
 });
 
-//Indice geospaziale per coordinate efficenti
-binsSchema.index({ location: '2dspere'});
-// Indice composto per query comuni (es: citta' + tipo rifiuto)
-binsSchema.index({ 'address.city': 1, trashType: 1 });
+//Indice geospaziale per ricerche basate sulla location
+binSchema.index({ location: '2dsphere' });
+//Indice per ricerche veloci per serial number
+binSchema.index({ serialNumber: 1 });
 
-export default mongoose.model('Bin', binSchema);
+//Middleware pre-save per aggiornare updatedAt
+binSchema.pre('save', function(next) {
+    this.updatedAt = new Date();
+    next();
+});
+
+// Metodo per verificare se il cestino necessita di svuotamento
+binSchema.methods.needsEmptying = function() {
+    return this.currentFillLevel >= 80; // 80% come soglia di esempio
+};
+
+// Metodo per verificare se il cestino necessita di manutenzione
+binSchema.methods.needsMaintenance = function() {
+    if (!this.maintenanceSchedule.nextMaintenance) return false;
+    return new Date() >= this.maintenanceSchedule.nextMaintenance;
+};
+
+const Bin = mongoose.model('Bin', binSchema);
+
+export default Bin;
