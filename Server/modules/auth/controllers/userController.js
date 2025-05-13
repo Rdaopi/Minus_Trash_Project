@@ -1,7 +1,7 @@
-
-import User from "../models/User";
+import User from "../models/User.js";
 import bcrypt from "bcryptjs"; //Password Hash
-import auditOnSuccess from "../middlewares/withAudit.js"; //per generare gli audit di registrazione
+import { auditOnSuccess } from "../middlewares/withAudit.js"; //per generare gli audit di registrazione
+import { logger } from '../../../core/utils/logger.js';
 
 //Regex per  validità password
 const REGEX_PASSWORD = /^(?=.*[A-Z])(?=.*[!@#$%^&*])(?=.{8,})/;

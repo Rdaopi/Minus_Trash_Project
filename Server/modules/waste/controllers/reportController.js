@@ -1,5 +1,15 @@
 import reportService from '../services/reportService.js';
 import { logger } from '../../../core/utils/logger.js';
+import rateLimit from 'express-rate-limit';
+
+// Rate limiter per le segnalazioni
+export const reportLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minuti
+    max: 5, // limite di 5 segnalazioni per IP
+    message: {
+        error: 'Troppe segnalazioni. Riprova tra 15 minuti.'
+    },
+});
 
 //Creazione nuova segnalazione
 export const createReport = async (req, res) => {
@@ -194,17 +204,73 @@ export const assignReport = async (req, res) => {
     }
 };
 
+//Recupero commenti di una segnalazione
+export const getReportComments = async (req, res) => {
+    try {
+        const report = await reportService.getReportById(req.params.id);
+        
+        if (!report) {
+            return res.status(404).json({ error: 'Segnalazione non trovata' });
+        }
+
+        // Assumendo che i commenti siano memorizzati nel report
+        const comments = report.comments || [];
+        
+        res.json(comments);
+    } catch (error) {
+        logger.error(`Errore nel recupero dei commenti della segnalazione: ${error.message}`);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+//Aggiunta di un commento a una segnalazione
 export const addReportComment = async (req, res) => {
     try {
-        const { comment } = req.body;
-        const report = await reportService.addComment(
-            req.params.id,
-            req.user._id,
-            comment
-        );
-        res.json(report);
+        const { text } = req.body;
+        
+        if (!text) {
+            return res.status(400).json({ error: 'Testo del commento non specificato' });
+        }
+
+        const comment = {
+            text,
+            author: req.user._id,
+            createdAt: new Date()
+        };
+
+        const report = await reportService.addComment(req.params.id, comment);
+        
+        if (!report) {
+            return res.status(404).json({ error: 'Segnalazione non trovata' });
+        }
+
+        logger.info(`Nuovo commento aggiunto alla segnalazione ${req.params.id}`);
+        res.status(201).json(comment);
     } catch (error) {
         logger.error(`Errore nell'aggiunta del commento: ${error.message}`);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+//Aggiornamento stato segnalazione
+export const updateReportStatus = async (req, res) => {
+    try {
+        const { status } = req.body;
+        
+        if (!status) {
+            return res.status(400).json({ error: 'Stato non specificato' });
+        }
+
+        const report = await reportService.updateReportStatus(req.params.id, status, req.user._id);
+        
+        if (!report) {
+            return res.status(404).json({ error: 'Segnalazione non trovata' });
+        }
+
+        logger.info(`Stato segnalazione ${req.params.id} aggiornato a: ${status}`);
+        res.json(report);
+    } catch (error) {
+        logger.error(`Errore nell'aggiornamento dello stato della segnalazione: ${error.message}`);
         res.status(500).json({ error: error.message });
     }
 };

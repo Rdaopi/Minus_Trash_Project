@@ -7,11 +7,12 @@ import * as binController from './controllers/binController.js';
 
 const router = express.Router();
 
+
 //Reports Routes (Segnalazioni)
 //BASE PATH: /api/waste/reports
 router.route('/reports')
     .get(jwtAuth, reportController.getAllReports)//GET /reports - Lista tutte le segnalazioni
-    .post(jwtAuth, validateWasteReport, reportController.createReport);//POST /reports - Crea nuova segnalazione
+    .post(jwtAuth, reportController.reportLimiter, validateWasteReport, reportController.createReport);//POST /reports - Crea nuova segnalazione
 
 router.route('/reports/:id')
     .get(jwtAuth, reportController.getReportById)//GET /reports/:id - Dettaglio segnalazione
@@ -22,7 +23,7 @@ router.route('/reports/:id')
 router.route('/reports/:id/status')
     .put(jwtAuth, reportController.updateReportStatus); //PUT /reports/:id/status - Aggiorna stato
 
-//Report Actions
+//Report
 router.route('/reports/:id/verify')
     .post(jwtAuth, reportController.verifyReport);//POST /reports/:id/verify - Verifica segnalazione
 
@@ -33,7 +34,7 @@ router.route('/reports/:id/comments')
     .get(jwtAuth, reportController.getReportComments)//GET /reports/:id/comments - Lista commenti
     .post(jwtAuth, reportController.addReportComment);//POST /reports/:id/comments - Aggiungi commento
 
-//Report Filters
+//Report
 router.get('/reports/area', reportController.getReportsInArea);//GET /reports/area?lat=x&lng=y - Segnalazioni in area
 router.get('/reports/type/:type', reportController.getReportsByType);//GET /reports/type/:type - Filtra per tipo
 router.get('/reports/status/:status', reportController.getReportsByStatus);//GET /reports/status/:status - Filtra per stato

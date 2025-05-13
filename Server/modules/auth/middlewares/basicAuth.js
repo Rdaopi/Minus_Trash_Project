@@ -1,4 +1,4 @@
-import logger from "../../../core/utils/logger.js";
+import { logger } from "../../../core/utils/logger.js";
 import User from "../models/User.js";
 import auditService from "../../audit/services/audit.service.js"; //FIX: Aggiunto percorso per l'audit.service 
 import bcrypt from "bcryptjs";

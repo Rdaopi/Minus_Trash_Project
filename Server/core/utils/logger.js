@@ -1,7 +1,7 @@
 import winston from 'winston';
 
 // 1. Creazione del Logger
-const logger = winston.createLogger({
+export const logger = winston.createLogger({
   // 2. Configurazione del Livello di Log
   level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
   
@@ -38,9 +38,4 @@ const logger = winston.createLogger({
 export const logRequest = (req, next) => {
   logger.info(`${req.method} ${req.url}`); // Logga metodo e URL delle richieste
   next(); // Passa al prossimo middleware
-};
-
-export default {
-  logger,
-  logRequest
 };

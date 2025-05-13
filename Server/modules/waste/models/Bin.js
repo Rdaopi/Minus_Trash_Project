@@ -73,8 +73,6 @@ const binSchema = new Schema({
 
 //Indice geospaziale per ricerche basate sulla location
 binSchema.index({ location: '2dsphere' });
-//Indice per ricerche veloci per serial number
-binSchema.index({ serialNumber: 1 });
 
 //Middleware pre-save per aggiornare updatedAt
 binSchema.pre('save', function(next) {

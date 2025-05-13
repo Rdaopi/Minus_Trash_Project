@@ -1,5 +1,4 @@
-// server/config/swagger.js
-import swaggerJsdoc from 'swagger-jsdoc'; // Importa la libreria per generare la documentazione Swagger/OpenAPI.
+import swaggerJsdoc from 'swagger-jsdoc'; //Importa la libreria per generare la documentazione Swagger/OpenAPI.
 
 const options = {
   definition: {

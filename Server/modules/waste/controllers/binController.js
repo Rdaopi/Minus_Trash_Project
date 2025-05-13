@@ -94,10 +94,39 @@ export const updateBinStatus = async (req, res) => {
 //Statistiche cestini
 export const getBinStats = async (req, res) => {
     try {
-        const stats = await binService.getStats();
+        const stats = {
+            total: await binService.countBins(),
+            byType: await binService.countBinsByType(),
+            needingMaintenance: await binService.countBinsNeedingMaintenance(),
+            fillLevelAverage: await binService.getAverageFillLevel()
+        };
+
+        logger.info('Statistiche cestini recuperate con successo');
         res.json(stats);
     } catch (error) {
         logger.error(`Errore nel recupero delle statistiche dei cestini: ${error.message}`);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+//Recupero cestini per tipo
+export const getBinsByType = async (req, res) => {
+    try {
+        const bins = await binService.getBinsByType(req.params.type);
+        res.json(bins);
+    } catch (error) {
+        logger.error(`Errore nel recupero dei cestini per tipo: ${error.message}`);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+//Recupero cestini che necessitano manutenzione
+export const getBinsNeedingMaintenance = async (req, res) => {
+    try {
+        const bins = await binService.getBinsNeedingMaintenance();
+        res.json(bins);
+    } catch (error) {
+        logger.error(`Errore nel recupero dei cestini da manutenere: ${error.message}`);
         res.status(500).json({ error: error.message });
     }
 };

@@ -1,6 +1,6 @@
 // modules/audit/services/audit.service.js
 import AuditLog from '../models/AuditLog.js';
-import logger from '../../../core/utils/logger.js';
+import { logger } from '../../../core/utils/logger.js';
 
 const auditService = {
   /**
