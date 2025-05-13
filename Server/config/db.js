@@ -1,30 +1,35 @@
 import mongoose from 'mongoose';
-import * as dotenv from 'dotenv';  // Importazione corretta per ES modules
+import dotenv from 'dotenv';
 
-// Configura dotenv
-dotenv.config();
+// Inizializza dotenv con il path corretto
+dotenv.config({ path: './config/.env' });
 
-const connectDB = async () => {
+// Check if MONGODB_URI is defined
+if (!process.env.MONGODB_URI) {
+  throw new Error('MONGODB_URI is not defined in environment variables');
+}
+
+const uri = process.env.MONGODB_URI;
+
+// Opzioni di connessione
+const clientOptions = { 
+  serverApi: { version: '1', strict: true, deprecationErrors: true },
+  connectTimeoutMS: 10000
+};
+
+/**
+ * Connette al database MongoDB
+ * @returns {Promise<mongoose.Connection>} La connessione mongoose
+ */
+async function connectDB() {
   try {
-    console.log('Tentativo di connessione a MongoDB Atlas...');
-
-    const options = {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      retryWrites: true,
-      w: 'majority',
-      authSource: 'admin',
-      ssl: true,
-      serverSelectionTimeoutMS: 5000
-    };
-
-    const conn = await mongoose.connect(process.env.MONGODB_URI, options);
-    console.log(`MongoDB Atlas connesso: ${conn.connection.host}`);
-
+    const conn = await mongoose.connect(uri, clientOptions);
+    console.log(`MongoDB connesso: ${conn.connection.host}`);
+    return conn;
   } catch (error) {
-    console.error('Errore di connessione:', error.message);
+    console.error('Errore connessione MongoDB:', error.message);
     process.exit(1);
   }
-};
+}
 
 export default connectDB;

@@ -8,7 +8,11 @@ import wasteRoutes from './modules/waste/routes.js';
 import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './config/swagger.js';
 
-//import wasteRoutes from '.modules/waste/routes.js';
+// Inizia connessione al database
+connectDB().catch(err => {
+  logger.error('Errore iniziale di connessione al database:', err);
+  process.exit(1);
+});
 
 const app = express();
 

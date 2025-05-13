@@ -9,6 +9,7 @@ node_modules/
 .env.development.local
 .env.test.local
 .env.production.local
+.env.production.
 Server/config/.env
 
 # Build directories
@@ -63,3 +64,7 @@ Frontend/.cache/
 *.pid
 *.seed
 *.pid.lock
+
+# Test files
+test/
+check-env.js
