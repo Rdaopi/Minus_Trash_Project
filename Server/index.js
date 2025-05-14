@@ -18,7 +18,7 @@ const app = express();
 
 //Configurazione CORS
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173', //Frontend URL
+  origin: process.env.CORS_ORIGIN,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true, //Per supportare i cookies se necessario
