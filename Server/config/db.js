@@ -2,22 +2,17 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 
 //ATTENZIONE FONDAMENTALE:  Se si prova a connettersi ad ATLAS non utilizzare
-//                          il wifi dell'UNI, non si connette.
+//                          il wifi dell'Università di Trento, non si connette.
 //                          Utilizzare wifi differente.
 
 // Inizializza dotenv con il path corretto
 dotenv.config({ path: './config/.env' });
 
-// Check se MONGODB_URI è definito
-if (!process.env.MONGODB_URI) {
-  throw new Error('MONGODB_URI is not defined in environment variables');
-}
+// Utilizza MongoDB locale come fallback se MONGODB_URI non è definito
+const uri = process.env.MONGODB_URI_LOCAL;
 
-const uri = process.env.MONGODB_URI;
-
-// Opzioni di connessione
+// Opzioni di connessione semplificate per localhost
 const clientOptions = { 
-  serverApi: { version: '1', strict: true, deprecationErrors: true },
   connectTimeoutMS: 10000
 };
 
