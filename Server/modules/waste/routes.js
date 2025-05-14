@@ -11,8 +11,8 @@ const router = express.Router();
 //Reports Routes (Segnalazioni)
 //BASE PATH: /api/waste/reports
 router.route('/reports')
-    .get(jwtAuth, reportController.getAllReports)//GET /reports - Lista tutte le segnalazioni
-    .post(jwtAuth, reportController.reportLimiter, validateWasteReport, reportController.createReport);//POST /reports - Crea nuova segnalazione
+    .get(jwtAuth, reportController.getAllReports) //GET /reports - Lista tutte le segnalazioni
+    .post(jwtAuth, reportController.reportLimiter, validateWasteReport, reportController.createReport); //POST /reports - Crea nuova segnalazione
 
 router.route('/reports/:id')
     .get(jwtAuth, reportController.getReportById)//GET /reports/:id - Dettaglio segnalazione
@@ -46,6 +46,11 @@ router.route('/bins')
     .get(binController.getAllBins)//GET /bins - Lista tutti i cestini
     .post(jwtAuth, validateBin, binController.createBin);//POST /bins - Crea nuovo cestino
 
+//Bin Filters
+router.get('/bins/area', binController.getBinsInArea);//GET /bins/area?lat=x&lng=y - Cestini in area
+router.get('/bins/type/:type', binController.getBinsByType);//GET /bins/type/:type - Filtra per tipo
+router.get('/bins/maintenance', jwtAuth, binController.getBinsNeedingMaintenance); //GET /bins/maintenance - Cestini da manutenere
+
 router.route('/bins/:id')
     .get(binController.getBinById)//GET /bins/:id - Dettaglio cestino
     .put(jwtAuth, validateBin, binController.updateBin)//PUT /bins/:id - Aggiorna cestino
@@ -54,11 +59,6 @@ router.route('/bins/:id')
 //Bin Status Management
 router.route('/bins/:id/status')
     .put(jwtAuth, binController.updateBinStatus);//PUT /bins/:id/status - Aggiorna stato
-
-//Bin Filters
-router.get('/bins/area', binController.getBinsInArea);//GET /bins/area?lat=x&lng=y - Cestini in area
-router.get('/bins/type/:type', binController.getBinsByType);//GET /bins/type/:type - Filtra per tipo
-router.get('/bins/maintenance', jwtAuth, binController.getBinsNeedingMaintenance); //GET /bins/maintenance - Cestini da manutenere
 
 //Statistics Routes
 router.get('/stats/reports', reportController.getReportStats);//GET /stats/reports - Statistiche segnalazioni

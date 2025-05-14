@@ -2,7 +2,7 @@
 export const jwtAuth = (req, res, next) => {
     //Mock user per testing
     req.user = {
-        id: "mock_user_id",
+        _id: "mock_user_id",
         email: "test@example.com",
         role: "user",
         name: "Test User"

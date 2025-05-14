@@ -35,7 +35,7 @@ export const logger = winston.createLogger({
 });
 
 // 5. Middleware per Express
-export const logRequest = (req, next) => {
+export const logRequest = (req, res, next) => {
   logger.info(`${req.method} ${req.url}`); // Logga metodo e URL delle richieste
   next(); // Passa al prossimo middleware
 };

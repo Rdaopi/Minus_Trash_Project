@@ -64,7 +64,7 @@ class BinService {
         const now = new Date();
         return await Bin.find({
             $or: [
-                { status: 'maintenance' },
+                { status: 'manutenzione' },
                 { 'maintenanceSchedule.nextMaintenance': { $lte: now } }
             ]
         });

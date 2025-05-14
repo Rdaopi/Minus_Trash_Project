@@ -5,7 +5,7 @@ const binSchema = new Schema({
     type: {
         type: String,
         required: true,
-        enum: ['organico', 'plastica', 'carta', 'vetro', 'indifferenziato', 'raee', 'altro'],
+        enum: ['ORGANICO', 'PLASTICA', 'CARTA', 'VETRO', 'INDIFFERENZIATO', 'RAEE', 'ALTRO'],
     },
     capacity: {
         type: Number,

@@ -10,7 +10,7 @@ const userSchema = new Schema({
         trim: true,
         minlength: [3, "Lo username deve avere almeno 3 caratteri"],
         maxlength: [30, "Lo username non può superare i 30 caratteri"], 
-        match: [/^(?=\w{3,30}$)(?!.*[_]{2})[a-zA-Z0-9_]+$/, "Sono ammessi solo lettere, numeri e underscore"]
+        match: [/^(?=[\w.]{3,30}$)(?!.*[_.]{2})[a-zA-Z0-9._]+$/, "Sono ammessi solo lettere, numeri, underscore e punto"]
     },
     fullName: { 
         name: { 

@@ -78,7 +78,8 @@ Server/package-lock.json
 ../MinusTrash_Environment.json
 
 #Vscode
-.vscode/
+Server/.vscode
+Server/.vscode/settings.json
 
 # Credentials and keys
 **/credentials/
@@ -101,3 +102,6 @@ settings.json
 *.bak
 *.swp
 *.tmp
+
+# VSCode settings
+.vscode/settings.json

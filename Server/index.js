@@ -27,7 +27,6 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(express.json());
-app.use(logRequest);
 
 //Routes per l'autenticazione
 app.use("/api/auth", authRoutes);
@@ -39,8 +38,19 @@ app.use('/api-docs',
   swaggerUi.setup(swaggerSpec)
 );
 
+app.use(logRequest);
+
+app.get('/test-next', (req, res) => {
+  console.log("TEST-NEXT typeof next:", typeof undefined);
+  res.json({ ok: true });
+});
+
 //Error Handling
 app.use((err, req, res, next) => {
+  console.log("DEBUG ERRORE:", err);
+  if (!err) {
+    return;
+  }
   logger.error(`Errore: ${err.message}`);
   res.status(500).json({ error: 'Errore interno' });
 });

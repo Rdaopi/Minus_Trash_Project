@@ -44,3 +44,14 @@ pids/
 # OS generated files
 .DS_Store
 Thumbs.db
+
+#Other files
+Server/playground-1.mongodb.js
+Server/package-lock.json
+
+#Test
+../MinusTrash_Environment.postman_collection.json
+../MinusTrash_Environment.json
+
+#Vscode
+.vscode
