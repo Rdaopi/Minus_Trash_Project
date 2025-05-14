@@ -68,3 +68,36 @@ Frontend/.cache/
 # Test files
 test/
 check-env.js
+
+#Other files
+Server/playground-1.mongodb.js
+Server/package-lock.json
+
+#Test
+../MinusTrash_Environment.postman_collection.json
+../MinusTrash_Environment.json
+
+#Vscode
+.vscode/
+
+# Credentials and keys
+**/credentials/
+**/keys/
+*.pem
+*.key
+*.cert
+*.p12
+*.pfx
+
+# Personal config files
+config.json
+settings.json
+
+# JWT secrets
+*jwt*.json
+*secret*.json
+
+# Temporary files with potential secrets
+*.bak
+*.swp
+*.tmp
