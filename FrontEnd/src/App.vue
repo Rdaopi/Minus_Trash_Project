@@ -11,7 +11,18 @@
         <router-link to="/map" class="nav-link">
           <i class="fas fa-map-marker-alt"></i> Mappa
         </router-link>
-        <router-link to="/auth" class="nav-link">
+        <router-link
+          v-if="isLoggedIn"
+          to="/profile"
+          class="nav-link"
+        >
+          <i class="fas fa-user"></i> Area Personale
+        </router-link>
+        <router-link
+          v-else
+          to="/auth"
+          class="nav-link"
+        >
           <i class="fas fa-user"></i> Login
         </router-link>
       </nav>
@@ -31,8 +42,19 @@
 
 <script setup>
 import { RouterView } from 'vue-router'
-// Il componente principale che gestisce la struttura dell'app
-// Ho usato setup script per semplicità
+import { ref, watchEffect } from 'vue'
+
+const isLoggedIn = ref(!!localStorage.getItem('token'))
+
+// Update isLoggedIn when localStorage changes (e.g., after login/logout)
+window.addEventListener('storage', () => {
+  isLoggedIn.value = !!localStorage.getItem('token')
+})
+
+// Also check on mount and after navigation
+watchEffect(() => {
+  isLoggedIn.value = !!localStorage.getItem('token')
+})
 </script>
 
 <style>
@@ -44,10 +66,12 @@ import { RouterView } from 'vue-router'
 /* Variabili CSS per mantenere coerenza nei colori */
 :root {
   --primary-color: #4CAF50; /* verde principale */
-  --secondary-color: #2E7D32; /* verde più scuro */
+  --secondary-color: #2E7D32; /* verde più scuro #*/
   --accent-color: #81C784; /* verde più chiaro */
-  --background-color: #F5F5F5; /* grigio chiaro */
+  --background-color: #fff; /* grigio chiaro f8fdff */
+  --background2-color: #f8fdff; /* blue chiaro f8fdff */
   --text-color: #333333; /* quasi nero */
+  --white-color: #fff;
 }
 
 /* Stile di base */
@@ -63,9 +87,11 @@ body {
   background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
   padding: 1rem 2rem;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  border: 2px solid var(--primary-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  border-radius: 2.5rem 2.5rem 0 0;
 }
 
 /* Stile del logo */
@@ -88,30 +114,43 @@ body {
 
 /*Link di navigazione */
 .nav-link {
-  color: white;
+  background-color: var(--white-color);
+  color: var(--primary-color);
+  border: 2px solid var(--primary-color);
+  border-radius: 8rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.75rem 1.75rem !important;
+  transition: all 0.3s ease-in-out;
+  box-shadow: 0 2px 5px rgba(76, 175, 80, 0.12);
+  position: relative;
+  overflow: hidden;
+  outline: none;
   text-decoration: none;
-  font-weight: 500;
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  transition: all 0.3s ease;
+  z-index: 1;
 }
 
-/*Effetto hover sui link */
-.nav-link:hover {
-  background-color: rgba(255,255,255,0.1);
-  transform: translateY(-2px);
+.nav-link:hover, .nav-link:focus {
+  background-color: #4CAF50;
+  color: var(--primary-color);
+  box-shadow: 0 4px 16px rgba(76, 175, 80, 0.18);
+  border-color: #388e3c;
 }
 
-/*Link attivo */
 .nav-link.router-link-active {
-  background-color: rgba(255,255,255,0.2);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  background-color: var(--white-color);
+  border: 2px solid var(--primary-color);
+  font-weight: 700;
+  box-shadow: 0 4px 16px rgba(255, 215, 0, 0.18), 0 2px 8px rgba(76, 175, 80, 0.10);
+  z-index: 2;
 }
 
 /* Contenuto principale */
 .main-content {
   max-width: 1200px;
   margin: 2rem auto;
+  background-color: var(--white-color);
   padding: 0 1rem;
   min-height: calc(100vh - 180px); /* per footer in fondo */
 }
@@ -123,6 +162,7 @@ body {
   text-align: center;
   padding: 1rem;
   margin-top: 2rem;
+  border-radius: 0 0 2.5rem 2.5rem;
 }
 
 /*Animazioni di transizione tra le pagine */
@@ -152,5 +192,15 @@ body {
   .logo-text {
     font-size: 1.5rem;
   }
+}
+
+.app {
+  border: 2px solid #e0e0e0;
+  border-radius: 2.5rem;
+  background: #f8fdff;
+  overflow: hidden;
+  max-width: 1280px;
+  margin: 2rem auto;
+  box-shadow: 0 5px 20px rgba(0, 212, 255, 0.08);
 }
 </style>

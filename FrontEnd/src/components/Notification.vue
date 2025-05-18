@@ -43,7 +43,7 @@ export default {
     top: 20px;
     right: 20px;
     padding: 1rem 2rem;
-    border-radius: 4px;
+    border-radius: 2.5rem;
     display: flex;
     align-items: center;
     gap: 0.5rem;

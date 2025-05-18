@@ -142,6 +142,7 @@ export default {
                 if (isLogin.value) {
                     response = await authAPI.login(formData.value.email, formData.value.password);
                     showSuccessNotification('Login effettuato con successo!');
+                    localStorage.setItem('userEmail', formData.value.email);
                 } else {
                     const registrationData = {
                         email: formData.value.email,
@@ -196,14 +197,16 @@ export default {
     align-items: center;
     min-height: calc(100vh - 64px);
     padding: 2rem;
-    background-color: #f5f5f5;
+    background-color: var(--background2-color);
+    border-radius: 2.5rem;
 }
 
 .auth-card {
-    background: white;
+    background-color: var(--background2-color);
     padding: 2rem;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border-radius: 2.5rem;
+    border: 2px solid var(--primary-color);
+    box-shadow: 0 5px 20px rgba(0, 212, 255, 0.15);
     width: 100%;
     max-width: 400px;
 }
@@ -211,6 +214,7 @@ export default {
 .auth-header {
     text-align: center;
     margin-bottom: 2rem;
+    border-radius: 2.5rem;
 }
 
 .auth-icon {
@@ -223,6 +227,8 @@ export default {
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    border-radius: 2.5rem;
+    background-color: var(--background2-color);
 }
 
 .form-group {
@@ -239,13 +245,14 @@ export default {
 .form-group input {
     padding: 0.75rem;
     border: 1px solid #ddd;
-    border-radius: 4px;
+    border-radius: 2.5rem;
     font-size: 1rem;
 }
 
 .form-group input:focus {
     outline: none;
     border-color: #4CAF50;
+    border-radius: 2.5rem;
     box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
 }
 
@@ -256,17 +263,41 @@ export default {
 
 .auth-button {
     background-color: #4CAF50;
-    color: white;
+    color: #fff;
     padding: 0.75rem;
     border: none;
-    border-radius: 4px;
+    border-radius: 8rem;
     font-size: 1rem;
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: all 0.3s ease-in-out;
+    box-shadow: 0 2px 5px rgba(76, 175, 80, 0.2);
+    position: relative;
+    overflow: hidden;
 }
 
-.auth-button:hover {
-    background-color: #45a049;
+.auth-button:hover, .auth-button:focus {
+    background-color: #388e3c;
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+    animation: pulseGlow 1.5s infinite;
+    outline: none;
+}
+
+.auth-button:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 5px rgba(76, 175, 80, 0.2);
+}
+
+@keyframes pulseGlow {
+    0% {
+        box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+    }
+    50% {
+        box-shadow: 0 5px 25px rgba(76, 175, 80, 0.7);
+    }
+    100% {
+        box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+    }
 }
 
 .auth-footer {
@@ -288,7 +319,7 @@ export default {
     background-color: #ffebee;
     color: #c62828;
     padding: 0.75rem;
-    border-radius: 4px;
+    border-radius: 2.5rem;
     margin-bottom: 1rem;
     display: flex;
     align-items: center;

@@ -7,7 +7,7 @@
         <router-link to="/map" class="cta-button primary">
           <i class="fas fa-map-marker-alt"></i> Trova Cestini
         </router-link>
-        <router-link to="/auth" class="cta-button secondary">
+        <router-link to="/profile" class="cta-button secondary">
           <i class="fas fa-user"></i> Area Personale
         </router-link>
       </div>
@@ -78,7 +78,7 @@ export default {
   text-align: center;
   padding: 4rem 1rem;
   background: linear-gradient(rgba(76, 175, 80, 0.1), rgba(76, 175, 80, 0.05));
-  border-radius: 20px;
+  border-radius: 2.5rem;
   margin-bottom: 3rem;
 }
 
@@ -111,27 +111,58 @@ export default {
 
 .cta-button {
   padding: 1rem 2rem;
-  border-radius: 30px;
+  border-radius: 8rem;
   text-decoration: none;
   font-weight: 600;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* Mi piace questo effetto di hover che solleva leggermente il bottone */
-.cta-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  transition: all 0.3s ease-in-out;
+  box-shadow: 0 2px 5px rgba(76, 175, 80, 0.2);
+  position: relative;
+  overflow: hidden;
+  font-size: 1rem;
+  cursor: pointer;
 }
 
 .cta-button.primary {
-  background-color: var(--primary-color);
-  color: white;
+  background-color: var(--white-color);
+  color: var(--primary-color);
+  border: 2px solid var(--primary-color);
 }
 
 .cta-button.secondary {
   background-color: white;
   color: var(--primary-color);
   border: 2px solid var(--primary-color);
+}
+
+.cta-button:hover, .cta-button:focus {
+  background-color: #388e3c;
+  color: #fff;
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+  animation: pulseGlow 1.5s infinite;
+  outline: none;
+}
+
+.cta-button.secondary:hover, .cta-button.secondary:focus {
+  background-color: var(--primary-color);
+  color: #fff;
+}
+
+.cta-button:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 5px rgba(76, 175, 80, 0.2);
+}
+
+@keyframes pulseGlow {
+  0% {
+    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+  }
+  50% {
+    box-shadow: 0 5px 25px rgba(76, 175, 80, 0.7);
+  }
+  100% {
+    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+  }
 }
 
 /* Sezione caratteristiche */
@@ -156,7 +187,7 @@ export default {
   text-align: center;
   padding: 2rem;
   background: white;
-  border-radius: 15px;
+  border-radius: 2.5rem;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   transition: transform 0.3s ease;
 }
@@ -174,8 +205,8 @@ export default {
 /* Sezione consigli ecologici */
 .eco-tips {
   padding: 3rem 1rem;
-  background-color: white;
-  border-radius: 20px;
+  background-color: var(--background2-color);
+  border-radius: 2.5rem;
   margin-top: 3rem;
 }
 
@@ -196,8 +227,9 @@ export default {
 .tip-card {
   text-align: center;
   padding: 1.5rem;
-  background: var(--background-color);
-  border-radius: 15px;
+  background: white;
+  border-radius: 2.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   transition: transform 0.3s ease;
 }
 
