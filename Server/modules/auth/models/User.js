@@ -37,7 +37,7 @@ const userSchema = new Schema({
     },
     role: {
         type: String,
-        enum: ["cittadino", "operatore_comunale"],
+        enum: ["cittadino", "operatore_comunale", "amministratore"],
         default: "cittadino"
     },
     password: {

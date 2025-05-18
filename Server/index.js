@@ -34,10 +34,14 @@ app.use(passport.initialize());
 //routes
 app.use("/api/auth", authRoutes);//Routes per l'autenticazione
 app.use("/api/waste", wasteRoutes);//Routes per waste (parte principale)
+
+//Documentazione Swagger
 app.use('/api-docs', 
   swaggerUi.serve, 
   swaggerUi.setup(swaggerSpec)
 );
+
+
 app.use(logRequest);
 
 app.get('/test-next', (req, res) => {
