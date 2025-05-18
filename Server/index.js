@@ -7,6 +7,7 @@ import authRoutes from './modules/auth/routes.js';
 import wasteRoutes from './modules/waste/routes.js';
 import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './config/swagger.js';
+import passport from 'passport';
 
 // Inizia connessione al database
 connectDB().catch(err => {
@@ -28,6 +29,7 @@ const corsOptions = {
 //middleware
 app.use(cors(corsOptions));
 app.use(express.json());
+app.use(passport.initialize());
 
 //routes
 app.use("/api/auth", authRoutes);//Routes per l'autenticazione

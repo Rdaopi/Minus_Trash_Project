@@ -68,8 +68,9 @@ watchEffect(() => {
   --primary-color: #4CAF50; /* verde principale */
   --secondary-color: #2E7D32; /* verde più scuro #*/
   --accent-color: #81C784; /* verde più chiaro */
-  --background-color: #fff; /* grigio chiaro f8fdff */
+  --background-color: #fff; 
   --background2-color: #f8fdff; /* blue chiaro f8fdff */
+  --background-hover-color:#388e3c;
   --text-color: #333333; /* quasi nero */
   --white-color: #fff;
 }

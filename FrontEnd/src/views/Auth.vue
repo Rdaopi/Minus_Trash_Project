@@ -76,6 +76,13 @@
                     {{ isLogin ? 'Accedi' : 'Registrati' }}
                 </button>
             </form>
+            
+            <div class="auth-divider">
+                <span>oppure</span>
+            </div>
+            
+            <GoogleSignIn />
+            
             <div class="auth-footer">
                 <p>
                     {{ isLogin ? 'Non hai un account?' : 'Hai già un account?' }}
@@ -89,15 +96,17 @@
 </template>
 
 <script>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { authAPI } from '../services/api';
 import { useRouter } from 'vue-router';
 import Notification from '../components/Notification.vue';
+import GoogleSignIn from '../components/GoogleSignIn.vue';
 
 export default {
     name: 'Auth',
     components: {
-        Notification
+        Notification,
+        GoogleSignIn
     },
     setup() {
         const router = useRouter();
@@ -113,6 +122,61 @@ export default {
             name: '',
             surname: ''
         });
+
+        // Handle OAuth callback
+        const handleOAuthCallback = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+            const error = urlParams.get('error');
+
+            if (error) {
+                showError(decodeURIComponent(error));
+                return;
+            }
+
+            if (token) {
+                try {
+                    // Store the token
+                    localStorage.setItem('token', token);
+                    
+                    // Decode the token to get user info
+                    const tokenParts = token.split('.');
+                    const payload = JSON.parse(atob(tokenParts[1]));
+                    
+                    // Store email like in regular login
+                    if (payload.email) {
+                        localStorage.setItem('userEmail', payload.email);
+                    }
+
+                    showSuccessNotification('Login effettuato con successo!');
+                    
+                    // Clean up the URL
+                    window.history.replaceState({}, document.title, '/auth');
+                    
+                    // Redirect to home
+                    setTimeout(() => {
+                        router.push('/');
+                    }, 1000);
+                } catch (err) {
+                    showError('Errore durante il login. Riprova più tardi.');
+                }
+            }
+        };
+
+        // Call handleOAuthCallback when component mounts
+        onMounted(() => {
+            handleOAuthCallback();
+        });
+
+        const showError = (message) => {
+            error.value = message;
+            notificationMessage.value = message;
+            notificationType.value = 'error';
+            showNotification.value = true;
+            setTimeout(() => {
+                showNotification.value = false;
+            }, 3000);
+        };
 
         const toggleAuthMode = () => {
             isLogin.value = !isLogin.value;
@@ -262,7 +326,7 @@ export default {
 }
 
 .auth-button {
-    background-color: #4CAF50;
+    background-color: var(--primary-color);
     color: #fff;
     padding: 0.75rem;
     border: none;
@@ -276,7 +340,7 @@ export default {
 }
 
 .auth-button:hover, .auth-button:focus {
-    background-color: #388e3c;
+    background-color: var(--background-hover-color);
     transform: translateY(-3px);
     box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
     animation: pulseGlow 1.5s infinite;
@@ -324,5 +388,25 @@ export default {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+}
+
+.auth-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 20px 0;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #ddd;
+}
+
+.auth-divider span {
+    padding: 0 10px;
+    color: #666;
+    font-size: 14px;
 }
 </style>

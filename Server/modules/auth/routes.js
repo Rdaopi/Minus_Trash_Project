@@ -2,7 +2,7 @@ import express from 'express';
 import { basicAuth } from "./middlewares/basicAuth.js";
 import { login, register, changePassword, profile_update, user_delete } from './controllers/userController.js';
 import { auditOnSuccess } from "./middlewares/withAudit.js";
-//import { googleAuth } from "./middlewares/googleAuth.js";
+import { googleAuth, googleAuthCallback } from "./middlewares/googleAuth.js";
 //import { jwtAuth } from "./middlewares/jwtAuth.js";
 
 const router = express.Router()
@@ -14,20 +14,10 @@ router.post('/register', auditOnSuccess('user_registration', ['email']), registe
 router.post('/login', basicAuth, login);
 
 //Registrazione/Login via google
-router.get('/googleOAuth/login',
-    // Da fare: Rimpiazzare la stub con googleAuth middleware una volta implementato
-    (req, res, next) => res.status(501).json({ error: 'googleAuth middleware non implementato' }),
-    // Da fare: Rimpiazzare la stub con il login dello user una volta implementato
-    (req, res) => res.status(501).json({ error: 'login non implementato' })
-);
+router.get('/googleOAuth/login', googleAuth);
 
 // Callback Google (GET)
-router.get('/googleOAuth/callback',
-    // Da fare: Rimpiazzare la stub con googleAuth middleware una volta implementato
-    (req, res, next) => res.status(501).json({ error: 'googleAuth middleware non implementato' }),
-    // Da fare: Rimpiazzare la stub con il login dello user una volta implementato
-    (req, res) => res.status(501).json({ error: 'login non implementato' })
-);
+router.get('/googleOAuth/callback', googleAuthCallback);
 
 //Route Protette da JWT
 //Da implementare con il JWT, attualmente richiede autenticazione base
