@@ -108,7 +108,8 @@ export default {
         Notification,
         GoogleSignIn
     },
-    setup() {
+    emits: ['login-success'],
+    setup(props, { emit }) {
         const router = useRouter();
         const isLogin = ref(true);
         const error = ref('');
@@ -149,6 +150,7 @@ export default {
                     }
 
                     showSuccessNotification('Login effettuato con successo!');
+                    emit('login-success');
                     
                     // Clean up the URL
                     window.history.replaceState({}, document.title, '/auth');
@@ -204,10 +206,22 @@ export default {
                 error.value = '';
                 let response;
                 if (isLogin.value) {
+                    // Login flow
                     response = await authAPI.login(formData.value.email, formData.value.password);
-                    showSuccessNotification('Login effettuato con successo!');
-                    localStorage.setItem('userEmail', formData.value.email);
+                    if (response && response.token) {
+                        localStorage.setItem('userEmail', formData.value.email);
+                        localStorage.setItem('token', response.token);
+                        emit('login-success');
+                        showSuccessNotification('Login effettuato con successo!');
+                        // Wait for the notification to be visible before redirecting
+                        setTimeout(() => {
+                            router.push('/');
+                        }, 1000);
+                    } else {
+                        throw new Error('Token non ricevuto dal server');
+                    }
                 } else {
+                    // Registration flow - no token handling here
                     const registrationData = {
                         email: formData.value.email,
                         password: formData.value.password,
@@ -217,17 +231,22 @@ export default {
                             surname: formData.value.surname
                         }
                     };
-                    response = await authAPI.register(registrationData);
-                    showSuccessNotification('Registrazione completata con successo!');
-                }
-                // If we get here, either login or registration was successful
-                if (response && response.token) {
-                    // Wait for the notification to be visible before redirecting
+                    await authAPI.register(registrationData);
+                    showSuccessNotification('Registrazione completata con successo! Effettua il login per continuare.');
+                    
+                    // Clear form data
+                    formData.value = {
+                        email: '',
+                        password: '',
+                        username: '',
+                        name: '',
+                        surname: ''
+                    };
+                    
+                    // Switch to login mode after registration
                     setTimeout(() => {
-                        router.push('/');
+                        isLogin.value = true;
                     }, 1000);
-                } else {
-                    throw new Error('Token non ricevuto dal server');
                 }
             } catch (err) {
                 error.value = err.message || 'Si è verificato un errore. Riprova più tardi.';

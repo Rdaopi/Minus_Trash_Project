@@ -70,7 +70,6 @@ export const authAPI = {
       });
       console.log('Registration response status:', response.status);
       const data = await handleResponse(response);
-      localStorage.setItem('token', data.token);
       return data;
     } catch (error) {
       console.error('Registration error:', error);

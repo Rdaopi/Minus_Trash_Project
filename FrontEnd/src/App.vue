@@ -30,7 +30,7 @@
     <main class="main-content">
       <router-view v-slot="{ Component }">
         <transition name="fade" mode="out-in">
-          <component :is="Component" />
+          <component :is="Component" @login-success="updateAuthState" />
         </transition>
       </router-view>
     </main>
@@ -42,8 +42,10 @@
 
 <script setup>
 import { RouterView } from 'vue-router'
-import { ref, watchEffect } from 'vue'
+import { ref, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 
+const route = useRoute()
 const isLoggedIn = ref(!!localStorage.getItem('token'))
 
 // Update isLoggedIn when localStorage changes (e.g., after login/logout)
@@ -51,10 +53,23 @@ window.addEventListener('storage', () => {
   isLoggedIn.value = !!localStorage.getItem('token')
 })
 
-// Also check on mount and after navigation
-watchEffect(() => {
+// Function to update auth state
+const updateAuthState = () => {
   isLoggedIn.value = !!localStorage.getItem('token')
+}
+
+// Watch for route changes
+watch(route, () => {
+  updateAuthState()
 })
+
+// Check on mount
+onMounted(() => {
+  updateAuthState()
+})
+
+// Check periodically for token
+setInterval(updateAuthState, 1000)
 </script>
 
 <style>

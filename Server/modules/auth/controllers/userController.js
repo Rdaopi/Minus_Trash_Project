@@ -91,11 +91,8 @@ export const register = async (req, res) => {
         const savedUser = await user.save();
         logger.info(`Nuovo utente registrato con successo: ${savedUser._id}`);
 
-        // Genera token JWT
-        const token = savedUser.generateAuthToken();
-
         return res.status(201).json({
-            token,
+            message: 'Registrazione completata con successo',
             user: {
                 id: savedUser._id,
                 username: savedUser.username,
