@@ -18,7 +18,11 @@ const routes = [
     name: 'Auth',
     component: () => import('../views/Auth.vue') // Pagina login/registrazione
   },
-  // TODO: Aggiungere pagina profilo utente
+  {
+    path: '/profile',
+    name: 'Profile',
+    component: () => import('../views/Profile.vue') // Pagina area personale
+  },
   // TODO: Aggiungere pagina contatti
 ]
 
@@ -29,5 +33,15 @@ const router = createRouter({
 })
 
 // In futuro qui potrei aggiungere controlli di accesso (guards)
+
+// Route guard: protect /profile from unauthenticated access
+router.beforeEach((to, from, next) => {
+  const isAuthenticated = !!localStorage.getItem('token');
+  if (to.path === '/profile' && !isAuthenticated) {
+    next('/auth');
+  } else {
+    next();
+  }
+});
 
 export default router 

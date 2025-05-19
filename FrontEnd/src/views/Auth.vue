@@ -1,160 +1,321 @@
 <template>
     <div class="auth-container">
+        <Notification 
+            :show="showNotification"
+            :message="notificationMessage"
+            :type="notificationType"
+        />
         <div class="auth-card">
             <div class="auth-header">
                 <i class="fas fa-leaf auth-icon"></i>
-                <h2>Accedi a MinusTrash</h2>
-                <p>Unisciti alla comunità eco-friendly</p>
+                <h2>{{ isLogin ? 'Accedi a MinusTrash' : 'Registrati su MinusTrash' }}</h2>
+                <p>{{ isLogin ? 'Accedi al tuo account' : 'Unisciti alla comunità eco-friendly' }}</p>
             </div>
             <div v-if="error" class="error-message">
                 <i class="fas fa-exclamation-circle"></i> {{ error }}
             </div>
             <form @submit.prevent="handleSubmit" class="auth-form">
+
+                <!-- Registration-only fields -->
+                <template v-if="!isLogin">
+                    <div class="form-group">
+                        <label for="name">Nome</label>
+                        <input
+                            type="text"
+                            id="name"
+                            v-model="formData.name"
+                            required
+                            placeholder="Inserisci il tuo nome"
+                        />
+                    </div>
+                    <div class="form-group">
+                        <label for="surname">Cognome</label>
+                        <input
+                            type="text"
+                            id="surname"
+                            v-model="formData.surname"
+                            required
+                            placeholder="Inserisci il tuo cognome"
+                        />
+                    </div>
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input
+                            type="text"
+                            id="username"
+                            v-model="formData.username"
+                            required
+                            placeholder="Scegli uno username"
+                        />
+                    </div>
+                </template>
+                <!-- Common fields -->
                 <div class="form-group">
-                    <label for="email">
-                        <i class="fas fa-envelope"></i> Email
-                    </label>
-                    <input 
-                        type="email" 
-                        id="email" 
-                        v-model="email" 
+                    <label for="email">Email</label>
+                    <input
+                        type="email"
+                        id="email"
+                        v-model="formData.email"
                         required
-                        placeholder="La tua email"
-                        :disabled="loading"
-                    >
+                        placeholder="Inserisci la tua email"
+                    />
                 </div>
                 <div class="form-group">
-                    <label for="password">
-                        <i class="fas fa-lock"></i> Password
-                    </label>
-                    <input 
-                        type="password" 
-                        id="password" 
-                        v-model="password" 
+                    <label for="password">Password</label>
+                    <input
+                        type="password"
+                        id="password"
+                        v-model="formData.password"
                         required
-                        placeholder="La tua password"
-                        :disabled="loading"
-                    >
+                        placeholder="Inserisci la password"
+                    />
+                    <small v-if="!isLogin" class="password-requirements">
+                        La password deve contenere almeno 8 caratteri, una lettera maiuscola e un carattere speciale
+                    </small>
                 </div>
-                <button type="submit" class="submit-btn" :disabled="loading">
-                    <i class="fas fa-spinner fa-spin" v-if="loading"></i>
-                    <i class="fas fa-sign-in-alt" v-else></i>
-                    {{ loading ? 'Accesso in corso...' : 'Accedi' }}
+                <button type="submit" class="auth-button">
+                    {{ isLogin ? 'Accedi' : 'Registrati' }}
                 </button>
-                <div class="auth-links">
-                    <a href="#" @click.prevent="toggleMode" class="register">
-                        {{ isLogin ? 'Registrati' : 'Hai già un account? Accedi' }}
-                    </a>
-                </div>
             </form>
+            
+            <div class="auth-divider">
+                <span>oppure</span>
+            </div>
+            
+            <GoogleSignIn />
+            
+            <div class="auth-footer">
+                <p>
+                    {{ isLogin ? 'Non hai un account?' : 'Hai già un account?' }}
+                    <a href="#" @click.prevent="toggleAuthMode">
+                        {{ isLogin ? 'Registrati' : 'Accedi' }}
+                    </a>
+                </p>
+            </div>
+
         </div>
     </div>
 </template>
 
 <script>
+import { ref, onMounted } from 'vue';
 import { authAPI } from '../services/api';
+import { useRouter } from 'vue-router';
+import Notification from '../components/Notification.vue';
+import GoogleSignIn from '../components/GoogleSignIn.vue';
 
 export default {
     name: 'Auth',
-    data() {
-        return {
+    components: {
+        Notification,
+        GoogleSignIn
+    },
+    emits: ['login-success'],
+    setup(props, { emit }) {
+        const router = useRouter();
+        const isLogin = ref(true);
+        const error = ref('');
+        const showNotification = ref(false);
+        const notificationMessage = ref('');
+        const notificationType = ref('success');
+        const formData = ref({
             email: '',
             password: '',
-            loading: false,
-            error: null,
-            isLogin: true // true = login mode, false = registration mode
-        }
-    },
-    methods: {
-        // Gestisce il submit del form (login o registrazione)
-        async handleSubmit() {
-            this.error = null;
-            this.loading = true;
+            username: '',
+            name: '',
+            surname: ''
+        });
 
-            try {
-                if (this.isLogin) {
-                    // Provo a fare il login
-                    const response = await authAPI.login(this.email, this.password);
-                    // Se arrivo qui, il login è andato a buon fine
-                    console.log('Login effettuato!');
-                    this.$router.push('/map'); // Redirect alla mappa dopo il login
-                } else {
-                    // Provo a fare la registrazione
-                    // TODO: aggiungere validazione più robusta
-                    await authAPI.register({ email: this.email, password: this.password });
-                    // Cambio in modalità login dopo registrazione riuscita
-                    this.isLogin = true;
-                    this.error = 'Registrazione completata! Ora puoi accedere.';
-                }
-            } catch (error) {
-                // Gestisco errori di login/registrazione
-                // Per ora mostro solo il messaggio, ma potrei fare cose più specifiche
-                this.error = error.message || 'Si è verificato un errore. Riprova più tardi.';
-            } finally {
-                // Indipendentemente dal risultato, tolgo lo stato di caricamento
-                this.loading = false;
+        // Handle OAuth callback
+        const handleOAuthCallback = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+            const error = urlParams.get('error');
+
+            if (error) {
+                showError(decodeURIComponent(error));
+                return;
             }
-        },
-        // Alterna tra modalità login e registrazione
-        toggleMode() {
-            this.isLogin = !this.isLogin;
-            this.error = null; // Pulisco eventuali errori precedenti
-        }
+
+            if (token) {
+                try {
+                    // Store the token
+                    localStorage.setItem('token', token);
+                    
+                    // Decode the token to get user info
+                    const tokenParts = token.split('.');
+                    const payload = JSON.parse(atob(tokenParts[1]));
+                    
+                    // Store email like in regular login
+                    if (payload.email) {
+                        localStorage.setItem('userEmail', payload.email);
+                    }
+
+                    showSuccessNotification('Login effettuato con successo!');
+                    emit('login-success');
+                    
+                    // Clean up the URL
+                    window.history.replaceState({}, document.title, '/auth');
+                    
+                    // Redirect to home
+                    setTimeout(() => {
+                        router.push('/');
+                    }, 1000);
+                } catch (err) {
+                    showError('Errore durante il login. Riprova più tardi.');
+                }
+            }
+        };
+
+        // Call handleOAuthCallback when component mounts
+        onMounted(() => {
+            handleOAuthCallback();
+        });
+
+        const showError = (message) => {
+            error.value = message;
+            notificationMessage.value = message;
+            notificationType.value = 'error';
+            showNotification.value = true;
+            setTimeout(() => {
+                showNotification.value = false;
+            }, 3000);
+        };
+
+        const toggleAuthMode = () => {
+            isLogin.value = !isLogin.value;
+            error.value = '';
+            formData.value = {
+                email: '',
+                password: '',
+                username: '',
+                name: '',
+                surname: ''
+            };
+        };
+
+        const showSuccessNotification = (message) => {
+            notificationMessage.value = message;
+            notificationType.value = 'success';
+            showNotification.value = true;
+            setTimeout(() => {
+                showNotification.value = false;
+            }, 3000);
+        };
+
+        const handleSubmit = async () => {
+            try {
+                error.value = '';
+                let response;
+                if (isLogin.value) {
+                    // Login flow
+                    response = await authAPI.login(formData.value.email, formData.value.password);
+                    if (response && response.token) {
+                        localStorage.setItem('userEmail', formData.value.email);
+                        localStorage.setItem('token', response.token);
+                        emit('login-success');
+                        showSuccessNotification('Login effettuato con successo!');
+                        // Wait for the notification to be visible before redirecting
+                        setTimeout(() => {
+                            router.push('/');
+                        }, 1000);
+                    } else {
+                        throw new Error('Token non ricevuto dal server');
+                    }
+                } else {
+                    // Registration flow - no token handling here
+                    const registrationData = {
+                        email: formData.value.email,
+                        password: formData.value.password,
+                        username: formData.value.username,
+                        fullName: {
+                            name: formData.value.name,
+                            surname: formData.value.surname
+                        }
+                    };
+                    await authAPI.register(registrationData);
+                    showSuccessNotification('Registrazione completata con successo! Effettua il login per continuare.');
+                    
+                    // Clear form data
+                    formData.value = {
+                        email: '',
+                        password: '',
+                        username: '',
+                        name: '',
+                        surname: ''
+                    };
+                    
+                    // Switch to login mode after registration
+                    setTimeout(() => {
+                        isLogin.value = true;
+                    }, 1000);
+                }
+            } catch (err) {
+                error.value = err.message || 'Si è verificato un errore. Riprova più tardi.';
+                notificationMessage.value = error.value;
+                notificationType.value = 'error';
+                showNotification.value = true;
+                setTimeout(() => {
+                    showNotification.value = false;
+                }, 3000);
+            }
+        };
+
+        return {
+            isLogin,
+            formData,
+            error,
+            handleSubmit,
+            toggleAuthMode,
+            showNotification,
+            notificationMessage,
+            notificationType
+        };
     }
-}
+};
 </script>
 
 <style scoped>
-/* Contenitore principale centrato verticalmente */
 .auth-container {
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 80vh;
+    min-height: calc(100vh - 64px);
     padding: 2rem;
+    background-color: var(--background2-color);
+    border-radius: 2.5rem;
 }
 
-/* Card con ombra e bordi arrotondati */
 .auth-card {
-    background: white;
-    border-radius: 20px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    background-color: var(--background2-color);
+    padding: 2rem;
+    border-radius: 2.5rem;
+    border: 2px solid var(--primary-color);
+    box-shadow: 0 5px 20px rgba(0, 212, 255, 0.15);
     width: 100%;
     max-width: 400px;
-    padding: 2rem;
 }
 
-/* Intestazione con icona e titolo */
 .auth-header {
     text-align: center;
     margin-bottom: 2rem;
+    border-radius: 2.5rem;
 }
 
-/* Icona grande e verde */
 .auth-icon {
-    font-size: 3rem;
-    color: var(--primary-color);
+    font-size: 2rem;
+    color: #4CAF50;
     margin-bottom: 1rem;
 }
 
-.auth-header h2 {
-    color: var(--text-color);
-    margin-bottom: 0.5rem;
-}
-
-.auth-header p {
-    color: #666;
-    font-size: 0.9rem;
-}
-
-/* Form con spaziatura tra gli elementi */
 .auth-form {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: 1rem;
+    border-radius: 2.5rem;
+    background-color: var(--background2-color);
 }
 
-/* Gruppo di form (label + input) */
 .form-group {
     display: flex;
     flex-direction: column;
@@ -162,92 +323,113 @@ export default {
 }
 
 .form-group label {
-    color: var(--text-color);
+
     font-weight: 500;
+    color: #333;
 }
 
-/* Stile degli input */
 .form-group input {
-    padding: 0.8rem;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 2.5rem;
     font-size: 1rem;
-    transition: border-color 0.3s ease;
 }
 
 .form-group input:focus {
-    border-color: var(--primary-color);
+    outline: none;
+    border-color: #4CAF50;
+    border-radius: 2.5rem;
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+.password-requirements {
+    color: #666;
+    font-size: 0.875rem;
+}
+
+.auth-button {
+    background-color: var(--primary-color);
+    color: #fff;
+    padding: 0.75rem;
+    border: none;
+    border-radius: 8rem;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease-in-out;
+    box-shadow: 0 2px 5px rgba(76, 175, 80, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.auth-button:hover, .auth-button:focus {
+    background-color: var(--background-hover-color);
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+    animation: pulseGlow 1.5s infinite;
     outline: none;
 }
 
-/* Pulsante submit grande e ben visibile */
-.submit-btn {
-    background-color: var(--primary-color);
-    color: white;
-    padding: 1rem;
-    border: none;
-    border-radius: 8px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.3s ease, transform 0.3s ease;
+.auth-button:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 5px rgba(76, 175, 80, 0.2);
 }
 
-.submit-btn:hover {
-    background-color: var(--secondary-color);
-    transform: translateY(-2px);
+@keyframes pulseGlow {
+    0% {
+        box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+    }
+    50% {
+        box-shadow: 0 5px 25px rgba(76, 175, 80, 0.7);
+    }
+    100% {
+        box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+    }
 }
 
-/* Link aggiuntivi sotto al form */
-.auth-links {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 1rem;
-    font-size: 0.9rem;
+.auth-footer {
+    margin-top: 1.5rem;
+    text-align: center;
 }
 
-.auth-links a {
-    color: var(--primary-color);
+.auth-footer a {
+    color: #4CAF50;
     text-decoration: none;
-    transition: color 0.3s ease;
+    font-weight: 500;
 }
 
-.auth-links a:hover {
-    color: var(--secondary-color);
+.auth-footer a:hover {
+    text-decoration: underline;
 }
 
-/* Adattamento per schermi molto piccoli */
-@media (max-width: 480px) {
-    .auth-card {
-        padding: 1.5rem;
-    }
-
-    .auth-header h2 {
-        font-size: 1.5rem;
-    }
-}
-
-/* Messaggio di errore in rosso */
 .error-message {
     background-color: #ffebee;
     color: #c62828;
-    padding: 1rem;
-    border-radius: 8px;
+    padding: 0.75rem;
+    border-radius: 2.5rem;
+
     margin-bottom: 1rem;
     display: flex;
     align-items: center;
     gap: 0.5rem;
 }
 
-/* Stili per elementi disabilitati durante il caricamento */
-.submit-btn:disabled {
-    background-color: #ccc;
-    cursor: not-allowed;
-    transform: none;
+.auth-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 20px 0;
 }
 
-input:disabled {
-    background-color: #f5f5f5;
-    cursor: not-allowed;
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #ddd;
+}
+
+.auth-divider span {
+    padding: 0 10px;
+    color: #666;
+    font-size: 14px;
 }
 </style>

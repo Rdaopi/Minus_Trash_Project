@@ -1,18 +1,170 @@
 import express from 'express';
 import { basicAuth } from "./middlewares/basicAuth.js";
 import { login, register, changePassword, profile_update, user_delete } from './controllers/userController.js';
-//import { googleAuth } from "./middlewares/googleAuth.js";
+import { auditOnSuccess } from "./middlewares/withAudit.js";
+import { googleAuth, googleAuthCallback } from "./middlewares/googleAuth.js";
+import User from "./models/User.js";
+import bcrypt from "bcryptjs";
 //import { jwtAuth } from "./middlewares/jwtAuth.js";
 
 const router = express.Router()
 
+
 /**
  * @swagger
- * /auth/register:
+ * components:
+ *   schemas:
+ *     User:
+ *       type: object
+ *       required:
+ *         - email
+ *         - password
+ *         - name
+ *         - surname
+ *         - username
+ *       properties:
+ *         email:
+ *           type: string
+ *         password:
+ *           type: string
+ *         fullName:
+ *           type: object
+ *           properties:
+ *             name:
+ *               type: string
+ *             surname:
+ *               type: string
+ *         role:
+ *           type: string
+ *           enum:
+ *             - cittadino
+ *             - operatore_comunale
+ *             - amministratore
+ *       example:
+ *         email: "test@test.com"
+ *         password: "Securepass123!"
+ *         fullName:
+ *           name: "Test"
+ *           surname: "Test"
+ *         username: "test"
+ *         role: "cittadino"
+ */
+
+/**
+ * @swagger
+ * tags:
+ *   name: Auth
+ *   description: Gestione autenticazione e registrazione
+ */
+
+//Registrazione classica
+router.post('/register', auditOnSuccess('user_registration', ['email']), register);
+
+//request url: http://localhost:3000/api/auth/register
+/**
+ * @swagger
+ * /api/auth/register:
  *   post:
+ *     summary: Registra un nuovo utente
  *     tags: [Auth]
- *     summary: Register a new user
- *     description: Create a new user account with email and password
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/User'
+ *     responses:
+ *       201:
+ *         description: Utente registrato con successo
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Dati non validi
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Utente già registrato"
+ *                 errors:
+ *                   type: object
+ *                   properties:
+ *                     email:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                         example: "Email già registrata"
+ *                     username:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                         example: "Username già registrato"
+ */
+
+
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: Login utente (richiede Basic Auth)
+ *     tags: [Auth]
+ *     security:
+ *       - BasicAuth: []
+ *     responses:
+ *       200:
+ *         description: Login effettuato con successo
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token:
+ *                   type: string
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Credenziali non valide
+ */
+
+//Login classico
+router.post('/login', basicAuth, login);
+//router.post('/login-test', login);
+//Temporary testing route that handles authentication directly
+router.post('/login-test', async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+    
+    // Find the user
+    const user = await User.findOne({
+      $or: [
+        { email: email },
+        { username: email }
+      ]
+    }).select('+password');
+    
+    // Verify user and password match
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return res.status(401).json({ error: "Credenziali non valide" });
+    }
+    
+    // Add the user to req and proceed to login controller
+    req.user = user;
+    next();
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Errore interno del server" });
+  }
+}, login);
+/**
+ * @swagger
+ * /api/auth/login-test:
+ *   post:
+ *     summary: Login utente (test senza Basic Auth)
+ *     tags: [Auth]
  *     requestBody:
  *       required: true
  *       content:
@@ -22,39 +174,14 @@ const router = express.Router()
  *             required:
  *               - email
  *               - password
- *               - name
  *             properties:
  *               email:
  *                 type: string
- *                 format: email
  *               password:
  *                 type: string
- *                 format: password
- *                 minLength: 8
- *               name:
- *                 type: string
- *     responses:
- *       201:
- *         description: User successfully registered
- *       400:
- *         description: Invalid input data
- *       409:
- *         description: Email already exists
- */
-router.post('/register', register);
-
-/**
- * @swagger
- * /auth/login:
- *   post:
- *     tags: [Auth]
- *     summary: Login user
- *     description: Authenticate user with email and password
- *     security:
- *       - BasicAuth: []
  *     responses:
  *       200:
- *         description: Login successful
+ *         description: Login effettuato con successo
  *         content:
  *           application/json:
  *             schema:
@@ -62,60 +189,54 @@ router.post('/register', register);
  *               properties:
  *                 token:
  *                   type: string
- *                   description: JWT token for authentication
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
  *       401:
- *         description: Invalid credentials
+ *         description: Credenziali non valide
  */
-router.post('/login', basicAuth, login);
 
 //Registrazione/Login via google
+router.get('/googleOAuth/login', googleAuth);
 /**
  * @swagger
- * /auth/googleOAuth/login:
+ * /api/auth/googleOAuth/login:
  *   get:
+ *     summary: Inizia flusso di login con Google
  *     tags: [Auth]
- *     summary: Google OAuth login
- *     description: Initiate Google OAuth authentication flow
  *     responses:
  *       302:
- *         description: Redirect to Google login
+ *         description: Redirect all'autenticazione Google
  */
-router.get('/googleOAuth/login',
-    // Da fare: Rimpiazzare la stub con googleAuth middleware una volta implementato
-    (req, res, next) => res.status(501).json({ error: 'googleAuth middleware non implementato' }),
-    // Da fare: Rimpiazzare la stub con il login dello user una volta implementato
-    (req, res) => res.status(501).json({ error: 'login non implementato' })
-);
 
+// Callback Google (GET)
+router.get('/googleOAuth/callback', googleAuthCallback);
 /**
  * @swagger
- * /auth/googleOAuth/callback:
+ * /api/auth/googleOAuth/callback:
  *   get:
+ *     summary: Callback dopo autenticazione Google
  *     tags: [Auth]
- *     summary: Google OAuth callback
- *     description: Callback endpoint for Google OAuth process
+ *     parameters:
+ *       - in: query
+ *         name: code
+ *         schema:
+ *           type: string
  *     responses:
  *       200:
- *         description: Authentication successful
+ *         description: Autenticazione completata
  *       401:
- *         description: Authentication failed
+ *         description: Autenticazione fallita
  */
-router.get('/googleOAuth/callback',
-    // Da fare: Rimpiazzare la stub con googleAuth middleware una volta implementato
-    (req, res, next) => res.status(501).json({ error: 'googleAuth middleware non implementato' }),
-    // Da fare: Rimpiazzare la stub con il login dello user una volta implementato
-    (req, res) => res.status(501).json({ error: 'login non implementato' })
-);
 
 //Route Protette da JWT
 //Da implementare con il JWT, attualmente richiede autenticazione base
+router.post('/profile_update', basicAuth, login /*jwtAuth*/, profile_update);
 /**
  * @swagger
- * /auth/profile_update:
+ * /api/auth/profile_update:
  *   post:
+ *     summary: Aggiorna il profilo utente
  *     tags: [Auth]
- *     summary: Update user profile
- *     description: Update authenticated user's profile information
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -125,26 +246,27 @@ router.get('/googleOAuth/callback',
  *           schema:
  *             type: object
  *             properties:
- *               name:
+ *               fullName:
+ *                 type: object
+ *                 properties:
+ *                   name:
+ *                     type: string
+ *                   surname:
+ *                     type: string
+ *               username:
  *                 type: string
- *               email:
- *                 type: string
- *                 format: email
  *     responses:
  *       200:
- *         description: Profile updated successfully
- *       401:
- *         description: Unauthorized
+ *         description: Profilo aggiornato con successo
  */
-router.post('/profile_update', basicAuth, login /*jwtAuth*/, profile_update);
 
+router.post('/change_password', basicAuth, login /*jwtAuth*/, changePassword);
 /**
  * @swagger
- * /auth/change_password:
+ * /api/auth/change_password:
  *   post:
+ *     summary: Cambia password utente
  *     tags: [Auth]
- *     summary: Change password
- *     description: Change authenticated user's password
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -154,37 +276,34 @@ router.post('/profile_update', basicAuth, login /*jwtAuth*/, profile_update);
  *           schema:
  *             type: object
  *             required:
- *               - currentPassword
+ *               - oldPassword
  *               - newPassword
  *             properties:
- *               currentPassword:
+ *               oldPassword:
  *                 type: string
  *               newPassword:
  *                 type: string
- *                 minLength: 8
  *     responses:
  *       200:
- *         description: Password changed successfully
- *       401:
- *         description: Invalid current password
+ *         description: Password cambiata con successo
+ *       400:
+ *         description: Errore nel cambio password
  */
-router.post('/change_password', basicAuth, login /*jwtAuth*/, changePassword);
 
+router.delete('/user_delete', basicAuth, login /*jwtAuth*/, user_delete);
 /**
  * @swagger
- * /auth/user_delete:
+ * /api/auth/user_delete:
  *   delete:
+ *     summary: Elimina account utente
  *     tags: [Auth]
- *     summary: Delete user account
- *     description: Delete authenticated user's account
  *     security:
  *       - BearerAuth: []
  *     responses:
  *       200:
- *         description: Account deleted successfully
- *       401:
- *         description: Unauthorized
+ *         description: Account eliminato con successo
+ *       400:
+ *         description: Errore nell'eliminazione dell'account
  */
-router.delete('/user_delete', basicAuth, login /*jwtAuth*/, user_delete);
 
 export default router;

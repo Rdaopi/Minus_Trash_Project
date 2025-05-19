@@ -2,12 +2,16 @@ const API_BASE_URL = '/api';
 
 // Funzioni helper
 const handleResponse = async (response) => {
+  const data = await response.json();
   if (!response.ok) {
-    console.error('API error:', response.status, response.statusText);
-    const error = await response.json().catch(e => ({ message: 'Errore di parsing JSON' }));
-    throw error;
+    console.error('API error:', {
+      status: response.status,
+      statusText: response.statusText,
+      data
+    });
+    throw new Error(data.error || 'Si è verificato un errore');
   }
-  return response.json();
+  return data;
 };
 
 // Prelevo i token per le richieste autenticate
@@ -25,7 +29,7 @@ const getBaseHeaders = () => ({
 // Per il debug delle chiamate API
 const logApiCall = (method, url, body = null) => {
   console.log(`API ${method}:`, url);
-  if (body) console.log('Body:', body);
+  if (body) console.log('Request Body:', body);
 };
 
 // API per l'autenticazione
@@ -35,16 +39,19 @@ export const authAPI = {
     const url = `${API_BASE_URL}/auth/login`;
     logApiCall('POST', url);
     try {
+      // Create base64 encoded credentials for Basic Auth
+      const credentials = btoa(`${email}:${password}`);
       const response = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${credentials}`
+        }
       });
       const data = await handleResponse(response);
       localStorage.setItem('token', data.token);
       return data;
     } catch (error) {
-      // TODO: migliorare gestione errori
       console.error('Login error:', error);
       throw error;
     }
@@ -55,12 +62,15 @@ export const authAPI = {
     const url = `${API_BASE_URL}/auth/register`;
     logApiCall('POST', url, userData);
     try {
+      console.log('Sending registration data:', userData);
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData)
       });
-      return handleResponse(response);
+      console.log('Registration response status:', response.status);
+      const data = await handleResponse(response);
+      return data;
     } catch (error) {
       console.error('Registration error:', error);
       throw error;

@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import jwt from 'jsonwebtoken';
 
 const { Schema } = mongoose;
 
@@ -35,8 +36,8 @@ const userSchema = new Schema({
         match: [/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, "Email non valida"]
     },
     role: {
-        type: String,
-        enum: ["cittadino", "operatore_comunale"],
+        type: Strin
+        enum: ["cittadino", "operatore_comunale", "amministratore"
         default: "cittadino"
     },
     password: {
@@ -46,11 +47,12 @@ const userSchema = new Schema({
         select: false
     },
 
-    authMethods: {
-        local: { type: Boolean, default: true },
+    authMethods: 
+        local: { type: Boolean, default: false },
         google: {
             id: String,
-            email: String
+            email: String,
+            enabled: { type: Boolean, default: false 
         }
     },
 
@@ -71,5 +73,18 @@ userSchema.index(
     {email: 1, username: 1},
     { unique: true}
 );
+
+// Method to generate JWT token
+userSchema.methods.generateAuthToken = function() {
+    const token = jwt.sign(
+        { 
+            id: this._id,
+            role: this.role 
+        },
+        process.env.JWT_ACCESS_SECRET,
+        { expiresIn: '15m' }
+    );
+    return token;
+};
 
 export default mongoose.model('User', userSchema);

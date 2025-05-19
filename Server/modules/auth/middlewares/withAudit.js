@@ -12,11 +12,14 @@ export const withAudit = (options) => async (req, res, next) => {
 
     res.json = async (body) => {
         try {
-            const statusType = res.statusCode >= 200 && res.statusCode < 300 ? 'success' : 'failed';
+            const statusType = res.statusCode >= 200 && res.statusCode < 300 ? 'success' : 'failed'
+            
+            // For registration, we'll get the user ID from the response body
+            const userId = action === 'user_registration' && body.id ? body.id : req.user?._id;
 
             await auditService.logEvent({
                 action,
-                user: req.user?._id,
+                user: userId, // This will be undefined for registration until user is create
                 status: statusType,
                 ip: req.ip,
                 device: req.headers['user-agent'],
@@ -41,11 +44,20 @@ export const withAudit = (options) => async (req, res, next) => {
     try {
         await next();
     } catch (error) {
-        await auditService.logFailedAttempt(action, error, {
-            ip: req.ip,
-            device: req.headers['user-agent'],
-            identifier: req.user?.email || req.body?.email
-        });
+        if (action === 'user_registration') {
+            // For registration failures, we don't have a user yet
+            await auditService.logFailedAttempt(action, error, {
+                ip: req.ip,
+                device: req.headers['user-agent'],
+                identifier: req.body?.email || 'unknown'
+            });
+        } else {
+            await auditService.logFailedAttempt(action, error, {
+                ip: req.ip,
+                device: req.headers['user-agent'],
+                identifier: req.user?.email || req.body?.email
+            });
+        }
         next(error);
     }
 };

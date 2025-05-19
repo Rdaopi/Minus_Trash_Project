@@ -13,6 +13,7 @@ const auditService = {
    * @param {String} params.device - User Agent/Dispositivo
    * @param {Object} [params.metadata] - Dettagli aggiuntivi
    * @param {Boolean} [params.success=true] - Esito dell'operazione
+   * @param {String} [params.method] - Metodo utilizzato per l'operazione
    */
   logEvent: async ({
     action,
@@ -20,8 +21,9 @@ const auditService = {
     initiator,
     ip,
     device,
-    metadata = {},
-    success = true
+    metadata = {}
+    success = true,
+    metho
   }) => {
     try {
       const logData = {
@@ -29,6 +31,7 @@ const auditService = {
         status: success ? 'success' : 'failed',
         ip,
         device,
+        method,
         metadata: {
           ...metadata,
           timestamp: new Date() // Data dell'evento

@@ -13,6 +13,7 @@ export const login = async(req, res) => {
 
     //Genera il JWT via metodo sullo schema
     const token = user.generateAuthToken();
+    logger.info('Generated token for user:', { userId: user._id, token });
 
     //Aggiorna lastLogin
     user.lastLogin = Date.now();
@@ -25,66 +26,90 @@ export const login = async(req, res) => {
         id: user._id,
         username: user.username,
         email: user.email,
-        role: user.role
+
+        fullName: user.fullName
       }
     });
-  } catch (err) {
-    next(err);
+  } catch (error) {
+    logger.error('Errore durante il login:', error);
+    return res.status(500).json({ error: 'Errore durante il login' });
   }
-}
+};
 
-//Registazione nuovo utente con audit
-export const register = [
-    auditOnSuccess('user_registration', ['email']),
-    async (req, res) => {
-
+//Metodo di registrazione
+export const register = async (req, res) => {
     try {
-        const { username, email, password} = req.body;
+        logger.info('Ricevuta richiesta di registrazione:', req.body);
+        const { username, email, password, fullName } = req.body;
 
-        //Validazione complessità password
-        if(!REGEX_PASSWORD.test(password)) {
+        // Validazione password
+        if (!REGEX_PASSWORD.test(password)) {
+            logger.warn('Password non valida durante la registrazione');
             return res.status(400).json({
-                error: "Password deve contenere 8+ caratteri, 1 maiuscola e 1 simbolo"
+                error: 'La password deve contenere almeno 8 caratteri, una lettera maiuscola e un carattere speciale'
             });
         }
 
-
-        //Verifica unicità email nel database
-        const existUser = await User.findOne({ email });
-        if(existUser) {
-            logger.warn('Registrazione fallita: ' + email + " già esistente");
-            return res.status(409).json({
-                error: "Email già registrata"
+        // Verifica se l'utente esiste già
+        const existingUser = await User.findOne({ $or: [{ email }, { username }] });
+        if (existingUser) {
+            logger.warn(`Tentativo di registrazione con email/username già esistente: ${email}`);
+            return res.status(400).json({
+                error: 'Un utente con questa email o username esiste già'
             });
         }
 
-        //Verifica unicità username
-        const existingUsername = await User.findOne( {username });
-        if(existingUsername) {
-            return res.status(409).json( { error: "Username già in uso" });
+        // Validazione fullName
+        if (!fullName || !fullName.name || !fullName.surname) {
+            logger.warn('Dati nome/cognome mancanti durante la registrazione');
+            return res.status(400).json({
+                error: 'Nome e cognome sono obbligatori'
+            });
         }
 
-        //Creazione utente con password hashata
-        const user = await User.create({
+        // Hash della password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        // Creazione nuovo utente
+        const user = new User({
             username,
             email,
-            password: await bcrypt.hash(password, 12) //Salt
+            password: hashedPassword,
+            fullName: {
+                name: fullName.name,
+                surname: fullName.surname
+            },
+            authMethods: {
+                local: true, // Set to true for regular registration
+                google: {
+                    enabled: false
+                }
+            }
         });
 
-        //Log evento e risposta "nuovo utente"
-        logger.info("Nuovo utente registrato: " + user._id);
-        res.status(201).json({
-            id: user._id,
-            email: user.email
+        logger.info('Tentativo di salvare nuovo utente nel database');
+        const savedUser = await user.save();
+        logger.info(`Nuovo utente registrato con successo: ${savedUser._id}`);
+
+        return res.status(201).json({
+            message: 'Registrazione completata con successo',
+            user: {
+                id: savedUser._id,
+                username: savedUser.username,
+                email: savedUser.email,
+                fullName: savedUser.fullName
+            }
         });
 
-    } catch(error) {
-        logger.error("Errore registrazione: " + error.stack);
-        res.status(500).json({
-            error:"Errore durante la registrazione"
+    } catch (error) {
+        logger.error('Errore durante la registrazione:', error);
+        return res.status(500).json({
+            error: 'Si è verificato un errore durante la registrazione. Riprova più tardi.'
         });
     }
-}];
+};
+
 
 //Aggiornamento profilo con audit
 export const profile_update = [

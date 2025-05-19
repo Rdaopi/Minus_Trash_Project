@@ -5,8 +5,8 @@ const auditLogSchema = new Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: function() {
-      return !['user_delete'].includes(this.action);
+    required: function() 
+      return !['user_registration', 'failed_login'].includes(this.action)
     }
   },
   action: {
@@ -26,7 +26,7 @@ const auditLogSchema = new Schema({
     type: String,
     enum: ['email', 'username', 'google'],
     required: function() {
-      return ['login', 'failed_login'].includes(this.action); //Controlla nel campo action
+      return ['login', 'failed_login'].includes(this.action);
     }
   },
   initiator: {
