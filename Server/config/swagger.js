@@ -16,7 +16,7 @@ const options = {
       description: 'Documentazione API per Minus Trash'
     },
     servers: [
-      { url: 'http://localhost:3000', description: 'Development server' }
+      { url: 'http://localhost:5000', description: 'Development server' }
     ],
     basePath: '/api',
     components: {
