@@ -103,7 +103,7 @@ const router = express.Router();
 
 /**
  * @swagger
- * /reports:
+ * /api/waste/reports:
  *   get:
  *     summary: Recupera tutte le segnalazioni
  *     tags: [Reports]
@@ -139,7 +139,7 @@ router.route('/reports')
 
 /**
  * @swagger
- * /reports/{id}:
+ * /api/waste/reports/{id}:
  *   get:
  *     summary: Recupera una segnalazione per ID
  *     tags: [Reports]
@@ -198,7 +198,7 @@ router.route('/reports/:id')
 
 /**
  * @swagger
- * /reports/{id}/status:
+ * /api/waste/reports/{id}/status:
  *   put:
  *     summary: Aggiorna lo stato di una segnalazione
  *     tags: [Reports]
@@ -250,7 +250,7 @@ router.get('/reports/urgent', jwtAuth, reportController.getUrgentReports);//GET 
 
 /**
  * @swagger
- * /bins:
+ * /api/waste/bins:
  *   get:
  *     summary: Recupera tutti i cestini
  *     tags: [Bins]
@@ -289,7 +289,7 @@ router.get('/bins/maintenance', jwtAuth, binController.getBinsNeedingMaintenance
 
 /**
  * @swagger
- * /bins/{id}:
+ * /api/waste/bins/{id}:
  *   get:
  *     summary: Recupera un cestino per ID
  *     tags: [Bins]
@@ -347,7 +347,7 @@ router.route('/bins/:id')
 //Bin Status Management
 /**
  * @swagger
- * /bins/{id}/status:
+ * /api/waste/bins/{id}/status:
  *   put:
  *     summary: Aggiorna lo stato di un cestino
  *     tags: [Bins]

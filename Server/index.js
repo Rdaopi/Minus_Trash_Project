@@ -33,7 +33,9 @@ app.use(passport.initialize());
 
 //routes
 app.use("/api/auth", authRoutes);//Routes per l'autenticazione
+console.log('Auth routes registered at /api/auth');
 app.use("/api/waste", wasteRoutes);//Routes per waste (parte principale)
+console.log('Waste routes registered at /api/waste');
 
 //Documentazione Swagger
 app.use('/api-docs', 
@@ -63,5 +65,6 @@ const PORT = process.env.PORT || 3000;
 connectDB().then(() => {
   app.listen(PORT, () => {
     logger.info(`Server attivo su porta ${PORT}`);
+    console.log(`Server is running on port ${PORT}`);
   });
 });

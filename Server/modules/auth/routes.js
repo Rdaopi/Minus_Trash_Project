@@ -57,9 +57,11 @@ const router = express.Router()
 
 //Registrazione classica
 router.post('/register', auditOnSuccess('user_registration', ['email']), register);
+
+//request url: http://localhost:3000/api/auth/register
 /**
  * @swagger
- * /register:
+ * /api/auth/register:
  *   post:
  *     summary: Registra un nuovo utente
  *     tags: [Auth]
@@ -106,7 +108,7 @@ router.post('/register', auditOnSuccess('user_registration', ['email']), registe
 router.post('/login', basicAuth, login);
 /**
  * @swagger
- * /login:
+ * /api/auth/login:
  *   post:
  *     summary: Login utente
  *     tags: [Auth]
@@ -144,7 +146,7 @@ router.post('/login', basicAuth, login);
 router.get('/googleOAuth/login', googleAuth);
 /**
  * @swagger
- * /googleOAuth/login:
+ * /api/auth/googleOAuth/login:
  *   get:
  *     summary: Inizia flusso di login con Google
  *     tags: [Auth]
@@ -157,7 +159,7 @@ router.get('/googleOAuth/login', googleAuth);
 router.get('/googleOAuth/callback', googleAuthCallback);
 /**
  * @swagger
- * /googleOAuth/callback:
+ * /api/auth/googleOAuth/callback:
  *   get:
  *     summary: Callback dopo autenticazione Google
  *     tags: [Auth]
@@ -178,7 +180,7 @@ router.get('/googleOAuth/callback', googleAuthCallback);
 router.post('/profile_update', basicAuth, login /*jwtAuth*/, profile_update);
 /**
  * @swagger
- * /profile_update:
+ * /api/auth/profile_update:
  *   post:
  *     summary: Aggiorna il profilo utente
  *     tags: [Auth]
@@ -208,7 +210,7 @@ router.post('/profile_update', basicAuth, login /*jwtAuth*/, profile_update);
 router.post('/change_password', basicAuth, login /*jwtAuth*/, changePassword);
 /**
  * @swagger
- * /change_password:
+ * /api/auth/change_password:
  *   post:
  *     summary: Cambia password utente
  *     tags: [Auth]
@@ -238,7 +240,7 @@ router.post('/change_password', basicAuth, login /*jwtAuth*/, changePassword);
 router.delete('/user_delete', basicAuth, login /*jwtAuth*/, user_delete);
 /**
  * @swagger
- * /user_delete:
+ * /api/auth/user_delete:
  *   delete:
  *     summary: Elimina account utente
  *     tags: [Auth]

@@ -15,7 +15,8 @@ const options = {
       version: '1.0.0',
       description: 'Documentazione API per Minus Trash'
     },
-    servers: [{ url: 'http://localhost:3000' }],    
+    servers: [{ url: 'http://localhost:3000' }],
+    basePath: '/api',
     components: {
       schemas: {
         User: mongooseToSwagger(User),//convert mongoose schema to swagger schema
