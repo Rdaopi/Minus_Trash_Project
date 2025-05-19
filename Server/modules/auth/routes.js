@@ -3,6 +3,8 @@ import { basicAuth } from "./middlewares/basicAuth.js";
 import { login, register, changePassword, profile_update, user_delete } from './controllers/userController.js';
 import { auditOnSuccess } from "./middlewares/withAudit.js";
 import { googleAuth, googleAuthCallback } from "./middlewares/googleAuth.js";
+import User from "./models/User.js";
+import bcrypt from "bcryptjs";
 //import { jwtAuth } from "./middlewares/jwtAuth.js";
 
 const router = express.Router()
@@ -104,13 +106,64 @@ router.post('/register', auditOnSuccess('user_registration', ['email']), registe
  */
 
 
-//Login classico
-router.post('/login', basicAuth, login);
 /**
  * @swagger
  * /api/auth/login:
  *   post:
- *     summary: Login utente
+ *     summary: Login utente (richiede Basic Auth)
+ *     tags: [Auth]
+ *     security:
+ *       - BasicAuth: []
+ *     responses:
+ *       200:
+ *         description: Login effettuato con successo
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token:
+ *                   type: string
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Credenziali non valide
+ */
+
+//Login classico
+router.post('/login', basicAuth, login);
+//router.post('/login-test', login);
+//Temporary testing route that handles authentication directly
+router.post('/login-test', async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+    
+    // Find the user
+    const user = await User.findOne({
+      $or: [
+        { email: email },
+        { username: email }
+      ]
+    }).select('+password');
+    
+    // Verify user and password match
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return res.status(401).json({ error: "Credenziali non valide" });
+    }
+    
+    // Add the user to req and proceed to login controller
+    req.user = user;
+    next();
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Errore interno del server" });
+  }
+}, login);
+/**
+ * @swagger
+ * /api/auth/login-test:
+ *   post:
+ *     summary: Login utente (test senza Basic Auth)
  *     tags: [Auth]
  *     requestBody:
  *       required: true
