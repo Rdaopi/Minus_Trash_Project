@@ -1,7 +1,11 @@
 import swaggerJsdoc from 'swagger-jsdoc'; //Importa la libreria per generare la documentazione Swagger/OpenAPI.
 import mongooseToSwagger from 'mongoose-to-swagger';
 import User from '../modules/auth/models/User.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const options = {
   definition: {
@@ -26,8 +30,8 @@ const options = {
     }
   },
   apis: [
-    './Server/modules/auth/routes.js',
-    './Server/modules/waste/routes.js'
+    path.resolve(__dirname, '../modules/auth/routes.js'),
+    path.resolve(__dirname, '../modules/waste/routes.js')
   ] //Include both auth and waste route files
 };
 
