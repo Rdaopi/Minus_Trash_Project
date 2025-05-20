@@ -1,0 +1,843 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Minus Trash API",
+    "version": "1.0.0",
+    "description": "Documentazione API per Minus Trash"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000/api",
+      "description": "Development server"
+    }
+  ],
+  "components": {
+    "schemas": {
+      "User": {
+        "title": "User",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "surname": {
+                "type": "string"
+              }
+            }
+          },
+          "email": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "cittadino",
+              "operatore_comunale",
+              "amministratore"
+            ]
+          },
+          "password": {
+            "type": "string"
+          },
+          "authMethods": {
+            "type": "object",
+            "properties": {
+              "local": {
+                "type": "boolean"
+              },
+              "google": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          },
+          "lastLogin": {
+            "type": "string"
+          },
+          "activeSessions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "device": {
+                  "type": "string"
+                },
+                "ip": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "passwordChangedAt": {
+            "type": "string"
+          },
+          "_id": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "example": {
+          "email": "test@test.com",
+          "password": "Securepass123!",
+          "fullName": {
+            "name": "Test",
+            "surname": "Test"
+          },
+          "username": "test",
+          "role": "cittadino"
+        }
+      },
+      "Report": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Titolo della segnalazione"
+          },
+          "description": {
+            "type": "string",
+            "description": "Descrizione della segnalazione"
+          },
+          "location": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "default": "Point"
+              },
+              "coordinates": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "description": "longitude, latitude"
+              }
+            }
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "abbandono",
+              "cestino_pieno",
+              "cestino_danneggiato",
+              "altro"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "segnalato",
+              "verificato",
+              "in_corso",
+              "risolto",
+              "archiviato"
+            ],
+            "default": "segnalato"
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "urgency": {
+            "type": "string",
+            "enum": [
+              "bassa",
+              "media",
+              "alta"
+            ],
+            "default": "media"
+          }
+        }
+      },
+      "Bin": {
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "default": "Point"
+              },
+              "coordinates": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "description": "longitude, latitude"
+              }
+            }
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "indifferenziato",
+              "carta",
+              "plastica",
+              "vetro",
+              "organico"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "operativo",
+              "manutenzione",
+              "pieno",
+              "danneggiato"
+            ],
+            "default": "operativo"
+          },
+          "capacity": {
+            "type": "number",
+            "description": "Capacità in litri"
+          },
+          "fillLevel": {
+            "type": "number",
+            "description": "Livello di riempimento (0-100)"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      },
+      "BasicAuth": {
+        "type": "http",
+        "scheme": "basic"
+      }
+    }
+  },
+  "paths": {
+    "/api/auth/register": {
+      "post": {
+        "summary": "Registra un nuovo utente",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/User"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Utente registrato con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dati non validi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Utente già registrato"
+                    },
+                    "errors": {
+                      "type": "object",
+                      "properties": {
+                        "email": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "example": "Email già registrata"
+                          }
+                        },
+                        "username": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "example": "Username già registrato"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "summary": "Login utente (richiede Basic Auth)",
+        "security": [
+          {
+            "BasicAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Login effettuato con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string"
+                    },
+                    "user": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Credenziali non valide"
+          }
+        }
+      }
+    },
+    "/api/auth/login-test": {
+      "post": {
+        "summary": "Login utente (test senza Basic Auth)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login effettuato con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string"
+                    },
+                    "user": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Credenziali non valide"
+          }
+        }
+      }
+    },
+    "/api/auth/googleOAuth/login": {
+      "get": {
+        "summary": "Inizia flusso di login con Google",
+        "responses": {
+          "302": {
+            "description": "Redirect all'autenticazione Google"
+          }
+        }
+      }
+    },
+    "/api/auth/googleOAuth/callback": {
+      "get": {
+        "summary": "Callback dopo autenticazione Google",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "code",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Autenticazione completata"
+          },
+          "401": {
+            "description": "Autenticazione fallita"
+          }
+        }
+      }
+    },
+    "/api/auth/profile_update": {
+      "post": {
+        "summary": "Aggiorna il profilo utente",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "fullName": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "surname": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "username": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Profilo aggiornato con successo"
+          }
+        }
+      }
+    },
+    "/api/auth/change_password": {
+      "post": {
+        "summary": "Cambia password utente",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "oldPassword": {
+                    "type": "string"
+                  },
+                  "newPassword": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password cambiata con successo"
+          },
+          "400": {
+            "description": "Errore nel cambio password"
+          }
+        }
+      }
+    },
+    "/api/auth/user_delete": {
+      "delete": {
+        "summary": "Elimina account utente",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Account eliminato con successo"
+          },
+          "400": {
+            "description": "Errore nell'eliminazione dell'account"
+          }
+        }
+      }
+    },
+    "/api/waste/reports": {
+      "get": {
+        "summary": "Recupera tutte le segnalazioni",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista di segnalazioni",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Report"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Crea una nuova segnalazione",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Report"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Segnalazione creata con successo"
+          }
+        }
+      }
+    },
+    "/api/waste/reports/{id}": {
+      "get": {
+        "summary": "Recupera una segnalazione per ID",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dettaglio della segnalazione"
+          },
+          "404": {
+            "description": "Segnalazione non trovata"
+          }
+        }
+      },
+      "put": {
+        "summary": "Aggiorna una segnalazione",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Report"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Segnalazione aggiornata"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Elimina una segnalazione",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Segnalazione eliminata"
+          }
+        }
+      }
+    },
+    "/api/waste/reports/{id}/status": {
+      "put": {
+        "summary": "Aggiorna lo stato di una segnalazione",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "segnalato",
+                      "verificato",
+                      "in_corso",
+                      "risolto",
+                      "archiviato"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stato aggiornato"
+          }
+        }
+      }
+    },
+    "/api/waste/bins": {
+      "get": {
+        "summary": "Recupera tutti i cestini",
+        "responses": {
+          "200": {
+            "description": "Lista di cestini",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Bin"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Crea un nuovo cestino",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Bin"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Cestino creato con successo"
+          }
+        }
+      }
+    },
+    "/api/waste/bins/{id}": {
+      "get": {
+        "summary": "Recupera un cestino per ID",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dettaglio del cestino"
+          },
+          "404": {
+            "description": "Cestino non trovato"
+          }
+        }
+      },
+      "put": {
+        "summary": "Aggiorna un cestino",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Bin"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cestino aggiornato"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Elimina un cestino",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cestino eliminato"
+          }
+        }
+      }
+    },
+    "/api/waste/bins/{id}/status": {
+      "put": {
+        "summary": "Aggiorna lo stato di un cestino",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "operativo",
+                      "manutenzione",
+                      "pieno",
+                      "danneggiato"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stato aggiornato"
+          }
+        }
+      }
+    }
+  }
+}
