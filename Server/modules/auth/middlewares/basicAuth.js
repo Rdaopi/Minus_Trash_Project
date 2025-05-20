@@ -4,7 +4,7 @@ import auditService from "../../audit/services/audit.service.js"; //FIX: Aggiunt
 import bcrypt from "bcryptjs";
 
 //Funzione per l'autenticazione di b
-const authenticateBasic = async (identifier, password, req = {}) =
+const authenticateBasic = async (identifier, password, req) => {
     try {
         //Determina se è email o username
         const isEmail = /\S+@\S+\.\S+/.test(identifier);
@@ -23,10 +23,10 @@ const authenticateBasic = async (identifier, password, req = {}) =
         //Verifica utente e corrispondenza password
         if (!user || !(await bcrypt.compare(password, user.password))) {
             await auditService.logFailedAttempt('login', new Error('Credenziali non valide'), {
-                identifie
+                identifier: identifier,
                 method: method,
                 ip: req.ip || 'unknown',
-                device: req.headers?.['user-agent'] || 'unknow
+                device: req.headers?.['user-agent'] || 'unknown'
             });
             return null;
         }
@@ -34,11 +34,11 @@ const authenticateBasic = async (identifier, password, req = {}) =
         // Registra login riuscito
         await auditService.logEvent({
             action: 'login',
-            user: user._id
+            user: user._id,
             method: method,
             ip: req.ip || 'unknown',
             device: req.headers?.['user-agent'] || 'unknown',
-            success: tru
+            success: true
         });
 
         return user;//Ritorna l'utente autenticato

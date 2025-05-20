@@ -6,8 +6,8 @@
       <div class="cta-buttons">
         <router-link to="/map" class="cta-button primary">
           <i class="fas fa-map-marker-alt"></i> Trova Cestini
-        </router-link
-        <router-link to="/profile" class="cta-button secondary"
+        </router-link>
+        <router-link to="/profile" class="cta-button secondary">
           <i class="fas fa-user"></i> Area Personale
         </router-link>
       </div>
