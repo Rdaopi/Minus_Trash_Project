@@ -136,3 +136,14 @@ Progress monitoring for uploads/downloads
     env.
     GoogleSignin.vue
     
+
+# swagger doc json
+1. create a file under config generate-swagger-json.js   then write
+    
+    import fs from 'fs';
+    import swaggerSpec from './swagger.js' assert { type: 'json' };
+
+    fs.writeFileSync('./swagger.json', JSON.stringify(swaggerSpec, null, 2));
+    console.log('✅ Swagger spec written to swagger.json');
+2. node config/generate-swagger-json.js
+3. now you will have a file called swagger.json

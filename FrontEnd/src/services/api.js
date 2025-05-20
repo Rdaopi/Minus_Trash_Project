@@ -142,5 +142,75 @@ export const binsAPI = {
     const data = await response.json();
     console.log('Dati per area ricevuti dal server');
     return data;
+  },
+
+  // Crea un nuovo cestino
+  async createBin(binData) {
+    console.log('Creazione nuovo cestino...');
+    
+    // Assicurati che il JSON sia ben formattato rimuovendo spazi e caratteri speciali
+    const cleanJSON = JSON.stringify(binData);
+    
+    const response = await fetch(`${API_BASE_URL}/waste/bins`, {
+      method: 'POST',
+      headers: {
+        ...getBaseHeaders(),
+        ...getAuthHeaders()
+      },
+      body: cleanJSON
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Errore creazione cestino:', errorText);
+      throw new Error(`Errore HTTP ${response.status}: ${errorText}`);
+    }
+    
+    return await response.json();
+  },
+  
+  // Aggiorna un cestino esistente
+  async updateBin(id, binData) {
+    console.log(`Aggiornamento cestino ${id}...`);
+    
+    // Assicurati che il JSON sia ben formattato rimuovendo spazi e caratteri speciali
+    const cleanJSON = JSON.stringify(binData);
+    
+    const response = await fetch(`${API_BASE_URL}/waste/bins/${id}`, {
+      method: 'PUT',
+      headers: {
+        ...getBaseHeaders(),
+        ...getAuthHeaders()
+      },
+      body: cleanJSON
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Errore aggiornamento cestino:', errorText);
+      throw new Error(`Errore HTTP ${response.status}: ${errorText}`);
+    }
+    
+    return await response.json();
+  },
+  
+  // Aggiorna lo stato di un cestino
+  async updateBinStatus(id, status) {
+    console.log(`Aggiornamento stato cestino ${id} a ${status}...`);
+    
+    const response = await fetch(`${API_BASE_URL}/waste/bins/${id}/status`, {
+      method: 'PUT',
+      headers: {
+        ...getBaseHeaders(),
+        ...getAuthHeaders()
+      },
+      body: JSON.stringify({ status })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Errore HTTP ${response.status}`);
+    }
+    
+    return await response.json();
   }
 }; 
