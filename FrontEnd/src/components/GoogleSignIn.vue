@@ -25,9 +25,7 @@ export default {
     signInWithGoogle() {
       this.loading = true;
       // Redirect to backend Google OAuth route
-      //http://localhost:5000
-      window.location.href = `http://localhost:5000/api/auth/googleOAuth/login`;
-      //window.location.href = `${import.meta.env.VITE_API_URL}/api/auth/googleOAuth/login`;
+      window.location.href = `${process.env.VITE_API_URL}/api/auth/googleOAuth/login`;
     }
   }
 }

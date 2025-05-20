@@ -8,7 +8,7 @@ import auditService from '../../audit/services/audit.service.js';
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: "http://localhost:5000/api/auth/googleOAuth/callback",
+    callbackURL: `${process.env.BACKEND_URL}/api/auth/googleOAuth/callback`,
     scope: ['profile', 'email']
 }, async (accessToken, refreshToken, profile, done) => {
     try {

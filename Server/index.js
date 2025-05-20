@@ -1,4 +1,3 @@
-
 import 'dotenv/config';
 import express from 'express';
 import connectDB from './config/db.js';
@@ -20,8 +19,7 @@ const app = express();
 
 //Configurazione CORS
 const corsOptions = {
-  //origin: process.env.CORS_ORIGIN
-  origin: process.env.CORS_ORIGIN || '*', // Allow all origins in development
+  origin: process.env.FRONTEND_URL || '*', // Use FRONTEND_URL or allow all origins in development
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true, //Per supportare i cookies se necessario
