@@ -12,14 +12,14 @@ export const withAudit = (options) => async (req, res, next) => {
 
     res.json = async (body) => {
         try {
-            const statusType = res.statusCode >= 200 && res.statusCode < 300 ? 'success' : 'failed';
+            const statusType = res.statusCode >= 200 && res.statusCode < 300 ? 'success' : 'failed'
             
             // For registration, we'll get the user ID from the response body
             const userId = action === 'user_registration' && body.id ? body.id : req.user?._id;
 
             await auditService.logEvent({
                 action,
-                user: userId, // This will be undefined for registration until user is created
+                user: userId, // This will be undefined for registration until user is create
                 status: statusType,
                 ip: req.ip,
                 device: req.headers['user-agent'],

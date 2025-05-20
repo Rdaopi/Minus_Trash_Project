@@ -6,8 +6,8 @@
       <div class="cta-buttons">
         <router-link to="/map" class="cta-button primary">
           <i class="fas fa-map-marker-alt"></i> Trova Cestini
-        </router-link>
-        <router-link to="/profile" class="cta-button secondary">
+        </router-link
+        <router-link to="/profile" class="cta-button secondary"
           <i class="fas fa-user"></i> Area Personale
         </router-link>
       </div>
@@ -164,7 +164,6 @@ export default {
     box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
   }
 }
-
 /* Sezione caratteristiche */
 .features {
   padding: 3rem 1rem;

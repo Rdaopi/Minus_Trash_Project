@@ -1,3 +1,4 @@
+
 # backend setup
 0. npm install
 1. Create a `.env` file in /config/
@@ -8,12 +9,14 @@
     GOOGLE_CLIENT_SECRET=...
     JWT_ACCESS_SECRET=...
     FRONTEND_URL=http://localhost:5173   
+
 3. check the URI variable used in db.js
     example process.env.MONGODB_URI_LOCAL;
 4. cd Server
 5. npm run dev
 
 # frontend setup
+
 0.npm install
 1. create new terminal
 2. cd FrontEnd
@@ -22,7 +25,6 @@
 5. add for example
     VITE_GOOGLE_CLIENT_ID=....
     VITE_API_URL=http://localhost:5000
-
 
 # useful commands 
 # Backend Setup (in Server directory)
@@ -37,7 +39,7 @@ npm install helmet          # Security middleware
 npm install express-rate-limit  # Rate limiting
 npm install swagger-jsdoc swagger-ui-express  # API documentation
 npm install winston         # Logging
-npm install mongoose-to-swagger  #
+npm install mongoose-to-swagger  # Mongoose Parsing
 
 # Backend Dev Dependencies
 npm install --save-dev nodemon  # Auto-restart server during development
@@ -79,6 +81,7 @@ git commit -m "message"     # Commit changes
 git branch development      # Create development branch
 git checkout development    # Switch to development branch
 git push origin development # Push to development branch
+
 git pull origin development # Pull latest changes
 
 
@@ -135,4 +138,3 @@ Progress monitoring for uploads/downloads
     googleAuth.js
     env.
     GoogleSignin.vue
-    

@@ -1,3 +1,4 @@
+
 import 'dotenv/config';
 import express from 'express';
 import connectDB from './config/db.js';
@@ -6,8 +7,8 @@ import { logger, logRequest } from './core/utils/logger.js';
 import authRoutes from './modules/auth/routes.js';
 import wasteRoutes from './modules/waste/routes.js';
 import swaggerUi from 'swagger-ui-express';
-import swaggerSpec from './config/swagger.js';
-import passport from 'passport';
+import swaggerSpec from './config/swagger.js'
+import passport from 'passport'
 
 // Inizia connessione al database
 connectDB().catch(err => {
@@ -26,7 +27,6 @@ const corsOptions = {
   credentials: true, //Per supportare i cookies se necessario
   optionsSuccessStatus: 200
 };
-
 //middleware
 app.use(cors(corsOptions));
 app.use(express.json());
@@ -38,7 +38,7 @@ console.log('Auth routes registered at /api/auth');
 app.use("/api/waste", wasteRoutes);//Routes per waste (parte principale)
 console.log('Waste routes registered at /api/waste');
 
-//Documentazione Swagger
+//Documentazione Swagge
 app.use('/api-docs', 
   swaggerUi.serve, 
   swaggerUi.setup(swaggerSpec)

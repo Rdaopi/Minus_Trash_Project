@@ -15,6 +15,7 @@
                 <i class="fas fa-exclamation-circle"></i> {{ error }}
             </div>
             <form @submit.prevent="handleSubmit" class="auth-form">
+
                 <!-- Registration-only fields -->
                 <template v-if="!isLogin">
                     <div class="form-group">
@@ -91,6 +92,7 @@
                     </a>
                 </p>
             </div>
+
         </div>
     </div>
 </template>
@@ -321,6 +323,7 @@ export default {
 }
 
 .form-group label {
+
     font-weight: 500;
     color: #333;
 }
@@ -403,6 +406,7 @@ export default {
     color: #c62828;
     padding: 0.75rem;
     border-radius: 2.5rem;
+
     margin-bottom: 1rem;
     display: flex;
     align-items: center;

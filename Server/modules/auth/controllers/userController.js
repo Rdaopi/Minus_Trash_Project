@@ -26,6 +26,7 @@ export const login = async(req, res) => {
         id: user._id,
         username: user.username,
         email: user.email,
+
         fullName: user.fullName
       }
     });
@@ -108,6 +109,7 @@ export const register = async (req, res) => {
         });
     }
 };
+
 
 //Aggiornamento profilo con audit
 export const profile_update = [

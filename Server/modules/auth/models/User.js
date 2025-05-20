@@ -36,8 +36,8 @@ const userSchema = new Schema({
         match: [/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, "Email non valida"]
     },
     role: {
-        type: String,
-        enum: ["cittadino", "operatore_comunale", "amministratore"],
+        type: Strin
+        enum: ["cittadino", "operatore_comunale", "amministratore"
         default: "cittadino"
     },
     password: {
@@ -47,12 +47,12 @@ const userSchema = new Schema({
         select: false
     },
 
-    authMethods: {
+    authMethods: 
         local: { type: Boolean, default: false },
         google: {
             id: String,
             email: String,
-            enabled: { type: Boolean, default: false }
+            enabled: { type: Boolean, default: false 
         }
     },
 

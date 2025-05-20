@@ -3,8 +3,8 @@ import User from "../models/User.js";
 import auditService from "../../audit/services/audit.service.js"; //FIX: Aggiunto percorso per l'audit.service 
 import bcrypt from "bcryptjs";
 
-//Funzione per l'autenticazione di base
-const authenticateBasic = async (identifier, password, req = {}) => {
+//Funzione per l'autenticazione di b
+const authenticateBasic = async (identifier, password, req = {}) =
     try {
         //Determina se è email o username
         const isEmail = /\S+@\S+\.\S+/.test(identifier);
@@ -23,10 +23,10 @@ const authenticateBasic = async (identifier, password, req = {}) => {
         //Verifica utente e corrispondenza password
         if (!user || !(await bcrypt.compare(password, user.password))) {
             await auditService.logFailedAttempt('login', new Error('Credenziali non valide'), {
-                identifier,
+                identifie
                 method: method,
                 ip: req.ip || 'unknown',
-                device: req.headers?.['user-agent'] || 'unknown'
+                device: req.headers?.['user-agent'] || 'unknow
             });
             return null;
         }
@@ -34,11 +34,11 @@ const authenticateBasic = async (identifier, password, req = {}) => {
         // Registra login riuscito
         await auditService.logEvent({
             action: 'login',
-            user: user._id,
+            user: user._id
             method: method,
             ip: req.ip || 'unknown',
             device: req.headers?.['user-agent'] || 'unknown',
-            success: true
+            success: tru
         });
 
         return user;//Ritorna l'utente autenticato

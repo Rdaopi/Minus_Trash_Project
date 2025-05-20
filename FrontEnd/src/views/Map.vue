@@ -465,8 +465,8 @@ export default {
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  transition: transform 0.3s ease;
-  border-radius: 2.5rem 0 0 2.5rem;
+  transition: transform 0.3s ea
+  border-radius: 2.5rem 0 0 2.5r
 }
 
 .sidebar-hidden {
@@ -572,8 +572,8 @@ export default {
   display: flex;
   gap: 12px;
   padding: 12px;
-  background: #f5f5f5;
-  border-radius: 2.5rem;
+  background: #f5f5f
+  border-radius: 2.5re
   cursor: pointer;
   transition: all 0.2s ease;
   border-left: 3px solid transparent;
@@ -710,8 +710,8 @@ export default {
 .fab {
   position: absolute;
   width: 48px;
-  height: 48px;
-  border-radius: 8rem;
+  height: 48px
+  border-radius: 8rem
   background: white;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   border: none;

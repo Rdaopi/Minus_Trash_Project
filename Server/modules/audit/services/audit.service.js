@@ -21,9 +21,9 @@ const auditService = {
     initiator,
     ip,
     device,
-    metadata = {},
+    metadata = {}
     success = true,
-    method
+    metho
   }) => {
     try {
       const logData = {
