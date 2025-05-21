@@ -2,16 +2,36 @@ const API_BASE_URL = '/api';
 
 // Funzioni helper
 const handleResponse = async (response) => {
-  const data = await response.json();
-  if (!response.ok) {
-    console.error('API error:', {
-      status: response.status,
-      statusText: response.statusText,
-      data
-    });
-    throw new Error(data.error || 'Si è verificato un errore');
+  try {
+    const contentType = response.headers.get('content-type');
+    let data;
+    
+    // Only try to parse as JSON if the content type is application/json
+    if (contentType && contentType.includes('application/json')) {
+      try {
+        data = await response.json();
+      } catch (e) {
+        console.error('JSON parsing error:', e);
+        throw new Error('Errore nella risposta dal server: JSON incompleto o non valido');
+      }
+    } else {
+      // Handle non-JSON responses
+      data = { message: await response.text() };
+    }
+    
+    if (!response.ok) {
+      console.error('API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        data
+      });
+      throw new Error(data.error || `Errore ${response.status}: ${response.statusText}`);
+    }
+    return data;
+  } catch (error) {
+    console.error('Response handling error:', error);
+    throw error;
   }
-  return data;
 };
 
 // Prelevo i token per le richieste autenticate
@@ -41,16 +61,32 @@ export const authAPI = {
     try {
       // Create base64 encoded credentials for Basic Auth
       const credentials = btoa(`${email}:${password}`);
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Basic ${credentials}`
+      
+      // Set a timeout for the fetch request
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 seconds timeout
+      
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Basic ${credentials}`
+          },
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        const data = await handleResponse(response);
+        localStorage.setItem('token', data.token);
+        return data;
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        if (fetchError.name === 'AbortError') {
+          throw new Error('La richiesta di login è scaduta. Verifica la tua connessione Internet.');
         }
-      });
-      const data = await handleResponse(response);
-      localStorage.setItem('token', data.token);
-      return data;
+        throw fetchError;
+      }
     } catch (error) {
       console.error('Login error:', error);
       throw error;
