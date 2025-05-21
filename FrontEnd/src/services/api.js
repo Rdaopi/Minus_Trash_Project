@@ -1,4 +1,6 @@
-const API_BASE_URL = '/api';
+//const API_BASE_URL = '/api';
+// Get the API base URL from environment variable or fallback to relative path
+const API_BASE_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api';
 
 // Funzioni helper
 const handleResponse = async (response) => {

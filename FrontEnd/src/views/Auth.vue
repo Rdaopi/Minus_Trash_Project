@@ -223,7 +223,7 @@ export default {
                         throw new Error('Token non ricevuto dal server');
                     }
                 } else {
-                    // Registration flow - no token handling here
+                    // Registration flow
                     const registrationData = {
                         email: formData.value.email,
                         password: formData.value.password,
