@@ -19,9 +19,12 @@ const app = express();
 
 //Configurazione CORS
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || '*', // Use FRONTEND_URL or allow all origins in development
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  origin:[ process.env.FRONTEND_URL || '*', // Use FRONTEND_URL or allow all origins in development
+  process.env.BACKEND_URL || '*', // if Swagger UI is served here
+  ],
+  /*methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  */
   credentials: true, //Per supportare i cookies se necessario
   optionsSuccessStatus: 200
 };

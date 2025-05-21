@@ -8,7 +8,8 @@
     GOOGLE_CLIENT_ID=...
     GOOGLE_CLIENT_SECRET=...
     JWT_ACCESS_SECRET=...
-    FRONTEND_URL=http://localhost:5173   
+    FRONTEND_URL=http://localhost:5173
+    BACKEND_URL=http://localhost:5000   
 
 3. check the URI variable used in db.js
     example process.env.MONGODB_URI_LOCAL;
