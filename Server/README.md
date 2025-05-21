@@ -1,3 +1,32 @@
+# MinusTrash Backend
+
+Minus Trash è una piattaforma digitale progettata per ottimizzare la gestione dei rifiuti urbani per i cittadini e per il Comune di Trento.
+Nella repository ci sono due cartelle:
+
+## Backend Setup
+
+1. Install dependencies:
+```bash
+npm install
+```
+
+## Funzionalità principali
+
+## Mappatura dei punti di raccolta
+Visualizzazione in tempo reale dei contenitori dislocati sul territorio, con indicazioni sullo stato di riempimento, posizione GPS e ultimo svuotamento.
+
+## Notifiche automatiche (in sviluppo)
+Il sistema genera alert in caso di contenitori pieni, guasti o situazioni anomale, notificando automaticamente gli operatori.
+
+## Statistiche e report (in sviluppo)
+Dashboard con grafici e dati aggregati per monitorare l'andamento della raccolta per ottimizzare i percorsi di raccolta e migliorare l'efficienza del servizio.
+
+## Area utente (in sviluppo)
+Accesso personalizzato per cittadini e operatori, con funzionalità dedicate:
+- I cittadini possono segnalare problemi o consultare i dati ambientali locali.
+- Gli operatori possono pianificare interventi e aggiornare lo stato dei contenitori.
+
+
 
 # backend setup
 0. npm install
@@ -27,8 +56,68 @@
     VITE_GOOGLE_CLIENT_ID=....
     VITE_API_URL=http://localhost:5000
 
-# useful commands 
-# Backend Setup (in Server directory)
+# Google OAuth Configuration
+
+## Local Development
+1. Set up a project in Google Cloud Console
+2. Configure OAuth credentials:
+   - Authorized JavaScript origins: `http://localhost:5173`
+   - Authorized redirect URIs: `http://localhost:5000/api/auth/googleOAuth/callback`
+3. Add credentials to your backend .env file:
+   ```
+   GOOGLE_CLIENT_ID=your-client-id
+   GOOGLE_CLIENT_SECRET=your-client-secret
+   FRONTEND_URL=http://localhost:5173
+   BACKEND_URL=http://localhost:5000
+   ```
+4. Add API URL to frontend .env:
+   ```
+   VITE_API_URL=http://localhost:5000
+   ```
+
+### Production (Render)
+1. Update OAuth credentials in Google Cloud Console:
+   - Add Authorized JavaScript origins: `https://your-frontend-url.onrender.com`
+   - Add Authorized redirect URIs: `https://your-backend-url.onrender.com/api/auth/googleOAuth/callback`
+2. Set environment variables in Render backend service:
+   ```
+   GOOGLE_CLIENT_ID=your-client-id
+   GOOGLE_CLIENT_SECRET=your-client-secret
+   FRONTEND_URL=https://your-frontend-url.onrender.com
+   BACKEND_URL=https://your-backend-url.onrender.com
+   NODE_ENV=production
+   ```
+3. Set environment variables in Render frontend service:
+   ```
+   VITE_API_URL=https://your-backend-url.onrender.com
+   ```
+
+## Troubleshooting OAuth Problems
+- If Google login works locally but not in production, check the environment variables
+- If you get a 404 error after login, check the SPA routing configuration
+- If you get a "redirect_uri_mismatch" error, verify the redirect URI in Google Cloud Console
+- If you get "Token not received from the server", check the backend response format
+- Use browser developer tools to inspect the network requests and identify the exact issue
+
+# Static Site Routing with Render
+
+Render static sites require special configuration for SPA routing:
+
+1. Create a `/public/_redirects` file:
+   ```
+   /* /index.html 200
+   ```
+
+2. Create a `/public/render.yaml` file:
+   ```yaml
+   routes:
+     - type: rewrite
+       source: /*
+       destination: /index.html
+   ```
+
+### Backend Setup Commands
+```bash
 npm init -y                    # Initialize new Node.js project
 npm install express           # Install Express.js framework
 npm install mongoose         # MongoDB ODM
@@ -41,101 +130,31 @@ npm install express-rate-limit  # Rate limiting
 npm install swagger-jsdoc swagger-ui-express  # API documentation
 npm install winston         # Logging
 npm install mongoose-to-swagger  # Mongoose Parsing
+```
 
-# Backend Dev Dependencies
+### Backend Dev Dependencies
+```bash
 npm install --save-dev nodemon  # Auto-restart server during development
 npm install --save-dev eslint   # Code linting
 npm install --save-dev jest     # Testing
 npm install --save-dev prettier # Code formatting
+```
 
-# Frontend Setup (in FrontEnd directory)
-npm create vite@latest         # Create Vue.js project with Vite
-npm install vue               # Vue.js framework
-npm install vue-router        # Vue routing
-npm install bootstrap        # UI framework
-npm install leaflet          # Maps integration
-
-# Backend Commands (in Server directory)
+### Backend Commands
+```bash
 npm start                    # Start the server
 npm run dev                  # Start server with nodemon (development)
 npm test                     # Run tests
 npm run test:watch          # Run tests in watch mode
 npm run test:coverage       # Run tests with coverage report
+```
 
-# Frontend Commands (in FrontEnd directory)
-npm run dev                 # Start development server
-npm run build              # Build for production
-npm run preview            # Preview production build
+## Important Notes
+1. Make sure all environment variables are set correctly
+2. For Google OAuth, the callback URL must match exactly in both the code and Google Cloud Console
+3. Check these files for proper configuration:
+   - index.js
+   - swagger.js
+   - googleAuth.js
+   - .env file
 
-# Create .env file in Server directory with:
-touch .env                  # Create .env file
-# Then add necessary environment variables like:
-# PORT=3000
-# MONGODB_URI=mongodb://localhost:27017/your_database
-# JWT_SECRET=your_secret_key
-
-
-# git commands
-git init                    # Initialize repository
-git add .                   # Add all files to staging
-git commit -m "message"     # Commit changes
-git branch development      # Create development branch
-git checkout development    # Switch to development branch
-git push origin development # Push to development branch
-
-git pull origin development # Pull latest changes
-
-
-# npm create vue@latest . 
-                        # This command:
-                        # 1. Creates the basic project structure
-                        # 2. Generates vite.config.js
-                        # 3. Sets up other configuration files
-
-The command npm create vue@latest created these files and folders:
-Root Files:
-    package.json - Project configuration and dependencies
-    package-lock.json - Exact dependency versions
-    vite.config.js - Vite build tool configuration
-    index.html - Entry HTML file
-    .gitignore - Git ignore rules
-    README.md - Project documentation
-    jsconfig.json - JavaScript configuration
-Directories:
-    src/ - Source code directory
-        App.vue - Root Vue component
-        main.js - Application entry point
-        assets/ - Static files like images
-        components/ - Vue components
-    public/ - Static files
-    node_modules/ - Installed dependencies 
-
-
-
-# npm install axios
-
-Axios is a popular HTTP client library that makes it easier to send HTTP requests from your frontend to your backend or any other API. Here are the main functions and benefits of Axios:
-Making HTTP Requests
-GET: Fetch data
-POST: Create data
-PUT/PATCH: Update data
-DELETE: Remove data
-Key Features
-Promise-based (works great with async/await)
-Automatic JSON data transformation
-Built-in error handling
-Request and response interceptors
-Request cancellation
-Timeout handling
-Progress monitoring for uploads/downloads
-
-
-
-# Attention
-    port of backend and frontend must be same eg. 5000
-    check:
-    index.js
-    swagger.js
-    googleAuth.js
-    env.
-    GoogleSignin.vue
