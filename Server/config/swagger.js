@@ -120,7 +120,7 @@ const options = {
     },
     servers: [
       { 
-        url: `${process.env.FRONTEND_URL}`,
+        url: `${process.env.BACKEND_URL}`,
         description: 'Development server'
       }
     ],
