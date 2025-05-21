@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Redirecting...</title>
+  <script>
+    // Get the current URL
+    const url = window.location.href;
+    
+    // Extract token or error parameters
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    const error = params.get('error');
+    
+    // Create the root URL
+    const rootUrl = url.split('/auth')[0];
+    
+    // Redirect to the correct URL with parameters
+    if (token) {
+      window.location.href = rootUrl + '/#/auth?token=' + token;
+    } else if (error) {
+      window.location.href = rootUrl + '/#/auth?error=' + error;
+    } else {
+      window.location.href = rootUrl + '/#/auth';
+    }
+  </script>
+</head>
+<body>
+  <p>Redirecting to the login page...</p>
+</body>
+</html> 
