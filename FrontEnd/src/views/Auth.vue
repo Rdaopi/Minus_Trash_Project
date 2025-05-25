@@ -128,9 +128,17 @@ export default {
 
         // Handle OAuth callback
         const handleOAuthCallback = () => {
+            // Check for parameters in the query string (history mode)
             const urlParams = new URLSearchParams(window.location.search);
-            const token = urlParams.get('token');
-            const error = urlParams.get('error');
+            
+            // Check for parameters in the hash (hash mode)
+            const hashParams = window.location.hash 
+                ? new URLSearchParams(window.location.hash.substring(window.location.hash.indexOf('?'))) 
+                : new URLSearchParams('');
+            
+            // Get token and error from either source
+            const token = urlParams.get('token') || hashParams.get('token');
+            const error = urlParams.get('error') || hashParams.get('error');
 
             if (error) {
                 showError(decodeURIComponent(error));
@@ -154,8 +162,12 @@ export default {
                     showSuccessNotification('Login effettuato con successo!');
                     emit('login-success');
                     
-                    // Clean up the URL
-                    window.history.replaceState({}, document.title, '/auth');
+                    // Clean up the URL - handle both hash and history modes
+                    if (window.location.hash && window.location.hash.includes('?')) {
+                        window.history.replaceState({}, document.title, window.location.hash.split('?')[0]);
+                    } else {
+                        window.history.replaceState({}, document.title, '/auth');
+                    }
                     
                     // Redirect to home
                     setTimeout(() => {
@@ -223,7 +235,7 @@ export default {
                         throw new Error('Token non ricevuto dal server');
                     }
                 } else {
-                    // Registration flow - no token handling here
+                    // Registration flow
                     const registrationData = {
                         email: formData.value.email,
                         password: formData.value.password,

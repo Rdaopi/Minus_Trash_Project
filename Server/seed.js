@@ -5,7 +5,7 @@ import Report from './modules/waste/models/Report.js';
 import User from './modules/auth/models/User.js';
 
 // 1. Connessione a MongoDB
-await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/minusTrashDB', {
+await mongoose.connect(process.env.MONGODB_URI_LOCAL || 'mongodb://localhost:27017/minusTrashDB', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });

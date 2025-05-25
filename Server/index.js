@@ -1,4 +1,3 @@
-
 import 'dotenv/config';
 import express from 'express';
 import connectDB from './config/db.js';
@@ -20,11 +19,16 @@ const app = express();
 
 //Configurazione CORS
 const corsOptions = {
-  //origin: process.env.CORS_ORIGIN
-  origin: process.env.CORS_ORIGIN || '*', // Allow all origins in development
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true, //Per supportare i cookies se necessario
+  origin: process.env.NODE_ENV === 'production' 
+    ? [
+        process.env.FRONTEND_URL,
+        process.env.BACKEND_URL,
+        'https://*.onrender.com'  // Allow all subdomains on render.com
+      ].filter(Boolean)  // Remove any undefined values
+    : '*',  // Allow all origins in development
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  credentials: true,
   optionsSuccessStatus: 200
 };
 //middleware

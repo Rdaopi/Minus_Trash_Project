@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory} from 'vue-router'
+import { createRouter, createWebHistory, createWebHashHistory } from 'vue-router'
 
 // Definisco le rotte dell'applicazione
 // Utilizzo il lazy-loading per caricare le pagine solo quando servono
@@ -26,9 +26,12 @@ const routes = [
   // TODO: Aggiungere pagina contatti
 ]
 
-// Creo il router con la history API per URL più puliti
+// Determine if we should use hash mode based on URL
+const useHashMode = window.location.href.includes('/#/');
+
+// Creo il router con la history API per URL più puliti o hash mode se necessario
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
+  history: useHashMode ? createWebHashHistory(import.meta.env.BASE_URL) : createWebHistory(import.meta.env.BASE_URL),
   routes
 })
 

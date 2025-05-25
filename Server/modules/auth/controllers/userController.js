@@ -10,26 +10,35 @@ const REGEX_PASSWORD = /^(?=.*[A-Z])(?=.*[!@#$%^&*])(?=.{8,})/;
 export const login = async(req, res) => {
     try {
     const user = req.user;   //dopo essersi autenticato
+    
+    if (!user) {
+      logger.error('No user object found in request');
+      return res.status(401).json({ error: 'Credenziali non valide' });
+    }
 
     //Genera il JWT via metodo sullo schema
-    const token = user.generateAuthToken();
-    logger.info('Generated token for user:', { userId: user._id, token });
+    try {
+      const token = user.generateAuthToken();
+      logger.info('Generated token for user:', { userId: user._id, token });
 
-    //Aggiorna lastLogin
-    user.lastLogin = Date.now();
-    await user.save();
+      //Aggiorna lastLogin
+      user.lastLogin = Date.now();
+      await user.save();
 
-    logger.info(`Utente loggato (JWT emesso): ${user._id}`);
-    return res.json({
-      token,
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email,
-
-        fullName: user.fullName
-      }
-    });
+      logger.info(`Utente loggato (JWT emesso): ${user._id}`);
+      return res.json({
+        token,
+        user: {
+          id: user._id,
+          username: user.username,
+          email: user.email,
+          fullName: user.fullName
+        }
+      });
+    } catch (tokenError) {
+      logger.error('Errore durante la generazione del token:', tokenError);
+      return res.status(500).json({ error: 'Errore durante la generazione del token' });
+    }
   } catch (error) {
     logger.error('Errore durante il login:', error);
     return res.status(500).json({ error: 'Errore durante il login' });

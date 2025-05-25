@@ -60,7 +60,7 @@ const router = express.Router()
 //Registrazione classica
 router.post('/register', auditOnSuccess('user_registration', ['email']), register);
 
-//request url: http://localhost:3000/api/auth/register
+//request url: http://localhost:5000/api/auth/register
 /**
  * @swagger
  * /api/auth/register:
