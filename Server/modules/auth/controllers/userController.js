@@ -9,40 +9,40 @@ const REGEX_PASSWORD = /^(?=.*[A-Z])(?=.*[!@#$%^&*])(?=.{8,})/;
 //Metodo di login
 export const login = async(req, res) => {
     try {
-    const user = req.user;   //dopo essersi autenticato
-    
-    if (!user) {
-      logger.error('No user object found in request');
-      return res.status(401).json({ error: 'Credenziali non valide' });
-    }
-
-    //Genera il JWT via metodo sullo schema
-    try {
-      const token = user.generateAuthToken();
-      logger.info('Generated token for user:', { userId: user._id, token });
-
-      //Aggiorna lastLogin
-      user.lastLogin = Date.now();
-      await user.save();
-
-      logger.info(`Utente loggato (JWT emesso): ${user._id}`);
-      return res.json({
-        token,
-        user: {
-          id: user._id,
-          username: user.username,
-          email: user.email,
-          fullName: user.fullName
+        const user = req.user;   //dopo essersi autenticato
+        
+        if (!user) {
+            logger.error('No user object found in request');
+            return res.status(401).json({ error: 'Credenziali non valide' });
         }
-      });
-    } catch (tokenError) {
-      logger.error('Errore durante la generazione del token:', tokenError);
-      return res.status(500).json({ error: 'Errore durante la generazione del token' });
+
+        //Genera il JWT via metodo sullo schema
+        try {
+            const token = user.generateAuthToken();
+            logger.info('Generated token for user:', { userId: user._id, token });
+
+            //Aggiorna lastLogin
+            user.lastLogin = Date.now();
+            await user.save();
+
+            logger.info(`Utente loggato (JWT emesso): ${user._id}`);
+            return res.json({
+                token,
+                user: {
+                    id: user._id,
+                    username: user.username,
+                    email: user.email,
+                    fullName: user.fullName
+                }
+            });
+        } catch (tokenError) {
+            logger.error('Errore durante la generazione del token:', tokenError);
+            return res.status(500).json({ error: 'Errore durante la generazione del token' });
+        }
+    } catch (error) {
+        logger.error('Errore durante il login:', error);
+        return res.status(500).json({ error: 'Errore durante il login' });
     }
-  } catch (error) {
-    logger.error('Errore durante il login:', error);
-    return res.status(500).json({ error: 'Errore durante il login' });
-  }
 };
 
 //Metodo di registrazione
@@ -55,7 +55,7 @@ export const register = async (req, res) => {
         if (!REGEX_PASSWORD.test(password)) {
             logger.warn('Password non valida durante la registrazione');
             return res.status(400).json({
-                error: 'La password deve contenere almeno 8 caratteri, una lettera maiuscola e un carattere speciale'
+                error: 'La password deve contenere almeno 8 caratteri, una lettera maiuscola e un carattere speciale[!@#$%^&*]'
             });
         }
 
@@ -145,10 +145,25 @@ export const changePassword = [
     async(req, res) => {
         try{
             const {currentPassword, newPassword} = req.body;
-            const user = await User.findById(req.user._id).select('+password');
+            
+            // Add logging to debug
+            console.log('User from request:', req.user);
+            
+            // Make sure we're getting the user ID correctly
+            const userId = req.user?._id;
+            if (!userId) {
+                throw new Error('User ID not found in request');
+            }
+
+            // Find user and explicitly select password field
+            const user = await User.findById(userId).select('+password');
+            if (!user) {
+                throw new Error('User not found');
+            }
+
             //Validazione complessità password
             if(!REGEX_PASSWORD.test(newPassword)) {
-                const error = new Error("Password deve contenere 8+ caratteri, 1 maiuscola e 1 simbolo");
+                const error = new Error("Password deve contenere 8+ caratteri, 1 maiuscola e 1 simbolo [!@#$%^&*]");
                 error.statusCode = 400;
                 throw error;
             };
@@ -163,12 +178,12 @@ export const changePassword = [
             await user.save();
             user.passwordChangedAt = Date.now();
 
-            res.json( { message: "Passoword aggiornata con successo" });
+            res.json({ message: "Password aggiornata con successo" });
         }catch(error){
+            console.error('Password change error:', error);
             error.statusCode = error.statusCode || 500;
             throw error;
         }
-
     }
 ];
 

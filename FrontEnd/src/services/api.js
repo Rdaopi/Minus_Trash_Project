@@ -119,6 +119,30 @@ export const authAPI = {
   logout() {
     localStorage.removeItem('token');
     // in futuro potrei aggiungere invalidazione token lato server
+  },
+
+  // Change password
+  async changePassword(passwordData) {
+    const url = `${API_BASE_URL}/auth/change_password`;
+    logApiCall('POST', url);
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword
+        })
+      });
+      const data = await handleResponse(response);
+      return data;
+    } catch (error) {
+      console.error('Change password error:', error);
+      throw error;
+    }
   }
 };
 

@@ -5,7 +5,7 @@ import { auditOnSuccess } from "./middlewares/withAudit.js";
 import { googleAuth, googleAuthCallback } from "./middlewares/googleAuth.js";
 import User from "./models/User.js";
 import bcrypt from "bcryptjs";
-//import { jwtAuth } from "./middlewares/jwtAuth.js";
+import { jwtAuth } from "./middlewares/jwtAuth.js";
 
 const router = express.Router()
 
@@ -260,7 +260,7 @@ router.post('/profile_update', basicAuth, login /*jwtAuth*/, profile_update);
  *         description: Profilo aggiornato con successo
  */
 
-router.post('/change_password', basicAuth, login /*jwtAuth*/, changePassword);
+router.post('/change_password', jwtAuth, changePassword);
 /**
  * @swagger
  * /api/auth/change_password:
