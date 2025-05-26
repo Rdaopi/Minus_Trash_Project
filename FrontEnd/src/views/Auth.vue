@@ -14,8 +14,8 @@
             <div v-if="error" class="error-message">
                 <i class="fas fa-exclamation-circle"></i> {{ error }}
             </div>
+            
             <form @submit.prevent="handleSubmit" class="auth-form">
-
                 <!-- Registration-only fields -->
                 <template v-if="!isLogin">
                     <div class="form-group">
@@ -92,7 +92,6 @@
                     </a>
                 </p>
             </div>
-
         </div>
     </div>
 </template>
@@ -103,6 +102,7 @@ import { authAPI } from '../services/api';
 import { useRouter } from 'vue-router';
 import Notification from '../components/Notification.vue';
 import GoogleSignIn from '../components/GoogleSignIn.vue';
+import { jwtDecode } from 'jwt-decode';
 
 export default {
     name: 'Auth',
@@ -157,6 +157,9 @@ export default {
                     // Store email like in regular login
                     if (payload.email) {
                         localStorage.setItem('userEmail', payload.email);
+                    }
+                    if (payload.role) {
+                        localStorage.setItem('userRole', payload.role);
                     }
 
                     showSuccessNotification('Login effettuato con successo!');
@@ -219,21 +222,46 @@ export default {
             try {
                 error.value = '';
                 let response;
+                
                 if (isLogin.value) {
                     // Login flow
                     response = await authAPI.login(formData.value.email, formData.value.password);
-                    if (response && response.token) {
-                        localStorage.setItem('userEmail', formData.value.email);
-                        localStorage.setItem('token', response.token);
-                        emit('login-success');
-                        showSuccessNotification('Login effettuato con successo!');
-                        // Wait for the notification to be visible before redirecting
-                        setTimeout(() => {
-                            router.push('/');
-                        }, 1000);
-                    } else {
+                    console.log('Login response:', response);
+                    
+                    if (!response || !response.token) {
                         throw new Error('Token non ricevuto dal server');
                     }
+                    
+                    // Store user data
+                    localStorage.setItem('userEmail', formData.value.email);
+                    localStorage.setItem('token', response.token);
+                    
+                    // Decode token to get role
+                    try {
+                        const decoded = jwtDecode(response.token);
+                        console.log('Decoded token:', decoded);
+                        
+                        // Check multiple possible locations for the role
+                        const role = decoded.role || decoded.user?.role || response.user?.role;
+                        console.log('Found role:', role);
+                        
+                        if (role) {
+                            localStorage.setItem('userRole', role);
+                            console.log('Stored role:', role);
+                        } else {
+                            console.warn('No role found in token or response');
+                            throw new Error('Ruolo utente non trovato');
+                        }
+                    } catch (error) {
+                        console.error('Error handling user role:', error);
+                        throw new Error('Errore nella gestione del ruolo utente');
+                    }
+                    
+                    // Notify success and redirect
+                    emit('login-success');
+                    showSuccessNotification('Login effettuato con successo!');
+                    setTimeout(() => router.push('/'), 1000);
+                    
                 } else {
                     // Registration flow
                     const registrationData = {
@@ -245,10 +273,11 @@ export default {
                             surname: formData.value.surname
                         }
                     };
+                    
                     await authAPI.register(registrationData);
                     showSuccessNotification('Registrazione completata con successo! Effettua il login per continuare.');
                     
-                    // Clear form data
+                    // Clear form and switch to login
                     formData.value = {
                         email: '',
                         password: '',
@@ -256,20 +285,15 @@ export default {
                         name: '',
                         surname: ''
                     };
-                    
-                    // Switch to login mode after registration
-                    setTimeout(() => {
-                        isLogin.value = true;
-                    }, 1000);
+                    setTimeout(() => isLogin.value = true, 1000);
                 }
             } catch (err) {
-                error.value = err.message || 'Si è verificato un errore. Riprova più tardi.';
-                notificationMessage.value = error.value;
+                const errorMessage = err.message || 'Si è verificato un errore. Riprova più tardi.';
+                error.value = errorMessage;
+                notificationMessage.value = errorMessage;
                 notificationType.value = 'error';
                 showNotification.value = true;
-                setTimeout(() => {
-                    showNotification.value = false;
-                }, 3000);
+                setTimeout(() => showNotification.value = false, 3000);
             }
         };
 
@@ -335,7 +359,6 @@ export default {
 }
 
 .form-group label {
-
     font-weight: 500;
     color: #333;
 }
@@ -418,7 +441,6 @@ export default {
     color: #c62828;
     padding: 0.75rem;
     border-radius: 2.5rem;
-
     margin-bottom: 1rem;
     display: flex;
     align-items: center;

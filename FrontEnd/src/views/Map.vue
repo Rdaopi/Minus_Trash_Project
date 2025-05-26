@@ -5,7 +5,7 @@
       <!-- Sidebar with bin list -->
       <div class="sidebar" :class="{ 'sidebar-hidden': !showSidebar }">
         <div class="sidebar-header">
-          <h2>Cestini <span class="bins-count">{{ filteredBins.length }}</span></h2>
+          <h2>Bins <span class="bins-count">{{ filteredBins.length }}</span></h2>
           <button @click="toggleSidebar" class="icon-button">
             <i class="fas fa-times"></i>
           </button>
@@ -17,27 +17,24 @@
             <input 
               type="text" 
               v-model="searchQuery" 
-              placeholder="Cerca indirizzo..."
-              @keyup.enter="searchLocation"
+              placeholder="Search address..."
             >
-            <button @click="searchLocation" :disabled="loading" class="icon-button">
-              <i class="fas fa-search"></i>
-            </button>
           </div>
           
           <div class="type-filter">
-            <select v-model="selectedType" @change="filterBins">
+            <select v-model="selectedType">
               <option value="">Tutti i tipi</option>
-              <option value="plastica">Plastica</option>
-              <option value="carta">Carta</option>
-              <option value="vetro">Vetro</option>
-              <option value="indifferenziata">Indifferenziata</option>
-              <option value="organico">Organico</option>
+              <option value="PLASTICA">Plastica</option>
+              <option value="CARTA">Carta</option>
+              <option value="VETRO">Vetro</option>
+              <option value="INDIFFERENZIATA">Indifferenziata</option>
+              <option value="ORGANICO">Organico</option>
+              <option value="RAEE">RAEE</option>
             </select>
           </div>
           
           <button @click="loadBins" class="refresh-button">
-            <i class="fas fa-sync"></i> Ricarica
+            <i class="fas fa-sync"></i> Refresh
           </button>
         </div>
         
@@ -61,34 +58,19 @@
         </div>
         
         <!-- Bins list -->
-        <div v-else class="bins-list">
-          <div 
-            v-for="bin in filteredBins" 
-            :key="bin.id || bin._id" 
-            class="bin-item"
-            :class="{ 'selected': selectedBinId === (bin.id || bin._id) }"
-            @click="selectBin(bin)"
-          >
-            <div class="bin-icon">
-              <img :src="getBinIconUrl(bin.type)" :alt="bin.type" width="24">
-            </div>
-            <div class="bin-details">
-              <div class="bin-title">{{ bin.type || 'Cestino' }}</div>
-              <div class="bin-address">{{ getBinAddress(bin) }}</div>
-              <div class="bin-fill-bar">
-                <div 
-                  :style="{ width: `${bin.currentFillLevel || 0}%` }" 
-                  :class="getFillLevelClass(bin.currentFillLevel || 0)"
-                ></div>
-              </div>
-            </div>
-          </div>
+        <div class="bins-container">
+          <BinList 
+            :bins="filteredBins"
+            :loading="loading"
+            :selected-bin-id="selectedBinId"
+            @select-bin="selectBin"
+          />
         </div>
       </div>
       
-      <!-- Map container -->
+      <!-- Map area using MapComponent -->
       <div class="map-area">
-        <div id="map"></div>
+        <MapComponent :bins="filteredBins" ref="mapRef" />
         
         <!-- Mobile controls -->
         <button @click="toggleSidebar" class="fab show-list-button" v-if="!showSidebar">
@@ -104,8 +86,7 @@
         <div class="legend" :class="{ 'legend-visible': showLegend }">
           <h4>Tipi di cestini</h4>
           <div class="legend-items">
-            <div class="legend-item" v-for="(icon, type) in binIcons" :key="type">
-              <img class="legend-icon" :src="icon" :alt="type">
+            <div class="legend-item" v-for="type in ['PLASTICA', 'CARTA', 'VETRO', 'ORGANICO', 'INDIFFERENZIAT', 'RAEE']" :key="type">
               <span class="legend-label">{{ type }}</span>
             </div>
           </div>
@@ -115,331 +96,103 @@
   </div>
 </template>
 
-<script>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
-import L from 'leaflet';
+<script setup>
+import { ref, computed, onMounted } from 'vue';
 import { binsAPI } from '../services/api';
+import MapComponent from '../components/MapComponent.vue';
+import BinList from '../components/BinList.vue';
 
-export default {
-  name: 'Map',
-  setup() {
-    // Core state
-    const map = ref(null);
-    const bins = ref([]);
-    const loading = ref(false);
-    const error = ref(null);
-    const searchQuery = ref('');
-    const selectedType = ref('');
-    const showSidebar = ref(true);
-    const showLegend = ref(false);
-    const selectedBinId = ref(null);
-    const markers = ref([]);
-    
-    // Computed properties
-    const filteredBins = computed(() => {
-      return bins.value;
-    });
-    
-    // Bin icon mapping
-    const binIcons = {
-      'PLASTICA': 'https://cdn-icons-png.flaticon.com/512/1039/1039928.png',
-      'CARTA': 'https://cdn-icons-png.flaticon.com/512/1039/1039833.png',
-      'VETRO': 'https://cdn-icons-png.flaticon.com/512/1039/1039936.png',
-      'INDIFFERENZIATO': 'https://cdn-icons-png.flaticon.com/512/3004/3004659.png',
-      'ORGANICO': 'https://cdn-icons-png.flaticon.com/512/1039/1039789.png'
-    };
-    
-    // Map initialization
-    const initMap = () => {
-      // Center on Trento, Italy
-      map.value = L.map('map').setView([46.0667, 11.1167], 13);
-      
-      // Add OpenStreetMap tiles
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-      }).addTo(map.value);
-      
-      // On mobile devices, hide sidebar by default
-      if (window.innerWidth <= 768) {
-        showSidebar.value = false;
-      }
-    };
-    
-    // Load bins from API
-    const loadBins = async () => {
-      if (loading.value) return;
-      
-      loading.value = true;
-      error.value = null;
-      
-      try {
-        const data = await binsAPI.getAllBins();
-        
-        if (Array.isArray(data) && data.length > 0) {
-          bins.value = data;
-        } else if (data && data.bins && Array.isArray(data.bins)) {
-          bins.value = data.bins;
-        } else {
-          throw new Error('Formato dati non valido');
-        }
-        
-        updateMapMarkers();
-      } catch (err) {
-        console.error('Error loading bins:', err);
-        error.value = 'Impossibile caricare i cestini. Riprova più tardi.';
-      } finally {
-        loading.value = false;
-      }
-    };
-    
-    // Filter bins by type
-    const filterBins = async () => {
-      loading.value = true;
-      error.value = null;
-      
-      try {
-        if (!selectedType.value) {
-          return await loadBins();
-        }
-        
-        const data = await binsAPI.getBinsByType(selectedType.value);
-        bins.value = Array.isArray(data) ? data : data.bins || [];
-        updateMapMarkers();
-      } catch (err) {
-        console.error('Error filtering bins:', err);
-        error.value = 'Impossibile filtrare i cestini. Riprova più tardi.';
-      } finally {
-        loading.value = false;
-      }
-    };
-    
-    // Search by location
-    const searchLocation = async () => {
-      if (!searchQuery.value) return;
-      
-      loading.value = true;
-      error.value = null;
-      
-      try {
-        // For demo purposes, search near Trento
-        const lat = 46.0667;
-        const lng = 11.1167;
-        
-        const data = await binsAPI.getNearbyBins(lat, lng, 1000);
-        bins.value = Array.isArray(data) ? data : data.bins || [];
-        
-        map.value.setView([lat, lng], 15);
-        updateMapMarkers();
-      } catch (err) {
-        console.error('Error searching location:', err);
-        error.value = 'Impossibile cercare in questa posizione. Riprova più tardi.';
-      } finally {
-        loading.value = false;
-      }
-    };
-    
-    // Update map markers
-    const updateMapMarkers = () => {
-      // Clear existing markers
-      markers.value.forEach(marker => marker.remove());
-      markers.value = [];
-      
-      // Add new markers
-      bins.value.forEach(bin => {
-        try {
-          // Extract coordinates
-          let lat, lng;
-          
-          if (bin.latitude !== undefined && bin.longitude !== undefined) {
-            lat = Number(bin.latitude);
-            lng = Number(bin.longitude);
-          } else if (bin.location && bin.location.coordinates && bin.location.coordinates.length >= 2) {
-            lng = Number(bin.location.coordinates[0]);
-            lat = Number(bin.location.coordinates[1]);
-          } else {
-            return; // Skip if no valid coordinates
-          }
-          
-          // Skip invalid coordinates
-          if (isNaN(lat) || isNaN(lng) || !isFinite(lat) || !isFinite(lng)) {
-            return;
-          }
-          
-          // Create marker with custom icon
-          const iconUrl = getBinIconUrl(bin.type);
-          const customIcon = L.icon({
-            iconUrl,
-            iconSize: [25, 25],
-            iconAnchor: [12, 12],
-            popupAnchor: [0, -10]
-          });
-          
-          const marker = L.marker([lat, lng], { icon: customIcon })
-            .bindPopup(createPopupContent(bin))
-            .addTo(map.value);
-          
-          // Add click handler to select bin
-          marker.on('click', () => {
-            selectedBinId.value = bin.id || bin._id;
-            
-            // On mobile, open sidebar when marker is clicked
-            if (window.innerWidth <= 768) {
-              showSidebar.value = true;
-            }
-          });
-          
-          markers.value.push(marker);
-        } catch (err) {
-          console.error('Error creating marker:', err);
-        }
-      });
-      
-      // Fit map to markers if any
-      if (markers.value.length > 0) {
-        const group = L.featureGroup(markers.value);
-        map.value.fitBounds(group.getBounds(), { padding: [50, 50] });
-      }
-    };
-    
-    // Create popup content for markers
-    const createPopupContent = (bin) => {
-      return `
-        <div class="popup-content">
-          <h3>${getBinAddress(bin)}</h3>
-          <p><strong>Tipo:</strong> ${bin.type || 'N/A'}</p>
-          <p><strong>Capacità:</strong> ${bin.capacity || 0}%</p>
-          <p><strong>Livello attuale:</strong> ${bin.currentFillLevel || 0}%</p>
-          <p><strong>Stato:</strong> ${getBinStatus(bin)}</p>
-        </div>
-      `;
-    };
-    
-    // Select a bin from the list
-    const selectBin = (bin) => {
-      selectedBinId.value = bin.id || bin._id;
-      
-      // Extract coordinates
-      let lat, lng;
-      
-      if (bin.latitude !== undefined && bin.longitude !== undefined) {
-        lat = Number(bin.latitude);
-        lng = Number(bin.longitude);
-      } else if (bin.location && bin.location.coordinates && bin.location.coordinates.length >= 2) {
-        lng = Number(bin.location.coordinates[0]);
-        lat = Number(bin.location.coordinates[1]);
-      } else {
-        return; // Skip if no valid coordinates
-      }
-      
-      // Center map on selected bin
-      map.value.setView([lat, lng], 17);
-      
-      // Find and open the corresponding marker popup
-      markers.value.forEach(marker => {
-        const pos = marker.getLatLng();
-        if (Math.abs(pos.lat - lat) < 0.0001 && Math.abs(pos.lng - lng) < 0.0001) {
-          marker.openPopup();
-        }
-      });
-      
-      // On mobile, close sidebar after selection
-      if (window.innerWidth <= 768) {
-        showSidebar.value = false;
-      }
-    };
-    
-    // Toggle sidebar visibility
-    const toggleSidebar = () => {
-      showSidebar.value = !showSidebar.value;
-    };
-    
-    // Toggle legend visibility
-    const toggleLegend = () => {
-      showLegend.value = !showLegend.value;
-    };
-    
-    // Helper functions
-    const getBinIconUrl = (type) => {
-      if (!type) return binIcons.INDIFFERENZIATO;
-      
-      const normalizedType = type.toUpperCase();
-      return binIcons[normalizedType] || binIcons.INDIFFERENZIATO;
-    };
-    
-    const getBinAddress = (bin) => {
-      if (bin.address) return bin.address;
-      
-      if (bin.location && bin.location.address) {
-        const addr = bin.location.address;
-        return [addr.street, addr.city, addr.postalCode].filter(Boolean).join(', ');
-      }
-      
-      return 'Indirizzo non disponibile';
-    };
-    
-    const getBinStatus = (bin) => {
-      if (!bin.status) return 'Non specificato';
-      
-      const stati = {
-        'attivo': 'Attivo',
-        'manutenzione': 'In manutenzione',
-        'inattivo': 'Inattivo',
-        'pieno': 'Pieno',
-        'available': 'Disponibile',
-        'maintenance': 'In manutenzione',
-        'inactive': 'Inattivo',
-        'full': 'Pieno'
-      };
-      
-      return stati[bin.status.toLowerCase()] || bin.status;
-    };
-    
-    const getFillLevelClass = (level) => {
-      if (level > 80) return 'level-high';
-      if (level > 50) return 'level-medium';
-      return 'level-low';
-    };
-    
-    // Handle window resize
-    const handleResize = () => {
-      if (map.value) {
-        map.value.invalidateSize();
-      }
-    };
-    
-    onMounted(() => {
-      initMap();
-      loadBins();
-      window.addEventListener('resize', handleResize);
-    });
-    
-    onUnmounted(() => {
-      window.removeEventListener('resize', handleResize);
-    });
-    
-    return {
-      bins,
-      filteredBins,
-      loading,
-      error,
-      searchQuery,
-      selectedType,
-      showSidebar,
-      showLegend,
-      selectedBinId,
-      binIcons,
-      loadBins,
-      filterBins,
-      searchLocation,
-      selectBin,
-      toggleSidebar,
-      toggleLegend,
-      getBinIconUrl,
-      getBinAddress,
-      getFillLevelClass
-    };
+//Core state
+const bins = ref([]);
+const loading = ref(false);
+const error = ref(null);
+const searchQuery = ref('');
+const selectedType = ref('');
+const showSidebar = ref(true);
+const showLegend = ref(false);
+const selectedBinId = ref(null);
+const mapRef = ref(null);
+
+//Computed properties
+const filteredBins = computed(() => {
+  let filtered = [...bins.value];
+  
+  //Apply type filter
+  if (selectedType.value) {
+    filtered = filtered.filter(bin => bin.type.toLowerCase() === selectedType.value.toLowerCase());
   }
-}
+  
+  //Apply search filter
+  if (searchQuery.value.trim()) {
+    const query = searchQuery.value.toLowerCase();
+    filtered = filtered.filter(bin => 
+      bin.address?.toLowerCase().includes(query) ||
+      bin.type?.toLowerCase().includes(query)
+    );
+  }
+  
+  return filtered;
+});
+
+//Load bins from API
+const loadBins = async () => {
+  if (loading.value) return;
+  
+  loading.value = true;
+  error.value = null;
+  
+  try {
+    const data = await binsAPI.getAllBins();
+    console.log('Data received from server:', data);
+    
+    if (Array.isArray(data) && data.length > 0) {
+      bins.value = data;
+    } else if (data && data.bins && Array.isArray(data.bins)) {
+      bins.value = data.bins;
+    } else {
+      throw new Error('Invalid data format');
+    }
+  } catch (err) {
+    console.error('Error loading bins:', err);
+    error.value = 'Unable to load bins. Please try again later.';
+  } finally {
+    loading.value = false;
+  }
+};
+
+//UI handlers
+const toggleSidebar = () => showSidebar.value = !showSidebar.value;
+const toggleLegend = () => showLegend.value = !showLegend.value;
+
+const selectBin = (bin) => {
+  selectedBinId.value = bin.id || bin._id;
+  
+  // Centra la mappa sul cestino selezionato
+  if (mapRef.value) {
+    const latitude = bin.lat || bin.latitude || (bin.location?.coordinates?.[1]);
+    const longitude = bin.lng || bin.longitude || (bin.location?.coordinates?.[0]);
+    
+    if (latitude && longitude) {
+      console.log('Centering map on bin:', { latitude, longitude });
+      mapRef.value.centerOnBin({
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude)
+      });
+    }
+  }
+};
+
+//Helper functions
+const getBinAddress = (bin) => bin.address || 'Address not available';
+
+const getFillLevelClass = (level) => {
+  if (level >= 80) return 'fill-critical';
+  if (level >= 50) return 'fill-warning';
+  return 'fill-normal';
+};
+
+//Load bins when component mounts
+onMounted(loadBins);
 </script>
 
 <style scoped>
@@ -447,6 +200,7 @@ export default {
 .map-container {
   height: calc(100vh - 80px);
   width: 100%;
+  position: relative;
 }
 
 /* Layout */
@@ -557,104 +311,17 @@ export default {
 .icon-button:hover {
   background: #f5f5f5;
 }
-
-/* Bins list */
-.bins-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.bin-item {
-  display: flex;
-  gap: 12px;
-  padding: 12px;
-  background: #f5f5f5;
-  border-radius: 2.5rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border-left: 3px solid transparent;
-}
-
-.bin-item:hover {
-  background: #e9e9e9;
-  transform: translateY(-2px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.bin-item.selected {
-  border-left-color: #4CAF50;
-  background: rgba(76, 175, 80, 0.1);
-}
-
-.bin-icon {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(76, 175, 80, 0.1);
-  border-radius: 50%;
-}
-
-.bin-details {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.bin-title {
-  font-weight: bold;
-}
-
-.bin-address {
-  font-size: 12px;
-  color: #666;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.bin-fill-bar {
-  height: 4px;
-  background: #eee;
-  border-radius: 2px;
-  overflow: hidden;
-  margin-top: 4px;
-}
-
-.bin-fill-bar > div {
-  height: 100%;
-  transition: width 0.3s ease;
-}
-
-.level-low {
-  background: #4CAF50;
-}
-
-.level-medium {
-  background: #FFC107;
-}
-
-.level-high {
-  background: #F44336;
-}
-
 /* Map area */
 .map-area {
   flex: 1;
   position: relative;
+  height: 100%;
+  min-height: 0;
 }
 
-#map {
-  height: 100%;
-  width: 100%;
-  background: #f5f5f5;
-  z-index: 1;
+.map-area :deep(.leaflet-container) {
+  height: 100% !important;
+  width: 100% !important;
 }
 
 /* Loading indicator */
@@ -806,6 +473,10 @@ export default {
 
 /* Media queries for responsive design */
 @media (max-width: 768px) {
+  .map-container {
+    height: calc(100vh - 60px);
+  }
+  
   .sidebar {
     position: absolute;
     top: 0;
@@ -817,6 +488,25 @@ export default {
   
   .map-area {
     width: 100%;
+    height: 100%;
   }
+}
+
+@media (max-width: 480px) {
+  .sidebar {
+    width: 100%;
+  }
+  
+  .map-container {
+    height: calc(100vh - 50px);
+  }
+}
+
+/* Sidebar */
+.bins-container {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 </style>

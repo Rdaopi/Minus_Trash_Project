@@ -1,72 +1,53 @@
-//const API_BASE_URL = '/api';
-// Get the API base URL from environment variable or fallback to relative path
-const API_BASE_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api';
+//Base API configuration
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
-// Funzioni helper
-const handleResponse = async (response) => {
-  try {
-    const contentType = response.headers.get('content-type');
-    let data;
-    
-    // Only try to parse as JSON if the content type is application/json
-    if (contentType && contentType.includes('application/json')) {
-      try {
-        data = await response.json();
-      } catch (e) {
-        console.error('JSON parsing error:', e);
-        throw new Error('Errore nella risposta dal server: JSON incompleto o non valido');
-      }
-    } else {
-      // Handle non-JSON responses
-      data = { message: await response.text() };
-    }
-    
-    if (!response.ok) {
-      console.error('API error:', {
-        status: response.status,
-        statusText: response.statusText,
-        data
-      });
-      throw new Error(data.error || `Errore ${response.status}: ${response.statusText}`);
-    }
-    return data;
-  } catch (error) {
-    console.error('Response handling error:', error);
-    throw error;
+//Simple logging helper for API calls
+function logApiCall(method, url) {
+  console.log(`API ${method} call to: ${url}`);
+}
+
+//Helper to handle API responses
+async function handleResponse(response) {
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `HTTP error ${response.status}`);
   }
-};
+  return await response.json();
+}
 
-// Prelevo i token per le richieste autenticate
+//Get base headers for requests
+function getBaseHeaders() {
+  const headers = {
+    'Content-Type': 'application/json'
+  };
+  
+  const token = localStorage.getItem('token');
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  return headers;
+}
+
+//Grabs the auth token for protected routes
 const getAuthHeaders = () => ({
   'Content-Type': 'application/json',
   'Authorization': `Bearer ${localStorage.getItem('token')}`
 });
 
-// Header base per tutte le chiamate
-const getBaseHeaders = () => ({
-  'Content-Type': 'application/json',
-  'Accept': 'application/json'
-});
-
-// Per il debug delle chiamate API
-const logApiCall = (method, url, body = null) => {
-  console.log(`API ${method}:`, url);
-  if (body) console.log('Request Body:', body);
-};
-
-// API per l'autenticazione
+//Authentication related API endpoints
 export const authAPI = {
-  // Login con email e password
+  //Handles user login with email/password
   async login(email, password) {
     const url = `${API_BASE_URL}/auth/login`;
     logApiCall('POST', url);
     try {
-      // Create base64 encoded credentials for Basic Auth
+      //Create base64 credentials for Basic Auth
       const credentials = btoa(`${email}:${password}`);
       
-      // Set a timeout for the fetch request
+      //Set a reasonable timeout for the request
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 seconds timeout
+      const timeoutId = setTimeout(() => controller.abort(), 15000); //15s timeout
       
       try {
         const response = await fetch(url, {
@@ -80,12 +61,17 @@ export const authAPI = {
         
         clearTimeout(timeoutId);
         const data = await handleResponse(response);
-        localStorage.setItem('token', data.token);
+        console.log('Login response data:', data);
+        if (data.user && data.user.role) {
+          console.log('User role from response:', data.user.role);
+        } else {
+          console.log('No user role found in response');
+        }
         return data;
       } catch (fetchError) {
         clearTimeout(timeoutId);
         if (fetchError.name === 'AbortError') {
-          throw new Error('La richiesta di login è scaduta. Verifica la tua connessione Internet.');
+          throw new Error('Login request timed out. Check your internet connection.');
         }
         throw fetchError;
       }
@@ -95,90 +81,214 @@ export const authAPI = {
     }
   },
 
-  // Registrazione nuovo utente
+  //Handles new user registration
   async register(userData) {
     const url = `${API_BASE_URL}/auth/register`;
-    logApiCall('POST', url, userData);
+    logApiCall('POST', url);
+    
     try {
-      console.log('Sending registration data:', userData);
       const response = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify(userData)
       });
-      console.log('Registration response status:', response.status);
-      const data = await handleResponse(response);
-      return data;
+
+      return await handleResponse(response);
     } catch (error) {
       console.error('Registration error:', error);
       throw error;
     }
   },
 
-  // Logout (rimuove il token)
+  //Cleans up user session
   logout() {
     localStorage.removeItem('token');
-    // in futuro potrei aggiungere invalidazione token lato server
+    //TODO: Implement server-side token invalidation in the future
   }
 };
 
-// API per i cestini
+//Waste bin management API endpoints
 export const binsAPI = {
-  // Recupera tutti i cestini
-  async getAllBins() {
-    console.log('Recupero cestini dal server...');
-    const response = await fetch(`${API_BASE_URL}/waste/bins`, {
-      method: 'GET',
-      headers: getBaseHeaders()
-    });
+  //Creates a new waste bin
+  async createBin(binData) {
+    const url = `${API_BASE_URL}/waste/bins`;
+    logApiCall('POST', url);
     
-    if (!response.ok) {
-      throw new Error(`Errore HTTP ${response.status}`);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No auth token found');
+      }
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(binData)
+      });
+
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('Error creating bin:', error);
+      throw new Error('Failed to create waste bin');
     }
-    
-    const data = await response.json();
-    console.log('Dati ricevuti dal server:', data.length || 'formato non array');
-    return data;
   },
 
-  // Recupera cestini per tipo (plastica, carta, ecc)
-  async getBinsByType(type) {
-    // Converto in maiuscolo per uniformità
-    const upperType = type.toUpperCase();
-    console.log('Recupero cestini per tipo dal server:', upperType);
+  //Fetches all waste bins
+  async getAllBins() {
+    const url = `${API_BASE_URL}/waste/bins`;
+    logApiCall('GET', url);
     
-    // Preparo la richiesta
+    try {
+      const response = await fetch(url, {
+        headers: getBaseHeaders()
+      });
+      
+      const data = await handleResponse(response);
+      console.log('Raw bins data from server:', data);
+      
+      // Ensure we have an array of bins with proper coordinates
+      if (!Array.isArray(data)) {
+        throw new Error('Invalid data format: expected array');
+      }
+      
+      // Transform location data to lat/lng format if needed
+      const transformedBins = data.map(bin => {
+        console.log('Processing bin:', bin);
+        let transformedBin = {
+          ...bin,
+          address: 'Indirizzo non disponibile'
+        };
+
+        // Handle coordinates
+        if (bin.location && bin.location.coordinates) {
+          transformedBin.lng = bin.location.coordinates[0];
+          transformedBin.lat = bin.location.coordinates[1];
+        }
+
+        // Handle address - check all possible sources
+        if (bin.street && bin.streetNumber) {
+          transformedBin.address = `${bin.street}, ${bin.streetNumber}`;
+        } else if (bin.address && typeof bin.address === 'object') {
+          if (bin.address.street) {
+            transformedBin.street = bin.address.street;
+            transformedBin.streetNumber = bin.address.streetNumber || '';
+            transformedBin.address = bin.address.streetNumber ? 
+              `${bin.address.street}, ${bin.address.streetNumber}` : 
+              bin.address.street;
+          }
+        } else if (bin.location && bin.location.address) {
+          transformedBin.address = bin.location.address;
+        } else if (typeof bin.address === 'string' && bin.address) {
+          transformedBin.address = bin.address;
+        }
+
+        console.log('Transformed bin address:', transformedBin.address);
+        return transformedBin;
+      });
+      
+      console.log('Transformed bins:', transformedBins);
+      return transformedBins;
+    } catch (error) {
+      console.error('Error fetching bins:', error);
+      throw new Error('Failed to fetch waste bins: ' + error.message);
+    }
+  },
+
+  //Updates an existing waste bin
+  async updateBin(binId, binData) {
+    const url = `${API_BASE_URL}/waste/bins/${binId}`;
+    logApiCall('PUT', url);
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No auth token found');
+      }
+
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(binData)
+      });
+
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('Error updating bin:', error);
+      throw new Error('Failed to update waste bin');
+    }
+  },
+
+  //Removes a waste bin from the system
+  async deleteBin(binId) {
+    const url = `${API_BASE_URL}/waste/bins/${binId}`;
+    logApiCall('DELETE', url);
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No auth token found');
+      }
+
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('Error deleting bin:', error);
+      throw new Error('Failed to delete waste bin');
+    }
+  },
+
+  //Fetches bins by waste type (plastic, paper, etc)
+  async getBinsByType(type) {
+    //Convert to uppercase for consistency
+    const upperType = type.toUpperCase();
+    console.log('Fetching bins by type:', upperType);
+    
+    //Prepare and send request
     const response = await fetch(`${API_BASE_URL}/waste/bins/type/${upperType}`, {
       method: 'GET',
       headers: getBaseHeaders()
     });
     
-    // Controllo se c'è stato un errore
+    //Check for errors
     if (!response.ok) {
-      throw new Error(`Errore HTTP ${response.status}`);
+      throw new Error(`HTTP error ${response.status}`);
     }
     
     const data = await response.json();
-    console.log('Dati filtrati ricevuti dal server');
+    console.log('Successfully fetched filtered bins');
     return data;
   },
 
-  // Recupera cestini nelle vicinanze di coordinate geografiche
+  //Finds bins near a geographic location
   async getNearbyBins(latitude, longitude, radius = 1000) {
-    console.log(`Recupero cestini per area dal server: [${latitude}, ${longitude}]`);
+    console.log(`Finding bins near [${latitude}, ${longitude}]`);
     
-    // Ho messo un radius default di 1km
+    //Default radius is 1km
     const response = await fetch(`${API_BASE_URL}/waste/bins/area?lat=${latitude}&lng=${longitude}&radius=${radius}`, {
       method: 'GET',
       headers: getBaseHeaders()
     });
     
     if (!response.ok) {
-      throw new Error(`Errore HTTP ${response.status}`);
+      throw new Error(`HTTP error ${response.status}`);
     }
     
     const data = await response.json();
-    console.log('Dati per area ricevuti dal server');
+    console.log('Successfully fetched nearby bins');
     return data;
   }
 }; 
