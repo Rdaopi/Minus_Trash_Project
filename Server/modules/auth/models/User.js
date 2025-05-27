@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
+import Token from './Token.js';
 
 const { Schema } = mongoose;
 
@@ -73,7 +74,7 @@ userSchema.index(
     {email: 1, username: 1},
     { unique: true}
 );
-
+/*
 // Method to generate JWT token
 userSchema.methods.generateAuthToken = function() {
     const token = jwt.sign(
@@ -82,9 +83,48 @@ userSchema.methods.generateAuthToken = function() {
             role: this.role 
         },
         process.env.JWT_ACCESS_SECRET,
-        { expiresIn: '15m' }
+        { expiresIn: '1m' }
     );
     return token;
+};*/
+
+// Method to generate both access and refresh tokens
+userSchema.methods.generateTokens = async function(ip, userAgent) {
+    const accessToken = jwt.sign(
+        { 
+            id: this._id,
+            role: this.role 
+        },
+        process.env.JWT_ACCESS_SECRET,
+        { expiresIn: '1m' }
+        //1m for testing
+    );
+
+    const refreshToken = jwt.sign(
+        { id: this._id },
+        process.env.JWT_REFRESH_SECRET,
+        { expiresIn: '7d' }
+    );
+
+    // Save refresh token in database
+    await Token.create({
+        user: this._id,
+        refreshToken, // Will be automatically hashed by the pre-save middleware
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        ipAddress: ip,
+        userAgent
+    });
+
+    return { accessToken, refreshToken };
+};
+
+// Method to check if password was changed after a specific timestamp
+userSchema.methods.changedPasswordAfter = function(timestamp) {
+    if (this.passwordChangedAt) {
+        const changedTimestamp = parseInt(this.passwordChangedAt.getTime() / 1000, 10);
+        return timestamp < changedTimestamp;
+    }
+    return false;
 };
 
 export default mongoose.model('User', userSchema);

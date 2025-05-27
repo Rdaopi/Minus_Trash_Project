@@ -222,9 +222,10 @@ export default {
                 if (isLogin.value) {
                     // Login flow
                     response = await authAPI.login(formData.value.email, formData.value.password);
-                    if (response && response.token) {
+                    if (response && response.accessToken && response.refreshToken) {
                         localStorage.setItem('userEmail', formData.value.email);
-                        localStorage.setItem('token', response.token);
+                        localStorage.setItem('token', response.accessToken);
+                        localStorage.setItem('refreshToken', response.refreshToken);
                         emit('login-success');
                         showSuccessNotification('Login effettuato con successo!');
                         // Wait for the notification to be visible before redirecting

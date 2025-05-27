@@ -1,41 +1,15 @@
 import jwt from 'jsonwebtoken';
+import User from '../models/User.js';
+import Token from '../models/Token.js';
+import { logger } from '../../../core/utils/logger.js';
+import { authenticateBasic } from '../services/authService.js';
 
-const generateTokens = async (user, ip, userAgent) => {
-    try {
-        const accessToken = jwt.sign(
-          { id: user._id, role: user.role },
-          process.env.JWT_ACCESS_SECRET,
-          { expiresIn: '15m' }
-        );
-
-    const refreshToken = jwt.sign(
-        { id: user._id },
-        process.env.JWT_REFRESH_SECRET,
-        { expiresIn: '7d' }
-        );
-
-  // Salva il refresh token nel database
-  await Token.create({
-    user: user._id,
-    refreshToken,
-    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    ipAddress: ip,
-    userAgent
-  });
-
-  return { accessToken, refreshToken };
-    } catch (error) {
-        logger.error(`Errore generazione token: ${error.stack}`);
-        throw new Error('Errore generazione token');
-    }    
-};
 // 2. Modifica la funzione login
 export const login = async (req, res) => {
   try {
     const user = await authenticateBasic(req.body.identifier, req.body.password);
     
-    const { accessToken, refreshToken } =await  generateTokens(
-      user,
+    const { accessToken, refreshToken } = await user.generateTokens(
       req.ip,
       req.headers['user-agent']
     );
@@ -57,24 +31,35 @@ export const refreshToken = async (req, res) => {
   const { refreshToken } = req.body;
   
   try {
+    if (!refreshToken) {
+      logger.error('Refresh token mancante nella richiesta');
+      return res.status(400).json({ error: 'Refresh token mancante' });
+    }
+
     // Verifica token
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
     
     // Cerca token nel database
     const storedToken = await Token.findOne({
-      refreshToken,
       user: decoded.id,
       revoked: false,
       expiresAt: { $gt: new Date() }
     }).populate('user');
 
     if (!storedToken) {
+      logger.error('Token non trovato nel database o revocato');
+      return res.status(401).json({ error: 'Refresh token non valido' });
+    }
+
+    // Verifica il token
+    const isValid = await storedToken.verifyToken(refreshToken);
+    if (!isValid) {
+      logger.error('Token non valido durante la verifica');
       return res.status(401).json({ error: 'Refresh token non valido' });
     }
 
     // Genera nuovi token
-    const { accessToken, refreshToken: newRefreshToken } = generateTokens(
-      storedToken.user,
+    const { accessToken, refreshToken: newRefreshToken } = await storedToken.user.generateTokens(
       storedToken.ipAddress,
       storedToken.userAgent
     );
@@ -82,6 +67,7 @@ export const refreshToken = async (req, res) => {
     // Revoca il vecchio refresh token
     await Token.findByIdAndUpdate(storedToken._id, { revoked: true });
 
+    logger.info('Nuovi token generati con successo');
     res.json({
       accessToken,
       refreshToken: newRefreshToken,
@@ -89,11 +75,15 @@ export const refreshToken = async (req, res) => {
     });
 
   } catch (error) {
+    logger.error('Errore durante il refresh del token:', error);
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Token scaduto' });
+    }
     res.status(401).json({ error: 'Token non valido' });
   }
 };
 
-// Middleware di autenticazione aggiornato
+// Middleware di autenticazione   
 export const authMiddleware = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   const token = authHeader?.split(' ')[1];

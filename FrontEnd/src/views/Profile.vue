@@ -22,6 +22,7 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import ChangePassword from '../components/ChangePassword.vue';
 import Notification from '../components/Notification.vue';
+import { authAPI } from '../services/api.js';
 
 const router = useRouter();
 const userEmail = ref(localStorage.getItem('userEmail') || 'utente');
@@ -29,10 +30,25 @@ const showNotification = ref(false);
 const notificationMessage = ref('');
 const notificationType = ref('success');
 
-function logout() {
-  localStorage.removeItem('token');
-  localStorage.removeItem('userEmail');
-  router.push('/auth');
+async function logout() {
+  try {
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (refreshToken) {
+      await authAPI.logout(refreshToken);
+    }
+    // Clear all auth-related data
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('userEmail');
+    router.push('/auth');
+  } catch (error) {
+    console.error('Logout error:', error);
+    // Even if the server request fails, clear local storage
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('userEmail');
+    router.push('/auth');
+  }
 }
 
 function handlePasswordChange({ type, message }) {

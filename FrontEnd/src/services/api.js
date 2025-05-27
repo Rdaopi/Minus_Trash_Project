@@ -37,10 +37,65 @@ const handleResponse = async (response) => {
 };
 
 // Prelevo i token per le richieste autenticate
-const getAuthHeaders = () => ({
-  'Content-Type': 'application/json',
-  'Authorization': `Bearer ${localStorage.getItem('token')}`
-});
+const getAuthHeaders = async () => {
+  const token = localStorage.getItem('token');
+  const refreshToken = localStorage.getItem('refreshToken');
+  
+  if (!token && !refreshToken) {
+    throw new Error('No authentication tokens available');
+  }
+
+  // Check if token is expired
+  if (token) {
+    try {
+      const tokenData = JSON.parse(atob(token.split('.')[1]));
+      const expirationTime = tokenData.exp * 1000;
+      const currentTime = Date.now();
+      const timeLeft = expirationTime - currentTime;
+      
+      if (timeLeft > 0) {
+        console.log(`%cAccess Token valid for ${Math.round(timeLeft/1000)}s`, 'background: #4caf50; color: white; padding: 2px 5px; border-radius: 3px');
+        return {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        };
+      } else {
+        console.log('%cAccess Token Expired - Attempting Refresh', 'background: #ff9800; color: white; padding: 2px 5px; border-radius: 3px');
+      }
+    } catch (error) {
+      console.error('Error parsing token:', error);
+    }
+  }
+
+  // Token is expired or invalid, try to refresh
+  if (refreshToken) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/refresh-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ refreshToken })
+      });
+      const newTokens = await handleResponse(response);
+      localStorage.setItem('token', newTokens.accessToken);
+      localStorage.setItem('refreshToken', newTokens.refreshToken);
+      console.log('%cToken Successfully Refreshed', 'background: #4caf50; color: white; padding: 2px 5px; border-radius: 3px');
+      return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${newTokens.accessToken}`
+      };
+    } catch (error) {
+      console.log('%cToken Refresh Failed - Redirecting to Login', 'background: #f44336; color: white; padding: 2px 5px; border-radius: 3px');
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      window.location.href = '/auth';
+      throw new Error('Session expired. Please login again.');
+    }
+  }
+
+  throw new Error('No valid authentication tokens available');
+};
 
 // Header base per tutte le chiamate
 const getBaseHeaders = () => ({
@@ -80,7 +135,8 @@ export const authAPI = {
         
         clearTimeout(timeoutId);
         const data = await handleResponse(response);
-        localStorage.setItem('token', data.token);
+        localStorage.setItem('token', data.accessToken);
+        localStorage.setItem('refreshToken', data.refreshToken);
         return data;
       } catch (fetchError) {
         clearTimeout(timeoutId);
@@ -116,31 +172,69 @@ export const authAPI = {
   },
 
   // Logout (rimuove il token)
-  logout() {
-    localStorage.removeItem('token');
-    // in futuro potrei aggiungere invalidazione token lato server
-  },
+  async logout(refreshToken) {
+      const url = `${API_BASE_URL}/auth/logout`;
+      logApiCall('POST', url);
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({ refreshToken })
+        });
+        return await handleResponse(response);
+      } catch (error) {
+        console.error('Logout error:', error);
+        throw error;
+      }
+    },
 
-  // Change password
+  // Change password with refresh token support
   async changePassword(passwordData) {
     const url = `${API_BASE_URL}/auth/change_password`;
     logApiCall('POST', url);
     try {
+      const headers = await getAuthHeaders();
       const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
+        headers,
         body: JSON.stringify({
           currentPassword: passwordData.currentPassword,
           newPassword: passwordData.newPassword
         })
       });
       const data = await handleResponse(response);
+      
+      // Clear tokens and redirect to login after successful password change
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      console.log('%cPassword Changed - Please Login Again', 'background: #2196f3; color: white; padding: 2px 5px; border-radius: 3px');
+      window.location.href = '/auth';
+      
       return data;
     } catch (error) {
       console.error('Change password error:', error);
+      throw error;
+    }
+  },
+
+  // Refresh token
+  async refreshToken(refreshToken) {
+    const url = `${API_BASE_URL}/auth/refresh-token`;
+    logApiCall('POST', url);
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ refreshToken })
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('Refresh token error:', error);
       throw error;
     }
   }
@@ -205,4 +299,4 @@ export const binsAPI = {
     console.log('Dati per area ricevuti dal server');
     return data;
   }
-}; 
+};

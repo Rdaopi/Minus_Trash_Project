@@ -2,6 +2,8 @@ import User from "../models/User.js";
 import bcrypt from "bcryptjs"; //Password Hash
 import { auditOnSuccess } from "../middlewares/withAudit.js"; //per generare gli audit di registrazione
 import { logger } from '../../../core/utils/logger.js';
+import jwt from 'jsonwebtoken';
+import Token from "../models/Token.js";
 
 //Regex per  validità password
 const REGEX_PASSWORD = /^(?=.*[A-Z])(?=.*[!@#$%^&*])(?=.{8,})/;
@@ -18,16 +20,17 @@ export const login = async(req, res) => {
 
         //Genera il JWT via metodo sullo schema
         try {
-            const token = user.generateAuthToken();
-            logger.info('Generated token for user:', { userId: user._id, token });
+            const { accessToken, refreshToken } = await user.generateTokens(req.ip, req.headers['user-agent']);
+            logger.info('Generated tokens for user:', { userId: user._id });
 
             //Aggiorna lastLogin
             user.lastLogin = Date.now();
             await user.save();
 
-            logger.info(`Utente loggato (JWT emesso): ${user._id}`);
+            logger.info(`Utente loggato (JWT emesso): ${user._id}, access token ${accessToken},\n refresh token ${refreshToken}`);
             return res.json({
-                token,
+                accessToken,
+                refreshToken,
                 user: {
                     id: user._id,
                     username: user.username,
@@ -42,6 +45,59 @@ export const login = async(req, res) => {
     } catch (error) {
         logger.error('Errore durante il login:', error);
         return res.status(500).json({ error: 'Errore durante il login' });
+    }
+};
+
+//Add refresh token endpoint
+export const refreshTokenHandler = async (req, res) => {
+    try {
+        const { refreshToken } = req.body;
+        
+        if (!refreshToken) {
+            return res.status(400).json({ error: 'Refresh token mancante' });
+        }
+
+        // Verify refresh token JWT
+        const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+        
+        // Find all valid tokens for the user
+        const storedTokens = await Token.find({
+            user: decoded.id,
+            revoked: false,
+            expiresAt: { $gt: new Date() }
+        }).populate('user');
+
+        // Find the matching token
+        let validToken = null;
+        for (const token of storedTokens) {
+            if (await token.verifyToken(refreshToken)) {
+                validToken = token;
+                break;
+            }
+        }
+
+        if (!validToken) {
+            return res.status(401).json({ error: 'Refresh token non valido' });
+        }
+
+        // Generate new tokens
+        const { accessToken: newAccessToken, refreshToken: newRefreshToken } = await validToken.user.generateTokens(
+            validToken.ipAddress,
+            validToken.userAgent
+        );
+
+        // Revoke old refresh token
+        await Token.findByIdAndUpdate(validToken._id, { revoked: true });
+
+        res.json({
+            accessToken: newAccessToken,
+            refreshToken: newRefreshToken,
+            expiresIn: 900 // 15 minutes in seconds
+        });
+
+    } catch (error) {
+        logger.error('Errore refresh token:', error);
+        res.status(401).json({ error: 'Token non valido' });
     }
 };
 
@@ -174,6 +230,9 @@ export const changePassword = [
                 throw error;
             }
 
+            // Revoke all existing refresh tokens
+            await Token.revokeAllUserTokens(userId);
+
             user.password = await bcrypt.hash(newPassword,12);
             await user.save();
             user.passwordChangedAt = Date.now();
@@ -200,3 +259,38 @@ export const user_delete = [
         }
     }
 ];
+
+//Logout endpoint
+export const logout = async (req, res) => {
+    try {
+        const { refreshToken, logoutAll } = req.body;
+        
+        if (!refreshToken && !logoutAll) {
+            return res.status(400).json({ error: 'Refresh token mancante o specificare logoutAll' });
+        }
+
+        if (logoutAll) {
+            // Revoke all tokens for the user
+            await Token.revokeAllUserTokens(req.user._id);
+            return res.json({ message: 'Logout da tutti i dispositivi effettuato con successo' });
+        }
+
+        // Find and revoke the specific token
+        const token = await Token.findOne({ 
+            refreshToken,
+            user: req.user._id,
+            revoked: false 
+        });
+        
+        if (token) {
+            token.revoked = true;
+            await token.save();
+            return res.json({ message: 'Logout effettuato con successo' });
+        }
+
+        res.json({ message: 'Token non trovato o già revocato' });
+    } catch (error) {
+        logger.error('Errore durante il logout:', error);
+        res.status(500).json({ error: 'Errore durante il logout' });
+    }
+};
