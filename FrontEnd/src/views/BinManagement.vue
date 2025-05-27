@@ -52,7 +52,7 @@
       <div class="map-container">
         <MapComponent 
           ref="mapRef"
-          :bins="bins"
+          :bins="filteredBins.length > 0 ? filteredBins : bins"
           :selected-bin-id="selectedBinId"
           @bin-click="handleBinClick"
         />
@@ -105,6 +105,7 @@
               :loading="loading"
               :selected-bin-id="selectedBinId"
               @select-bin="handleBinSelect"
+              @bins-filtered="handleBinsFiltered"
             />
           </div>
         </div>
@@ -128,6 +129,7 @@ import { binsAPI } from '../services/api';
 //Component state management
 const showBinList = ref(false);
 const bins = ref([]);
+const filteredBins = ref([]);
 const loading = ref(false);
 const error = ref(null);
 const successMessage = ref(null);
@@ -272,6 +274,12 @@ function handleBinClick(bin) {
       longitude: bin.lng || bin.longitude || (bin.location?.coordinates?.[0])
     });
   }
+}
+
+//Handle filtered bins from BinList component
+function handleBinsFiltered(filtered) {
+  filteredBins.value = filtered;
+  console.log('Filtered bins received in BinManagement:', filtered.length);
 }
 
 //Handle insert bin button click from header

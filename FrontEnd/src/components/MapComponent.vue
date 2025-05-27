@@ -29,7 +29,7 @@ const getBinIcon = (type) => {
     'PLASTICA': 'fa-bottle-water',
     'CARTA': 'fa-newspaper',
     'VETRO': 'fa-wine-bottle',
-    'INDIFFERENZIATA': 'fa-solid fa-trash',
+    'INDIFFERENZIATO': 'fa-solid fa-trash',
     'ORGANICO': 'fa-apple-whole',
     'RAEE': 'fa-laptop',
     'default': 'fa-trash-can'
@@ -43,7 +43,7 @@ const getBinColor = (type) => {
     'PLASTICA': '#ffeb3b',  // Yellow
     'CARTA': '#2196f3',     // Blue
     'VETRO': '#4caf50',     // Green
-    'INDIFFERENZIATA': '#9e9e9e', // Gray
+    'INDIFFERENZIATO': '#9e9e9e', // Gray
     'ORGANICO': '#795548',  // Brown
     'RAEE': '#f44336',      // Red
     'default': '#9e9e9e'    // Gray as fallback
@@ -168,7 +168,7 @@ const updateMarkers = () => {
             <div class="popup-section">
               <p class="popup-address">
                 <i class="fas fa-location-dot"></i>
-                ${formatAddress(bin)}
+                ${formatAddress(bin.address)}
               </p>
             </div>
             

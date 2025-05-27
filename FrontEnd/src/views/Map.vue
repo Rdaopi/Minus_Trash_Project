@@ -5,34 +5,14 @@
       <!-- Sidebar with bin list -->
       <div class="sidebar" :class="{ 'sidebar-hidden': !showSidebar }">
         <div class="sidebar-header">
-          <h2>Bins <span class="bins-count">{{ filteredBins.length }}</span></h2>
+          <h2>Bins <span class="bins-count">{{ filteredBins.length > 0 ? filteredBins.length : bins.length }}</span></h2>
           <button @click="toggleSidebar" class="icon-button">
             <i class="fas fa-times"></i>
           </button>
         </div>
         
-        <!-- Search and filter controls -->
+        <!-- Refresh button -->
         <div class="controls">
-          <div class="search-box">
-            <input 
-              type="text" 
-              v-model="searchQuery" 
-              placeholder="Search address..."
-            >
-          </div>
-          
-          <div class="type-filter">
-            <select v-model="selectedType">
-              <option value="">Tutti i tipi</option>
-              <option value="PLASTICA">Plastica</option>
-              <option value="CARTA">Carta</option>
-              <option value="VETRO">Vetro</option>
-              <option value="INDIFFERENZIATA">Indifferenziata</option>
-              <option value="ORGANICO">Organico</option>
-              <option value="RAEE">RAEE</option>
-            </select>
-          </div>
-          
           <button @click="loadBins" class="refresh-button">
             <i class="fas fa-sync"></i> Refresh
           </button>
@@ -53,24 +33,25 @@
         </div>
         
         <!-- Empty state -->
-        <div v-else-if="filteredBins.length === 0" class="empty-state">
+        <div v-else-if="bins.length === 0" class="empty-state">
           <p>Nessun cestino disponibile</p>
         </div>
         
         <!-- Bins list -->
         <div class="bins-container">
           <BinList 
-            :bins="filteredBins"
+            :bins="bins"
             :loading="loading"
             :selected-bin-id="selectedBinId"
             @select-bin="selectBin"
+            @bins-filtered="handleBinsFiltered"
           />
         </div>
       </div>
       
       <!-- Map area using MapComponent -->
       <div class="map-area">
-        <MapComponent :bins="filteredBins" ref="mapRef" />
+        <MapComponent :bins="filteredBins.length > 0 ? filteredBins : bins" ref="mapRef" />
         
         <!-- Mobile controls -->
         <button @click="toggleSidebar" class="fab show-list-button" v-if="!showSidebar">
@@ -97,42 +78,20 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { binsAPI } from '../services/api';
 import MapComponent from '../components/MapComponent.vue';
 import BinList from '../components/BinList.vue';
 
 //Core state
 const bins = ref([]);
+const filteredBins = ref([]);
 const loading = ref(false);
 const error = ref(null);
-const searchQuery = ref('');
-const selectedType = ref('');
 const showSidebar = ref(true);
 const showLegend = ref(false);
 const selectedBinId = ref(null);
 const mapRef = ref(null);
-
-//Computed properties
-const filteredBins = computed(() => {
-  let filtered = [...bins.value];
-  
-  //Apply type filter
-  if (selectedType.value) {
-    filtered = filtered.filter(bin => bin.type.toLowerCase() === selectedType.value.toLowerCase());
-  }
-  
-  //Apply search filter
-  if (searchQuery.value.trim()) {
-    const query = searchQuery.value.toLowerCase();
-    filtered = filtered.filter(bin => 
-      bin.address?.toLowerCase().includes(query) ||
-      bin.type?.toLowerCase().includes(query)
-    );
-  }
-  
-  return filtered;
-});
 
 //Load bins from API
 const loadBins = async () => {
@@ -182,13 +141,10 @@ const selectBin = (bin) => {
   }
 };
 
-//Helper functions
-const getBinAddress = (bin) => bin.address || 'Address not available';
-
-const getFillLevelClass = (level) => {
-  if (level >= 80) return 'fill-critical';
-  if (level >= 50) return 'fill-warning';
-  return 'fill-normal';
+// Handler per ricevere i cestini filtrati dalla BinList
+const handleBinsFiltered = (filtered) => {
+  filteredBins.value = filtered;
+  console.log('Filtered bins received:', filtered.length);
 };
 
 //Load bins when component mounts
@@ -254,32 +210,11 @@ onMounted(loadBins);
 /* Controls */
 .controls {
   padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
   border-bottom: 1px solid #eee;
 }
 
-.search-box {
-  display: flex;
-  gap: 8px;
-}
-
-.search-box input {
-  flex: 1;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
-.type-filter select {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
 .refresh-button {
+  width: 100%;
   padding: 8px;
   background: #f5f5f5;
   border: none;

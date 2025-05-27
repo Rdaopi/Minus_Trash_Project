@@ -1,6 +1,5 @@
-//Reusable component to display a list of bins
 <script setup>
-import { defineProps, onMounted, watch } from 'vue';
+import { defineProps, onMounted, watch, ref, computed } from 'vue';
 
 const props = defineProps({
   bins: {
@@ -17,7 +16,44 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['select-bin']);
+const emit = defineEmits(['select-bin', 'bins-filtered']);
+
+// Filtri e ricerca
+const searchQuery = ref('');
+const selectedType = ref('');
+const selectedStatus = ref('');
+
+// Computed per i cestini filtrati
+const filteredBins = computed(() => {
+  let filtered = [...props.bins];
+  
+  // Applica filtro per tipo
+  if (selectedType.value) {
+    filtered = filtered.filter(bin => bin.type?.toLowerCase() === selectedType.value.toLowerCase());
+  }
+  
+  // Applica filtro per status
+  if (selectedStatus.value) {
+    filtered = filtered.filter(bin => bin.status?.toLowerCase() === selectedStatus.value.toLowerCase());
+  }
+  
+  // Applica filtro di ricerca
+  if (searchQuery.value.trim()) {
+    const query = searchQuery.value.toLowerCase();
+    filtered = filtered.filter(bin => {
+      const address = formatAddress(bin).toLowerCase();
+      const type = bin.type?.toLowerCase() || '';
+      return address.includes(query) || type.includes(query);
+    });
+  }
+  
+  return filtered;
+});
+
+// Watch for emitting filtered bins when they change
+watch(filteredBins, (newFilteredBins) => {
+  emit('bins-filtered', newFilteredBins);
+}, { immediate: true });
 
 const getFillLevelClass = (level) => {
   if (level >= 80) return 'level-high';
@@ -30,7 +66,7 @@ const getBinIcon = (type) => {
     'PLASTICA': 'fa-bottle-water',
     'CARTA': 'fa-newspaper',
     'VETRO': 'fa-wine-bottle',
-    'INDIFFERENZIATA': 'fa-trash',
+    'INDIFFERENZIATO': 'fa-trash',  
     'ORGANICO': 'fa-apple-whole',
     'RAEE': 'fa-laptop',
     'default': 'fa-trash-can'
@@ -41,30 +77,67 @@ const getBinIcon = (type) => {
 
 const getBinColor = (type) => {
   const colorMap = {
-    'PLASTICA': '#ffeb3b',  // Giallo
-    'CARTA': '#2196f3',     // Blu
-    'VETRO': '#4caf50',     // Verde
-    'INDIFFERENZIATA': '#9e9e9e', // Grigio
-    'ORGANICO': '#795548',  // Marrone
-    'RAEE': '#f44336',      // Rosso
-    'default': '#9e9e9e'    // Grigio come fallback
+    'PLASTICA': '#ffeb3b',
+    'CARTA': '#2196f3',
+    'VETRO': '#4caf50',
+    'INDIFFERENZIATO': '#9e9e9e',
+    'ORGANICO': '#795548',
+    'RAEE': '#f44336',
+    'default': '#9e9e9e'
   };
   
   return colorMap[type?.toUpperCase()] || colorMap.default;
 };
 
-// Formatta l'indirizzo per la visualizzazione
+// Format the address for display
 function formatAddress(bin) {
-  if (!bin || !bin.location || !bin.location.address) return 'Indirizzo non disponibile';
+  if (!bin) return 'Indirizzo non disponibile';
   
-  const { street, streetNumber, city, postalCode } = bin.location.address;
-  const parts = [];
-  if (street) parts.push(street);
-  if (streetNumber) parts.push(streetNumber);
-  if (city) parts.push(city);
-  if (postalCode) parts.push(postalCode);
+  // Debug: log the bin structure to understand the data format
+  console.log('Bin data structure:', bin);
   
-  return parts.length > 0 ? parts.join(', ') : 'Indirizzo non disponibile';
+  // If bin.address exists directly (simple format)
+  if (bin.address && typeof bin.address === 'string') {
+    return bin.address;
+  }
+  
+  // If the address is in bin.location.address (structured format)
+  if (bin.location && bin.location.address) {
+    // If it's a string
+    if (typeof bin.location.address === 'string') {
+      return bin.location.address;
+    }
+    
+    // If it's an object with structured fields
+    if (typeof bin.location.address === 'object' && bin.location.address !== null) {
+      const address = bin.location.address;
+      const parts = [];
+      
+      // Try different possible field names
+      if (address.street) parts.push(address.street);
+      if (address.streetNumber) parts.push(address.streetNumber);
+      if (address.city) parts.push(address.city);
+      if (address.postalCode) parts.push(address.postalCode);
+      if (address.cap) parts.push(address.cap);
+      
+      if (parts.length > 0) {
+        return parts.join(', ');
+      }
+      
+      // If no structured fields, try to convert object to readable string
+      const addressString = Object.values(address).filter(val => val && typeof val === 'string').join(', ');
+      if (addressString) return addressString;
+    }
+  }
+  // If bin.location exists but no address, try coordinates as fallback
+  if (bin.location && (bin.location.coordinates || (bin.location.lat && bin.location.lng))) {
+    const lat = bin.location.coordinates?.[1] || bin.location.lat;
+    const lng = bin.location.coordinates?.[0] || bin.location.lng;
+    if (lat && lng) {
+      return `Coordinate: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+    }
+  }
+  return 'Indirizzo non disponibile';
 }
 
 // Log quando i cestini cambiano
@@ -79,52 +152,178 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="bins-list">
-    <div v-if="loading" class="loading-indicator">
-      <div class="spinner"></div>
-      <p>Caricamento in corso...</p>
+  <div class="bins-list-container">
+    <!-- Header con conteggio -->
+    <div class="list-header">
+      <h3>Cestini <span class="bins-count">{{ filteredBins.length }}</span></h3>
     </div>
     
-    <div v-else-if="bins.length === 0" class="empty-state">
-      <p>Nessun cestino disponibile</p>
-    </div>
-    
-    <template v-else>
-      <div 
-        v-for="bin in bins" 
-        :key="bin.id || bin._id"
-        class="bin-item"
-        :class="{ 'selected': selectedBinId === (bin.id || bin._id) }"
-        @click="$emit('select-bin', bin)"
-      >
-        <div class="bin-icon" :style="{ backgroundColor: getBinColor(bin.type) + '20' }">
-          <i class="fas" :class="getBinIcon(bin.type)" :style="{ color: getBinColor(bin.type) }"></i>
+    <!-- Controlli di ricerca e filtri -->
+    <div class="controls">
+      <div class="search-box">
+        <input 
+          type="text" 
+          v-model="searchQuery" 
+          placeholder="Cerca indirizzo..."
+        >
+      </div>
+      
+      <div class="filters-row">
+        <div class="type-filter">
+          <select v-model="selectedType">
+            <option value="">Tutti i tipi</option>
+            <option value="PLASTICA">Plastica</option>
+            <option value="CARTA">Carta</option>
+            <option value="VETRO">Vetro</option>
+            <option value="INDIFFERENZIATO">Indifferenziato</option>
+            <option value="ORGANICO">Organico</option>
+            <option value="RAEE">RAEE</option>
+          </select>
         </div>
-        <div class="bin-details">
-          <div class="bin-title">{{ bin.type || 'Cestino' }}</div>
-          <div class="bin-address">{{ formatAddress(bin) }}</div>
-          <div class="bin-fill-bar">
-            <div 
-              :style="{ width: `${bin.currentFillLevel || 0}%` }" 
-              :class="getFillLevelClass(bin.currentFillLevel || 0)"
-            ></div>
+        
+        <div class="status-filter">
+          <select v-model="selectedStatus">
+            <option value="">Tutti gli stati</option>
+            <option value="attivo">Attivo</option>
+            <option value="manutenzione">Manutenzione</option>
+            <option value="inattivo">Inattivo</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Lista cestini -->
+    <div class="bins-list">
+      <div v-if="loading" class="loading-indicator">
+        <div class="spinner"></div>
+        <p>Caricamento in corso...</p>
+      </div>
+      
+      <div v-else-if="filteredBins.length === 0" class="empty-state">
+        <p v-if="searchQuery || selectedType || selectedStatus">
+          Nessun cestino trovato con i filtri applicati
+        </p>
+        <p v-else>Nessun cestino disponibile</p>
+      </div>
+      
+      <div v-else class="bins-container">
+        <div 
+          v-for="bin in filteredBins" 
+          :key="bin.id || bin._id"
+          class="bin-item"
+          :class="{ 'selected': selectedBinId === (bin.id || bin._id) }"
+          @click="$emit('select-bin', bin)"
+        >
+          <div class="bin-icon" :style="{ backgroundColor: getBinColor(bin.type) + '20' }">
+            <i class="fas" :class="getBinIcon(bin.type)" :style="{ color: getBinColor(bin.type) }"></i>
+          </div>
+          <div class="bin-details">
+            <div class="bin-header">
+              <div class="bin-title">{{ bin.type || 'Cestino' }}</div>
+              <span class="status-badge" :class="`status-${bin.status || 'attivo'}`">
+                {{ bin.status || 'attivo' }}
+              </span>
+            </div>
+            <div class="bin-address">{{ formatAddress(bin) }}</div>
+            <div class="bin-fill-info">
+              <span class="fill-text">Riempimento: {{ bin.currentFillLevel || 0 }}%</span>
+              <div class="bin-fill-bar">
+                <div 
+                  :style="{ width: `${bin.currentFillLevel || 0}%` }" 
+                  :class="getFillLevelClass(bin.currentFillLevel || 0)"
+                ></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </template>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.bins-list {
-  flex: 1;
-  overflow-y: auto;
+.bins-list-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: white;
+  overflow: hidden;
+}
+
+/* Header */
+.list-header {
+  padding: 16px;
+  border-bottom: 1px solid #eee;
+  flex-shrink: 0;
+}
+
+.list-header h3 {
+  margin: 0;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bins-count {
+  background: #4CAF50;
+  color: white;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+/* Controlli */
+.controls {
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  height: 100%;
-  max-height: calc(100vh - 200px); /* Sottraggo l'altezza approssimativa di header e controlli */
+  border-bottom: 1px solid #eee;
+  flex-shrink: 0;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.filters-row {
+  display: flex;
+  gap: 8px;
+}
+
+.type-filter,
+.status-filter {
+  flex: 1;
+}
+
+.type-filter select,
+.status-filter select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+/* Lista scrollabile */
+.bins-list {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0;
+  min-height: 0;
+}
+
+.bins-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
 }
 
 .bin-item {
@@ -137,6 +336,7 @@ onMounted(() => {
   transition: all 0.2s ease;
   border-left: 3px solid transparent;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .bin-item:hover {
@@ -169,7 +369,14 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  min-width: 0; /* Per far funzionare text-overflow */
+  min-width: 0;
+}
+
+.bin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
 }
 
 .bin-title {
@@ -177,6 +384,31 @@ onMounted(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.status-badge {
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.status-attivo {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-manutenzione {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-inattivo {
+  background: #f8d7da;
+  color: #721c24;
 }
 
 .bin-address {
@@ -187,12 +419,22 @@ onMounted(() => {
   text-overflow: ellipsis;
 }
 
+.bin-fill-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fill-text {
+  font-size: 11px;
+  color: #888;
+}
+
 .bin-fill-bar {
   height: 4px;
   background: #eee;
   border-radius: 2px;
   overflow: hidden;
-  margin-top: 4px;
 }
 
 .bin-fill-bar > div {
@@ -240,5 +482,45 @@ onMounted(() => {
   padding: 16px;
   text-align: center;
   color: #666;
+}
+
+/* Scrollbar personalizzata per webkit browsers */
+.bins-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.bins-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.bins-list::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.bins-list::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .filters-row {
+    flex-direction: column;
+  }
+  
+  .bin-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .bins-container {
+    padding: 12px;
+  }
+  
+  .bin-item {
+    padding: 10px;
+  }
 }
 </style> 
