@@ -52,7 +52,7 @@
       <div class="map-container">
         <MapComponent 
           ref="mapRef"
-          :bins="filteredBins.length > 0 ? filteredBins : bins"
+          :bins="displayedBins.length > 0 ? displayedBins : bins"
           :selected-bin-id="selectedBinId"
           @bin-click="handleBinClick"
         />
@@ -106,6 +106,7 @@
               :selected-bin-id="selectedBinId"
               @select-bin="handleBinSelect"
               @bins-filtered="handleBinsFiltered"
+              ref="binListRef"
             />
           </div>
         </div>
@@ -129,13 +130,14 @@ import { binsAPI } from '../services/api';
 //Component state management
 const showBinList = ref(false);
 const bins = ref([]);
-const filteredBins = ref([]);
+const displayedBins = ref([]);
 const loading = ref(false);
 const error = ref(null);
 const successMessage = ref(null);
 const selectedBinId = ref(null);
 const mapRef = ref(null);
 const binFormRef = ref(null);
+const binListRef = ref(null);
 
 //Check if current user has operator privileges
 const isOperator = computed(() => {
@@ -278,7 +280,7 @@ function handleBinClick(bin) {
 
 //Handle filtered bins from BinList component
 function handleBinsFiltered(filtered) {
-  filteredBins.value = filtered;
+  displayedBins.value = filtered;
   console.log('Filtered bins received in BinManagement:', filtered.length);
 }
 

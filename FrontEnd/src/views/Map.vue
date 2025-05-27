@@ -5,7 +5,7 @@
       <!-- Sidebar with bin list -->
       <div class="sidebar" :class="{ 'sidebar-hidden': !showSidebar }">
         <div class="sidebar-header">
-          <h2>Bins <span class="bins-count">{{ filteredBins.length > 0 ? filteredBins.length : bins.length }}</span></h2>
+          <h2>Bins <span class="bins-count">{{ displayedBins.length > 0 ? displayedBins.length : bins.length }}</span></h2>
           <button @click="toggleSidebar" class="icon-button">
             <i class="fas fa-times"></i>
           </button>
@@ -45,13 +45,14 @@
             :selected-bin-id="selectedBinId"
             @select-bin="selectBin"
             @bins-filtered="handleBinsFiltered"
+            ref="binListRef"
           />
         </div>
       </div>
       
       <!-- Map area using MapComponent -->
       <div class="map-area">
-        <MapComponent :bins="filteredBins.length > 0 ? filteredBins : bins" ref="mapRef" />
+        <MapComponent :bins="displayedBins.length > 0 ? displayedBins : bins" ref="mapRef" />
         
         <!-- Mobile controls -->
         <button @click="toggleSidebar" class="fab show-list-button" v-if="!showSidebar">
@@ -85,13 +86,16 @@ import BinList from '../components/BinList.vue';
 
 //Core state
 const bins = ref([]);
-const filteredBins = ref([]);
 const loading = ref(false);
 const error = ref(null);
 const showSidebar = ref(true);
 const showLegend = ref(false);
 const selectedBinId = ref(null);
 const mapRef = ref(null);
+const binListRef = ref(null);
+
+// Stato per i cestini filtrati (gestito da BinList)
+const displayedBins = ref([]);
 
 //Load bins from API
 const loadBins = async () => {
@@ -143,12 +147,50 @@ const selectBin = (bin) => {
 
 // Handler per ricevere i cestini filtrati dalla BinList
 const handleBinsFiltered = (filtered) => {
-  filteredBins.value = filtered;
+  displayedBins.value = filtered;
   console.log('Filtered bins received:', filtered.length);
+};
+
+// Metodi per controllare i filtri dall'esterno (opzionale)
+const setFilter = (type, value) => {
+  if (!binListRef.value) return;
+  
+  switch(type) {
+    case 'search':
+      binListRef.value.setSearchQuery(value);
+      break;
+    case 'type':
+      binListRef.value.setTypeFilter(value);
+      break;
+    case 'status':
+      binListRef.value.setStatusFilter(value);
+      break;
+  }
+};
+
+const clearFilters = () => {
+  if (binListRef.value) {
+    binListRef.value.clearAllFilters();
+  }
+};
+
+const getFilterState = () => {
+  return binListRef.value ? binListRef.value.getFilterState() : null;
 };
 
 //Load bins when component mounts
 onMounted(loadBins);
+
+// Esponi metodi per controllo esterno (utile per integrazioni future)
+defineExpose({
+  loadBins,
+  setFilter,
+  clearFilters,
+  getFilterState,
+  selectBin,
+  toggleSidebar,
+  toggleLegend
+});
 </script>
 
 <style scoped>

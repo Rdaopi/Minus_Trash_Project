@@ -23,18 +23,97 @@ const searchQuery = ref('');
 const selectedType = ref('');
 const selectedStatus = ref('');
 
+// Functions to check filters from outside
+const setSearchQuery = (query) => {
+  searchQuery.value = query;
+};
+
+const setTypeFilter = (type) => {
+  selectedType.value = type;
+};
+
+const setStatusFilter = (status) => {
+  selectedStatus.value = status;
+};
+
+const clearAllFilters = () => {
+  searchQuery.value = '';
+  selectedType.value = '';
+  selectedStatus.value = '';
+};
+
+const getFilterState = () => {
+  return {
+    searchQuery: searchQuery.value,
+    selectedType: selectedType.value,
+    selectedStatus: selectedStatus.value,
+    hasActiveFilters: !!(searchQuery.value || selectedType.value || selectedStatus.value),
+    totalBins: props.bins.length,
+    filteredCount: filteredBins.value.length,
+    hiddenCount: props.bins.length - filteredBins.value.length
+  };
+};
+
+// Funzione per ottenere statistiche sui tipi di cestini
+const getTypeStats = () => {
+  const stats = {};
+  props.bins.forEach(bin => {
+    const type = bin.type || 'UNKNOWN';
+    stats[type] = (stats[type] || 0) + 1;
+  });
+  return stats;
+};
+
+// Funzione per ottenere statistiche sugli status
+const getStatusStats = () => {
+  const stats = {};
+  props.bins.forEach(bin => {
+    const status = bin.status || 'attivo';
+    stats[status] = (stats[status] || 0) + 1;
+  });
+  return stats;
+};
+
 // Computed per i cestini filtrati
 const filteredBins = computed(() => {
   let filtered = [...props.bins];
   
+  // Debug: log dei dati per capire la struttura (solo se necessario)
+  if (props.bins.length > 0 && process.env.NODE_ENV === 'development') {
+    console.log('Bin data for filtering:', props.bins.map(bin => ({ 
+      id: bin.id || bin._id, 
+      type: bin.type, 
+      status: bin.status 
+    })));
+    if (selectedType.value) {
+      console.log('Type filter active:', selectedType.value);
+    }
+    if (selectedStatus.value) {
+      console.log('Status filter active:', selectedStatus.value);
+    }
+  }
+  
   // Applica filtro per tipo
   if (selectedType.value) {
-    filtered = filtered.filter(bin => bin.type?.toLowerCase() === selectedType.value.toLowerCase());
+    filtered = filtered.filter(bin => {
+      const binType = bin.type?.toUpperCase();
+      const selectedTypeUpper = selectedType.value.toUpperCase();
+      // Gestisce anche il caso INDIFFERENZIATA vs INDIFFERENZIATO
+      return binType === selectedTypeUpper || 
+             (binType === 'INDIFFERENZIATO')
+    });
   }
   
   // Applica filtro per status
   if (selectedStatus.value) {
-    filtered = filtered.filter(bin => bin.status?.toLowerCase() === selectedStatus.value.toLowerCase());
+    filtered = filtered.filter(bin => {
+      const binStatus = bin.status?.toLowerCase() || 'attivo';
+      const selectedStatusLower = selectedStatus.value.toLowerCase();
+             if (process.env.NODE_ENV === 'development') {
+         console.log(`Comparing bin status: "${binStatus}" with selected: "${selectedStatusLower}"`);
+       }
+       return binStatus === selectedStatusLower;
+    });
   }
   
   // Applica filtro di ricerca
@@ -43,10 +122,12 @@ const filteredBins = computed(() => {
     filtered = filtered.filter(bin => {
       const address = formatAddress(bin).toLowerCase();
       const type = bin.type?.toLowerCase() || '';
-      return address.includes(query) || type.includes(query);
+      const serialNumber = bin.serialNumber?.toLowerCase() || '';
+      return address.includes(query) || type.includes(query) || serialNumber.includes(query);
     });
   }
   
+  console.log(`Filtered ${filtered.length} bins from ${props.bins.length} total`);
   return filtered;
 });
 
@@ -149,6 +230,18 @@ watch(() => props.bins, (newBins) => {
 onMounted(() => {
   console.log('BinList initial bins:', props.bins);
 });
+
+// Expose methods for external use
+defineExpose({
+  setSearchQuery,
+  setTypeFilter,
+  setStatusFilter,
+  clearAllFilters,
+  getFilterState,
+  getTypeStats,
+  getStatusStats,
+  filteredBins
+});
 </script>
 
 <template>
@@ -156,6 +249,15 @@ onMounted(() => {
     <!-- Header con conteggio -->
     <div class="list-header">
       <h3>Cestini <span class="bins-count">{{ filteredBins.length }}</span></h3>
+      <div class="filter-status" v-if="getFilterState().hasActiveFilters">
+        <span class="filter-indicator">
+          <i class="fas fa-filter"></i>
+          Filtri attivi
+        </span>
+        <button @click="clearAllFilters" class="clear-filters-btn">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
     </div>
     
     <!-- Controlli di ricerca e filtri -->
@@ -271,6 +373,48 @@ onMounted(() => {
   font-size: 12px;
   padding: 2px 8px;
   border-radius: 12px;
+}
+
+.filter-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.filter-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #666;
+  background: #f0f0f0;
+  padding: 4px 8px;
+  border-radius: 12px;
+}
+
+.filter-indicator i {
+  color: #4CAF50;
+}
+
+.clear-filters-btn {
+  background: #ff4444;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 10px;
+  transition: all 0.2s ease;
+}
+
+.clear-filters-btn:hover {
+  background: #cc0000;
+  transform: scale(1.1);
 }
 
 /* Controlli */
