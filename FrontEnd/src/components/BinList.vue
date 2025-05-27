@@ -13,6 +13,10 @@ const props = defineProps({
   selectedBinId: {
     type: String,
     default: null
+  },
+  hideHeader: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -247,7 +251,7 @@ defineExpose({
 <template>
   <div class="bins-list-container">
     <!-- Header con conteggio -->
-    <div class="list-header">
+    <div class="list-header" v-if="!hideHeader">
       <h3>Cestini <span class="bins-count">{{ filteredBins.length }}</span></h3>
       <div class="filter-status" v-if="getFilterState().hasActiveFilters">
         <span class="filter-indicator">
@@ -352,6 +356,19 @@ defineExpose({
   overflow: hidden;
 }
 
+.bins-list {
+  overflow-y: scroll;
+  overflow-x: hidden;
+  
+}
+
+/* Sidebar */
+.bins-container {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
 /* Header */
 .list-header {
   padding: 16px;

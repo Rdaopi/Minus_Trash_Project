@@ -59,7 +59,7 @@
       </div>
 
       <!-- Form e lista -->
-      <div class="content-container" :class="{ 'list-hidden': !showBinList }">
+      <div class="content-container">
         <!-- Form per l'inserimento dei cestini -->
         <div class="form-container">
           <BinForm 
@@ -84,30 +84,45 @@
           </BinForm>
         </div>
 
-        <!-- Lista collassabile dei cestini -->
-        <div class="list-container" :class="{ 'collapsed': !showBinList }">
-          <div v-if="loading" class="loading-state">
-            <div class="spinner"></div>
-            <p>Caricamento cestini in corso...</p>
-          </div>
+        <!-- Overlay della lista cestini -->
+        <div v-if="showBinList" class="bins-overlay" @click.self="toggleBinList">
+          <div class="bins-sidebar" :class="{ 'bins-sidebar-visible': showBinList }">
+            <div class="bins-header">
+              <h4>Cestini <span class="bins-count">{{ displayedBins.length > 0 ? displayedBins.length : bins.length }}</span></h4>
+              <div class="header-controls">
+                <button @click="loadBins" class="icon-button refresh-button" :disabled="loading">
+                  <i class="fas fa-redo" :class="{ 'fa-spin': loading }"></i>
+                </button>
+                <button @click="toggleBinList" class="close-button">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+            </div>
 
-          <div v-else-if="error" class="error-state">
-            <i class="fas fa-exclamation-circle"></i>
-            <p>{{ error }}</p>
-            <button @click="loadBins" class="retry-button">
-              Riprova
-            </button>
-          </div>
+            <div v-if="loading" class="loading-state">
+              <div class="spinner"></div>
+              <p>Caricamento cestini in corso...</p>
+            </div>
 
-          <div v-else-if="showBinList">
-            <BinList 
-              :bins="bins"
-              :loading="loading"
-              :selected-bin-id="selectedBinId"
-              @select-bin="handleBinSelect"
-              @bins-filtered="handleBinsFiltered"
-              ref="binListRef"
-            />
+            <div v-else-if="error" class="error-state">
+              <i class="fas fa-exclamation-circle"></i>
+              <p>{{ error }}</p>
+              <button @click="loadBins" class="retry-button">
+                Riprova
+              </button>
+            </div>
+
+            <div v-else class="bins-list-wrapper">
+              <BinList 
+                :bins="bins"
+                :loading="loading"
+                :selected-bin-id="selectedBinId"
+                :hide-header="true"
+                @select-bin="handleBinSelect"
+                @bins-filtered="handleBinsFiltered"
+                ref="binListRef"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -251,6 +266,20 @@ function showSuccessMessage(message) {
 //Handle form cancellation
 function handleBinCancel() {
   binFormRef.value?.resetForm();
+}
+
+//Reset form function
+function resetForm() {
+  if (binFormRef.value) {
+    binFormRef.value.resetForm();
+  }
+}
+
+//Handle cancel button
+function handleCancel() {
+  if (binFormRef.value) {
+    binFormRef.value.resetForm();
+  }
 }
 
 //Handle bin selection from list and center map
@@ -423,11 +452,8 @@ onMounted(() => {
   flex-direction: column;
   overflow: hidden;
   transition: width 0.3s ease;
-}
-
-/* When list is hidden, container shrinks */
-.content-container.list-hidden {
-  width: 350px;
+  height: 100%;
+  position: relative;
 }
 
 .map-container :deep(.leaflet-container) {
@@ -437,10 +463,9 @@ onMounted(() => {
 
 /* Form container styling */
 .form-container {
-  flex: 1; /* Allow form to take available space */
+  flex: 1;
   overflow-y: auto;
-  max-height: 100%; /* Ensure form takes full height of container */
-  padding-right: 10px; /* Space for scrollbar */
+  padding-right: 10px;
 }
 
 /* Scrollbar styling for better aesthetics */
@@ -476,7 +501,7 @@ onMounted(() => {
 }
 
 .toggle-list-button.active {
-  background: var(--primary-active-color);
+  background: #0056b3;
 }
 
 .loading-state, .error-state {
@@ -555,10 +580,6 @@ onMounted(() => {
   }
 
   .content-container {
-    width: 100%;
-  }
-
-  .content-container.list-hidden {
     width: 100%;
   }
 }
@@ -644,5 +665,156 @@ onMounted(() => {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Overlay della lista */
+.bins-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+  z-index: 1000;
+}
+
+.bins-sidebar {
+  background: white;
+  width: 400px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.bins-sidebar-visible {
+  transform: translateX(0);
+}
+
+.bins-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+  background: #f8f9fa;
+  flex-shrink: 0;
+}
+
+.bins-header h4 {
+  margin: 0;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bins-count {
+  background: #4CAF50;
+  color: white;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.icon-button {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.icon-button:hover:not(:disabled) {
+  background: #f0f0f0;
+}
+
+.icon-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.refresh-button {
+  color: #4CAF50;
+}
+
+.refresh-button:hover:not(:disabled) {
+  background: rgba(76, 175, 80, 0.1);
+}
+
+.close-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  color: #666;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.2s ease;
+}
+
+.close-button:hover {
+  background: #f0f0f0;
+}
+
+.bins-list-wrapper {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Assicuriamoci che BinList.vue sia scrollabile */
+.bins-list-wrapper :deep(.bins-list-container) {
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.bins-list-wrapper :deep(.bins-list) {
+  flex: 1;
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  min-height: 0;
+}
+
+/* Scrollbar personalizzata per webkit browsers */
+.bins-list-wrapper :deep(.bins-list)::-webkit-scrollbar {
+  width: 6px;
+}
+
+.bins-list-wrapper :deep(.bins-list)::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.bins-list-wrapper :deep(.bins-list)::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.bins-list-wrapper :deep(.bins-list)::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }
 </style> 

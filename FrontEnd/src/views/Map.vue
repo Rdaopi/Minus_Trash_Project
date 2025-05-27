@@ -5,17 +5,15 @@
       <!-- Sidebar with bin list -->
       <div class="sidebar" :class="{ 'sidebar-hidden': !showSidebar }">
         <div class="sidebar-header">
-          <h2>Bins <span class="bins-count">{{ displayedBins.length > 0 ? displayedBins.length : bins.length }}</span></h2>
-          <button @click="toggleSidebar" class="icon-button">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-        
-        <!-- Refresh button -->
-        <div class="controls">
-          <button @click="loadBins" class="refresh-button">
-            <i class="fas fa-sync"></i> Refresh
-          </button>
+          <h2>Cestini <span class="bins-count">{{ displayedBins.length > 0 ? displayedBins.length : bins.length }}</span></h2>
+          <div class="header-controls">
+            <button @click="loadBins" class="icon-button refresh-button" :disabled="loading">
+              <i class="fas fa-redo" :class="{ 'fa-spin': loading }"></i>
+            </button>
+            <button @click="toggleSidebar" class="icon-button">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
         </div>
         
         <!-- Loading state -->
@@ -38,11 +36,12 @@
         </div>
         
         <!-- Bins list -->
-        <div class="bins-container">
+        <div v-else class="bins-container">
           <BinList 
             :bins="bins"
             :loading="loading"
             :selected-bin-id="selectedBinId"
+            :hide-header="true"
             @select-bin="selectBin"
             @bins-filtered="handleBinsFiltered"
             ref="binListRef"
@@ -241,6 +240,12 @@ defineExpose({
   gap: 8px;
 }
 
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .bins-count {
   background: #4CAF50;
   color: white;
@@ -255,23 +260,6 @@ defineExpose({
   border-bottom: 1px solid #eee;
 }
 
-.refresh-button {
-  width: 100%;
-  padding: 8px;
-  background: #f5f5f5;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.refresh-button:hover {
-  background: #e0e0e0;
-}
-
 /* Icons */
 .icon-button {
   width: 32px;
@@ -283,11 +271,26 @@ defineExpose({
   background: none;
   cursor: pointer;
   border-radius: 50%;
+  transition: all 0.2s ease;
 }
 
-.icon-button:hover {
+.icon-button:hover:not(:disabled) {
   background: #f5f5f5;
 }
+
+.icon-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.refresh-button {
+  color: #4CAF50;
+}
+
+.refresh-button:hover:not(:disabled) {
+  background: rgba(76, 175, 80, 0.1);
+}
+
 /* Map area */
 .map-area {
   flex: 1;
