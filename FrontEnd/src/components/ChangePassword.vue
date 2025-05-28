@@ -10,6 +10,7 @@
           v-model="formData.currentPassword"
           required
           placeholder="Inserisci la password attuale"
+          :disabled="isGoogleUser"
         />
       </div>
       
@@ -21,6 +22,7 @@
           v-model="formData.newPassword"
           required
           placeholder="Inserisci la nuova password"
+          :disabled="isGoogleUser"
         />
         <small class="password-requirements">
           La password deve contenere almeno 8 caratteri, una lettera maiuscola e un carattere speciale <p>(simboli permessi: !@#$%^&*)</p>
@@ -35,10 +37,11 @@
           v-model="formData.confirmPassword"
           required
           placeholder="Conferma la nuova password"
+          :disabled="isGoogleUser"
         />
       </div>
 
-      <button type="submit" class="change-password-button">
+      <button type="submit" class="change-password-button" :disabled="isGoogleUser">
         Cambia Password
       </button>
     </form>
@@ -46,9 +49,28 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { authAPI } from '../services/api';
 import Notification from './Notification.vue';
+
+const isGoogleUser = computed(() => {
+  const authMethod = localStorage.getItem('authMethod');
+  const email = localStorage.getItem('userEmail');
+  
+  // If authMethod is not set, fallback to checking email domain
+  if (!authMethod) {
+    // Set authMethod based on email domain for existing sessions
+    const isGoogle = email && email.endsWith('@gmail.com');
+    if (isGoogle) {
+      localStorage.setItem('authMethod', 'google');
+    } else if (email) {
+      localStorage.setItem('authMethod', 'regular');
+    }
+    return isGoogle;
+  }
+  
+  return authMethod === 'google';
+});
 
 const formData = ref({
   currentPassword: '',
@@ -60,6 +82,15 @@ const emit = defineEmits(['password-changed']);
 
 const handleSubmit = async () => {
   try {
+    // Check if user is a Google user
+    if (isGoogleUser.value) {
+      emit('password-changed', {
+        type: 'error',
+        message: 'Non puoi cambiare la password se hai effettuato l\'accesso con Google'
+      });
+      return;
+    }
+
     if (formData.value.newPassword !== formData.value.confirmPassword) {
       throw new Error('Le password non coincidono');
     }
@@ -161,6 +192,21 @@ const handleSubmit = async () => {
     transform: translateY(1px);
     box-shadow: 0 2px 5px rgba(76, 175, 80, 0.2);
 }
+
+.change-password-button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+    animation: none;
+}
+
+.form-group input:disabled {
+    background-color: #f5f5f5;
+    cursor: not-allowed;
+    border-color: #ddd;
+}
+
 @keyframes pulseGlow {
     0% {
         box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);

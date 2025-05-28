@@ -22,12 +22,20 @@ const handleResponse = async (response) => {
     }
     
     if (!response.ok) {
+      if (response.status === 401) {
+        // Token expired or invalid
+        const refreshToken = localStorage.getItem('refreshToken');
+        if (!refreshToken) {
+          clearAuthData();
+          window.location.href = '/auth';
+        }
+      }
       console.error('API error:', {
         status: response.status,
         statusText: response.statusText,
         data
       });
-      throw new Error(data.error || `Errore ${response.status}: ${response.statusText}`);
+      throw new Error(data.error || 'Something went wrong');
     }
     return data;
   } catch (error) {
@@ -36,39 +44,54 @@ const handleResponse = async (response) => {
   }
 };
 
+// Function to check if token is expired  
+const isTokenExpired = (token) => {
+  if (!token) return true;
+  
+  try {
+    const tokenData = JSON.parse(atob(token.split('.')[1]));
+    const expirationTime = tokenData.exp * 1000; // Convert to milliseconds
+    const currentTime = Date.now();
+    const timeLeft = expirationTime - currentTime;
+    
+    if (timeLeft > 0) {
+      console.log(`%cAccess Token valid for ${Math.round(timeLeft/1000)}s`, 'background: #4caf50; color: white; padding: 2px 5px; border-radius: 3px');
+      return false;
+    } else {
+      console.log('%cAccess Token Expired', 'background: #ff9800; color: white; padding: 2px 5px; border-radius: 3px');
+      return true;
+    }
+  } catch (error) {
+    console.error('Error parsing token:', error);
+    return true;
+  }
+};
+
+// Add automatic token check on interval
+setInterval(() => {
+  const token = localStorage.getItem('token');
+  if (token && isTokenExpired(token)) {
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (!refreshToken) {
+      console.log('%cNo refresh token available - Logging out', 'background: #f44336; color: white; padding: 2px 5px; border-radius: 3px');
+      clearAuthData();
+      window.location.href = '/auth';
+    }
+  }
+}, 30000); // Check every 30 seconds
+
 // Prelevo i token per le richieste autenticate
 const getAuthHeaders = async () => {
   const token = localStorage.getItem('token');
   const refreshToken = localStorage.getItem('refreshToken');
-  
-  if (!token && !refreshToken) {
-    throw new Error('No authentication tokens available');
-  }
 
-  // Check if token is expired
-  if (token) {
-    try {
-      const tokenData = JSON.parse(atob(token.split('.')[1]));
-      const expirationTime = tokenData.exp * 1000;
-      const currentTime = Date.now();
-      const timeLeft = expirationTime - currentTime;
-      
-      if (timeLeft > 0) {
-        console.log(`%cAccess Token valid for ${Math.round(timeLeft/1000)}s`, 'background: #4caf50; color: white; padding: 2px 5px; border-radius: 3px');
-        return {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        };
-      } else {
-        console.log('%cAccess Token Expired - Attempting Refresh', 'background: #ff9800; color: white; padding: 2px 5px; border-radius: 3px');
-      }
-    } catch (error) {
-      console.error('Error parsing token:', error);
+  if (!token) {
+    if (!refreshToken) {
+      clearAuthData();
+      window.location.href = '/auth';
+      throw new Error('No authentication tokens available');
     }
-  }
-
-  // Token is expired or invalid, try to refresh
-  if (refreshToken) {
+    // Try to refresh the token
     try {
       const response = await fetch(`${API_BASE_URL}/auth/refresh-token`, {
         method: 'POST',
@@ -80,21 +103,69 @@ const getAuthHeaders = async () => {
       const newTokens = await handleResponse(response);
       localStorage.setItem('token', newTokens.accessToken);
       localStorage.setItem('refreshToken', newTokens.refreshToken);
-      console.log('%cToken Successfully Refreshed', 'background: #4caf50; color: white; padding: 2px 5px; border-radius: 3px');
       return {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${newTokens.accessToken}`
       };
     } catch (error) {
-      console.log('%cToken Refresh Failed - Redirecting to Login', 'background: #f44336; color: white; padding: 2px 5px; border-radius: 3px');
-      localStorage.removeItem('token');
-      localStorage.removeItem('refreshToken');
+      clearAuthData();
       window.location.href = '/auth';
-      throw new Error('Session expired. Please login again.');
+      throw new Error('Failed to refresh token');
     }
   }
 
-  throw new Error('No valid authentication tokens available');
+  // Check if current token is expired
+  try {
+    const tokenData = JSON.parse(atob(token.split('.')[1]));
+    const expirationTime = tokenData.exp * 1000;
+    const currentTime = Date.now();
+    
+    // If token is expired or will expire in next 30 seconds, try to refresh
+    if (currentTime >= (expirationTime - 30000)) {
+      if (!refreshToken) {
+        clearAuthData();
+        window.location.href = '/auth';
+        throw new Error('No refresh token available');
+      }
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/auth/refresh-token`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ refreshToken })
+        });
+        const newTokens = await handleResponse(response);
+        localStorage.setItem('token', newTokens.accessToken);
+        localStorage.setItem('refreshToken', newTokens.refreshToken);
+        return {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${newTokens.accessToken}`
+        };
+      } catch (error) {
+        clearAuthData();
+        window.location.href = '/auth';
+        throw new Error('Failed to refresh token');
+      }
+    }
+  } catch (error) {
+    console.error('Error parsing token:', error);
+  }
+
+  // Use current token
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  };
+};
+
+// Helper function to clear auth data
+const clearAuthData = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('userEmail');
+  localStorage.removeItem('authMethod');
 };
 
 // Header base per tutte le chiamate
@@ -134,9 +205,16 @@ export const authAPI = {
         });
         
         clearTimeout(timeoutId);
+
+        // Handle non-200 responses before trying to parse JSON
+        if (!response.ok) {
+          if (response.status === 401) {
+            throw new Error('Email o password non corretti');
+          }
+          throw new Error('Errore durante il login');
+        }
+
         const data = await handleResponse(response);
-        localStorage.setItem('token', data.accessToken);
-        localStorage.setItem('refreshToken', data.refreshToken);
         return data;
       } catch (fetchError) {
         clearTimeout(timeoutId);

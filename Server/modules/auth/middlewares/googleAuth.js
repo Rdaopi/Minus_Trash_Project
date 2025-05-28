@@ -26,7 +26,6 @@ passport.use(new GoogleStrategy({
                     name: profile.name.givenName || profile.displayName.split(' ')[0],
                     surname: profile.name.familyName || profile.displayName.split(' ').slice(1).join(' ')
                 },
-                password: Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8),
                 authMethods: {
                     google: {
                         id: profile.id,
@@ -68,11 +67,10 @@ export const googleAuthCallback = (req, res, next) => {
         const { user, isNewUser } = data;
 
         try {
-            // Generate JWT token
-            const token = jwt.sign(
-                { userId: user._id, email: user.email },
-                process.env.JWT_ACCESS_SECRET,
-                { expiresIn: '24h' }
+            // Generate both access and refresh tokens using the user's method
+            const { accessToken, refreshToken } = await user.generateTokens(
+                req.ip,
+                req.headers['user-agent']
             );
 
             // Log the appropriate event
@@ -102,8 +100,8 @@ export const googleAuthCallback = (req, res, next) => {
                 });
             }
 
-            // Redirect to frontend auth page with token
-            res.redirect(`${process.env.FRONTEND_URL}/auth?token=${token}`);
+            // Redirect to frontend auth page with both tokens
+            res.redirect(`${process.env.FRONTEND_URL}/auth?token=${accessToken}&refreshToken=${refreshToken}`);
         } catch (error) {
             console.error('Auth error:', error);
             res.redirect(`${process.env.FRONTEND_URL}/auth?error=Authentication failed`);

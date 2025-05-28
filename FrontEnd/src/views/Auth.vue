@@ -147,14 +147,23 @@ export default {
 
             if (token) {
                 try {
-                    // Store the token
-                    localStorage.setItem('token', token);
-                    
-                    // Decode the token to get user info
+                    // Decode the token to get user info first
                     const tokenParts = token.split('.');
                     const payload = JSON.parse(atob(tokenParts[1]));
                     
-                    // Store email like in regular login
+                    // Set auth method first
+                    localStorage.setItem('authMethod', 'google');
+                    
+                    // Then store the tokens
+                    localStorage.setItem('token', token);
+                    
+                    // Get refresh token from URL if available
+                    const refreshToken = new URLSearchParams(window.location.search).get('refreshToken');
+                    if (refreshToken) {
+                        localStorage.setItem('refreshToken', refreshToken);
+                    }
+                    
+                    // Store email
                     if (payload.email) {
                         localStorage.setItem('userEmail', payload.email);
                     }
@@ -221,19 +230,31 @@ export default {
                 let response;
                 if (isLogin.value) {
                     // Login flow
-                    response = await authAPI.login(formData.value.email, formData.value.password);
-                    if (response && response.accessToken && response.refreshToken) {
-                        localStorage.setItem('userEmail', formData.value.email);
-                        localStorage.setItem('token', response.accessToken);
-                        localStorage.setItem('refreshToken', response.refreshToken);
-                        emit('login-success');
-                        showSuccessNotification('Login effettuato con successo!');
-                        // Wait for the notification to be visible before redirecting
+                    try {
+                        response = await authAPI.login(formData.value.email, formData.value.password);
+                        if (response && response.accessToken && response.refreshToken) {
+                            localStorage.setItem('userEmail', formData.value.email);
+                            localStorage.setItem('token', response.accessToken);
+                            localStorage.setItem('refreshToken', response.refreshToken);
+                            localStorage.setItem('authMethod', 'regular');
+                            emit('login-success');
+                            showSuccessNotification('Login effettuato con successo!');
+                            // Wait for the notification to be visible before redirecting
+                            setTimeout(() => {
+                                router.push('/');
+                            }, 1000);
+                        } else {
+                            throw new Error('Token non ricevuto dal server');
+                        }
+                    } catch (loginError) {
+                        error.value = loginError.message || 'Credenziali non valide. Riprova.';
+                        notificationMessage.value = error.value;
+                        notificationType.value = 'error';
+                        showNotification.value = true;
                         setTimeout(() => {
-                            router.push('/');
-                        }, 1000);
-                    } else {
-                        throw new Error('Token non ricevuto dal server');
+                            showNotification.value = false;
+                        }, 3000);
+                        return; // Stop execution here for login errors
                     }
                 } else {
                     // Registration flow

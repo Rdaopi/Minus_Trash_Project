@@ -1,11 +1,13 @@
 import express from 'express';
 import { basicAuth } from "./middlewares/basicAuth.js";
-import { login, register, changePassword, profile_update, user_delete, refreshTokenHandler } from './controllers/userController.js';
+import { login, register, changePassword, profile_update, user_delete, refreshTokenHandler, logout } from './controllers/userController.js';
 import { auditOnSuccess } from "./middlewares/withAudit.js";
 import { googleAuth, googleAuthCallback } from "./middlewares/googleAuth.js";
 import User from "./models/User.js";
+import Token from "./models/Token.js";
 import bcrypt from "bcryptjs";
 import { jwtAuth } from "./middlewares/jwtAuth.js";
+import { logger } from '../../core/utils/logger.js';
 
 const router = express.Router()
 
@@ -310,24 +312,6 @@ router.delete('/user_delete', basicAuth, login /*jwtAuth*/, user_delete);
 router.post('/refresh-token', refreshTokenHandler);
 
 // Add logout handler to the router
-router.post('/logout', jwtAuth, async (req, res) => {
-    try {
-        const { refreshToken } = req.body;
-        if (!refreshToken) {
-            return res.status(400).json({ error: 'Refresh token required' });
-        }
-
-        // Revoke the refresh token
-        await Token.findOneAndUpdate(
-            { token: refreshToken },
-            { revoked: true }
-        );
-
-        res.json({ message: 'Logged out successfully' });
-    } catch (error) {
-        logger.error('Logout error:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
+router.post('/logout', jwtAuth, logout);
 
 export default router;

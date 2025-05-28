@@ -43,7 +43,9 @@ const userSchema = new Schema({
     },
     password: {
         type: String,
-        required: [true, "Password obbligatoria"],
+        required: function() {
+            return this.authMethods?.local === true;
+        },
         minlength: [8, "La password deve avere almeno 8 caratteri"],
         select: false
     },
@@ -116,6 +118,11 @@ userSchema.methods.generateTokens = async function(ip, userAgent) {
     });
 
     return { accessToken, refreshToken };
+};
+
+// Method to check if user can change password
+userSchema.methods.canChangePassword = function() {
+    return this.authMethods?.local === true;
 };
 
 // Method to check if password was changed after a specific timestamp

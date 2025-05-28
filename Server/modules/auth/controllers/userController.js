@@ -199,7 +199,7 @@ export const profile_update = [
 export const changePassword = [
     auditOnSuccess('password_change'),
     async(req, res) => {
-        try{
+        try {
             const {currentPassword, newPassword} = req.body;
             
             // Add logging to debug
@@ -217,12 +217,17 @@ export const changePassword = [
                 throw new Error('User not found');
             }
 
+            // Check if user can change password
+            if (!user.canChangePassword()) {
+                throw new Error('Non puoi cambiare la password se hai effettuato l\'accesso con Google');
+            }
+
             //Validazione complessità password
             if(!REGEX_PASSWORD.test(newPassword)) {
                 const error = new Error("Password deve contenere 8+ caratteri, 1 maiuscola e 1 simbolo [!@#$%^&*]");
                 error.statusCode = 400;
                 throw error;
-            };
+            }
             
             if(!await bcrypt.compare(currentPassword, user.password)) {
                 const error = new Error("Password corrente non valida");
@@ -233,15 +238,15 @@ export const changePassword = [
             // Revoke all existing refresh tokens
             await Token.revokeAllUserTokens(userId);
 
-            user.password = await bcrypt.hash(newPassword,12);
-            await user.save();
+            user.password = await bcrypt.hash(newPassword, 12);
             user.passwordChangedAt = Date.now();
+            await user.save();
 
             res.json({ message: "Password aggiornata con successo" });
-        }catch(error){
+        } catch (error) {
             console.error('Password change error:', error);
             error.statusCode = error.statusCode || 500;
-            throw error;
+            res.status(error.statusCode).json({ error: error.message });
         }
     }
 ];
