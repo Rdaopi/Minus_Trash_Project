@@ -3,10 +3,10 @@
 
 # Environment variables
 
-# config/.env
-# .env
-# *.env.local
-# *.env.*.local
+config/.env
+.env
+*.env.local
+*.env.*.local
 
 # Logs
 logs/
