@@ -91,17 +91,26 @@ export const updateUserById = async (req, res) => {
       updateData.password = await bcrypt.hash(updateData.password, salt);
     }
 
+    // Get the user before update to check if role is being changed
+    const existingUser = await User.findById(userId).select('-password');
+    if (!existingUser) {
+      return res.status(404).json({ error: 'Utente non trovato' });
+    }
+
     const user = await User.findByIdAndUpdate(
       userId,
       { $set: updateData },
       { new: true, runValidators: true }
     ).select('-password');
 
-    if (!user) {
-      return res.status(404).json({ error: 'Utente non trovato' });
-    }
-
-    return res.json(user);
+    // If role was changed, we'll return this info to the frontend
+    const roleChanged = updateData.role && existingUser.role !== updateData.role;
+    
+    return res.json({
+      ...user.toObject(),
+      roleChanged,
+      previousRole: roleChanged ? existingUser.role : undefined
+    });
   } catch (error) {
     logger.error('Error updating user:', error);
     return res.status(500).json({ error: 'Errore nell\'aggiornamento dell\'utente' });

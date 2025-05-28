@@ -276,11 +276,26 @@ async function handleSubmit() {
       throw new Error(errorData.error || 'Failed to save user');
     }
 
+    const updatedUser = await response.json();
+
+    // If we're editing and the role was changed, force the user to log out
+    if (showEditUserModal.value) {
+      // Get the original user from the users list
+      const originalUser = users.value.find(u => u._id === userForm.value._id);
+      if (originalUser && originalUser.role !== updatedUser.role) {
+        // Create a message to show to the user
+        const userEmail = updatedUser.email;
+        successMessage.value = `Il ruolo dell'utente ${userEmail} è stato aggiornato a ${translateRole(updatedUser.role)}. L'utente dovrà effettuare nuovamente il login per applicare le modifiche.`;
+      }
+    }
+
     await loadUsers();
     closeModal();
-    successMessage.value = showEditUserModal.value 
-      ? 'Account modificato con successo'
-      : 'Nuovo account creato con successo';
+    if (!successMessage.value) {
+      successMessage.value = showEditUserModal.value 
+        ? 'Account modificato con successo'
+        : 'Nuovo account creato con successo';
+    }
   } catch (error) {
     console.error('Error saving user:', error);
     errorMessage.value = error.message || 'Errore nel salvataggio dell\'account';
@@ -530,6 +545,8 @@ th {
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  overflow-y: auto;
+  padding: 2rem;
 }
 
 .modal-content {
@@ -538,16 +555,27 @@ th {
   border-radius: 8px;
   width: 100%;
   max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  margin: auto;
+}
+
+.modal-content h2 {
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+  color: #333;
 }
 
 .form-group {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
-label {
+.form-group label {
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 500;
+  color: #333;
 }
 
 input, select {
@@ -555,21 +583,26 @@ input, select {
   padding: 0.8rem;
   border: 1px solid #ddd;
   border-radius: 4px;
-  font-size: 1rem;
+  font-size: 0.9rem;
+  background-color: #fff;
 }
 
-input:disabled {
-  background-color: #f5f5f5;
+input:focus, select:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
 }
 
 .checkbox-label {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  cursor: pointer;
 }
 
-.checkbox-label input {
+.checkbox-label input[type="checkbox"] {
   width: auto;
+  margin-right: 0.5rem;
 }
 
 .modal-actions {
@@ -577,6 +610,8 @@ input:disabled {
   justify-content: flex-end;
   gap: 1rem;
   margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid #eee;
 }
 
 .submit-btn, .cancel-btn {
@@ -675,9 +710,28 @@ input:disabled {
     overflow-x: auto;
   }
 
+  .modal {
+    padding: 1rem;
+  }
+
   .modal-content {
-    margin: 1rem;
     padding: 1.5rem;
+    max-height: 85vh;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .modal-actions button {
+    width: 100%;
+  }
+}
+
+@media (max-height: 600px) {
+  .modal-content {
+    max-height: 95vh;
   }
 }
 

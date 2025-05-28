@@ -136,8 +136,9 @@ export default {
                 ? new URLSearchParams(window.location.hash.substring(window.location.hash.indexOf('?'))) 
                 : new URLSearchParams('');
             
-            // Get token and error from either source
+            // Get token, role and error from either source
             const token = urlParams.get('token') || hashParams.get('token');
+            const role = urlParams.get('role') || hashParams.get('role');
             const error = urlParams.get('error') || hashParams.get('error');
 
             if (error) {
@@ -151,15 +152,22 @@ export default {
                     localStorage.setItem('token', token);
                     
                     // Decode the token to get user info
-                    const tokenParts = token.split('.');
-                    const payload = JSON.parse(atob(tokenParts[1]));
+                    const decoded = jwtDecode(token);
+                    console.log('Decoded token:', decoded);
                     
-                    // Store email like in regular login
-                    if (payload.email) {
-                        localStorage.setItem('userEmail', payload.email);
+                    // Store email and role
+                    if (decoded.email) {
+                        localStorage.setItem('userEmail', decoded.email);
                     }
-                    if (payload.role) {
-                        localStorage.setItem('userRole', payload.role);
+                    
+                    // First try to get role from URL parameter, then from token
+                    const userRole = role || decoded.role;
+                    if (userRole) {
+                        localStorage.setItem('userRole', userRole);
+                        console.log('Stored role:', userRole);
+                    } else {
+                        console.warn('No role found in token or URL parameters');
+                        throw new Error('Ruolo utente non trovato');
                     }
 
                     showSuccessNotification('Login effettuato con successo!');
@@ -177,6 +185,7 @@ export default {
                         router.push('/');
                     }, 1000);
                 } catch (err) {
+                    console.error('Error during login:', err);
                     showError('Errore durante il login. Riprova più tardi.');
                 }
             }

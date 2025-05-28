@@ -68,12 +68,20 @@ export const googleAuthCallback = (req, res, next) => {
         const { user, isNewUser } = data;
 
         try {
-            // Generate JWT token
+            // Generate JWT token with user role
             const token = jwt.sign(
-                { userId: user._id, email: user.email },
+                { 
+                    id: user._id,
+                    email: user.email,
+                    role: user.role // Include the role in the token
+                },
                 process.env.JWT_ACCESS_SECRET,
                 { expiresIn: '24h' }
             );
+
+            // Update lastLogin
+            user.lastLogin = Date.now();
+            await user.save();
 
             // Log the appropriate event
             if (isNewUser) {
@@ -85,7 +93,8 @@ export const googleAuthCallback = (req, res, next) => {
                     ip: req.ip,
                     device: req.headers['user-agent'],
                     metadata: {
-                        email: user.email
+                        email: user.email,
+                        role: user.role
                     }
                 });
             } else {
@@ -97,13 +106,14 @@ export const googleAuthCallback = (req, res, next) => {
                     ip: req.ip,
                     device: req.headers['user-agent'],
                     metadata: {
-                        email: user.email
+                        email: user.email,
+                        role: user.role
                     }
                 });
             }
 
-            // Redirect to frontend auth page with token
-            res.redirect(`${process.env.FRONTEND_URL}/auth?token=${token}`);
+            // Redirect to frontend auth page with token and role
+            res.redirect(`${process.env.FRONTEND_URL}/auth?token=${token}&role=${user.role}`);
         } catch (error) {
             console.error('Auth error:', error);
             res.redirect(`${process.env.FRONTEND_URL}/auth?error=Authentication failed`);
