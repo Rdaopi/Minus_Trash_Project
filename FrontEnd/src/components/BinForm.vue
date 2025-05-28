@@ -26,7 +26,7 @@ const binTypes = [
   { value: 'PLASTICA', label: 'Plastica' },
   { value: 'CARTA', label: 'Carta' },
   { value: 'VETRO', label: 'Vetro' },
-  { value: 'INDIFFERENZIATA', label: 'Indifferenziata' },
+  { value: 'INDIFFERENZIATO', label: 'Indifferenziato' },
   { value: 'ORGANICO', label: 'Organico' },
   { value: 'RAEE', label: 'RAEE' }
 ];

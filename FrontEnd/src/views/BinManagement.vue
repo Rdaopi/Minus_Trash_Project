@@ -113,15 +113,31 @@
             </div>
 
             <div v-else class="bins-list-wrapper">
-              <BinList 
-                :bins="bins"
-                :loading="loading"
-                :selected-bin-id="selectedBinId"
-                :hide-header="true"
-                @select-bin="handleBinSelect"
-                @bins-filtered="handleBinsFiltered"
-                ref="binListRef"
-              />
+              <!-- Show bin details if a bin is selected -->
+              <div v-if="selectedBinDetails" class="bin-details-panel">
+                <BinDetails 
+                  :bin="selectedBinDetails"
+                  :loading="loadingBinDetails"
+                  :error="binDetailsError"
+                  @close="clearSelectedBin"
+                  @retry="retryLoad"
+                  @center-on-map="centerOnSelectedBin"
+                  @report-issue="handleReportIssue"
+                />
+              </div>
+              
+              <!-- Show bin list if no bin is selected -->
+              <div v-else>
+                <BinList 
+                  :bins="bins"
+                  :loading="loading"
+                  :selected-bin-id="selectedBinId"
+                  :hide-header="true"
+                  @select-bin="handleBinSelect"
+                  @bins-filtered="handleBinsFiltered"
+                  ref="binListRef"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -140,7 +156,9 @@ import { ref, onMounted, computed } from 'vue';
 import BinForm from '../components/BinForm.vue';
 import BinList from '../components/BinList.vue';
 import MapComponent from '../components/MapComponent.vue';
+import BinDetails from '../components/BinDetails.vue';
 import { binsAPI } from '../services/api';
+import { useBinDetails } from '../composables/useBinDetails';
 
 //Component state management
 const showBinList = ref(false);
@@ -149,10 +167,21 @@ const displayedBins = ref([]);
 const loading = ref(false);
 const error = ref(null);
 const successMessage = ref(null);
-const selectedBinId = ref(null);
 const mapRef = ref(null);
 const binFormRef = ref(null);
 const binListRef = ref(null);
+
+// Use the bin details composable
+const {
+  selectedBinId,
+  selectedBinDetails,
+  loading: loadingBinDetails,
+  error: binDetailsError,
+  hasSelectedBin,
+  loadBinDetails,
+  clearSelection,
+  retryLoad
+} = useBinDetails();
 
 //Check if current user has operator privileges
 const isOperator = computed(() => {
@@ -283,8 +312,12 @@ function handleCancel() {
 }
 
 //Handle bin selection from list and center map
-function handleBinSelect(bin) {
-  selectedBinId.value = bin.id || bin._id;
+async function handleBinSelect(bin) {
+  const binId = bin.id || bin._id;
+  
+  // Load bin details
+  await loadBinDetails(binId);
+  
   //Center map on selected bin
   if (mapRef.value) {
     console.log('Centering map on bin:', bin);
@@ -296,8 +329,12 @@ function handleBinSelect(bin) {
 }
 
 //Handle bin marker click on map
-function handleBinClick(bin) {
-  selectedBinId.value = bin.id || bin._id;
+async function handleBinClick(bin) {
+  const binId = bin.id || bin._id;
+  
+  // Load bin details
+  await loadBinDetails(binId);
+  
   //Center map when clicking a marker
   if (mapRef.value) {
     mapRef.value.centerOnBin({
@@ -364,6 +401,28 @@ onMounted(() => {
   console.log('User is authorized, loading bins...');
   loadBins();
 });
+
+// Handle clearing selected bin
+function clearSelectedBin() {
+  clearSelection();
+}
+
+// Handle center on selected bin
+function centerOnSelectedBin(bin) {
+  if (mapRef.value) {
+    mapRef.value.centerOnBin({
+      latitude: bin.lat || bin.latitude || (bin.location?.coordinates?.[1]),
+      longitude: bin.lng || bin.longitude || (bin.location?.coordinates?.[0])
+    });
+  }
+}
+
+// Handle report issue
+function handleReportIssue(bin) {
+  console.log('Reporting issue for bin:', bin);
+  // Implement the logic to report an issue for the selected bin
+  alert(`Segnalazione problema per cestino ${bin.id || bin._id} - Funzionalità da implementare`);
+}
 </script>
 
 <style scoped>
@@ -782,6 +841,7 @@ onMounted(() => {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 /* Assicuriamoci che BinList.vue sia scrollabile */
@@ -794,9 +854,11 @@ onMounted(() => {
 
 .bins-list-wrapper :deep(.bins-list) {
   flex: 1;
-  overflow-y: auto !important;
+  overflow-y: scroll !important;
   overflow-x: hidden;
   min-height: 0;
+  height: calc(100vh - 220px) !important; /* Riduco un po' l'altezza */
+  max-height: calc(100vh - 220px) !important;
 }
 
 /* Scrollbar personalizzata per webkit browsers */
@@ -816,5 +878,13 @@ onMounted(() => {
 
 .bins-list-wrapper :deep(.bins-list)::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+/* Bin details panel */
+.bin-details-panel {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 </style> 

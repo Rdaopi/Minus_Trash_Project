@@ -78,11 +78,17 @@ const getStatusStats = () => {
   return stats;
 };
 
-// Computed per i cestini filtrati
+// Handle bin selection
+const handleBinSelect = (bin) => {
+  // Emit the selection event
+  emit('select-bin', bin);
+};
+
+// Computed for filtered bins
 const filteredBins = computed(() => {
   let filtered = [...props.bins];
   
-  // Debug: log dei dati per capire la struttura (solo se necessario)
+  // Debug: log the data to understand the structure (only if needed)
   if (props.bins.length > 0 && process.env.NODE_ENV === 'development') {
     console.log('Bin data for filtering:', props.bins.map(bin => ({ 
       id: bin.id || bin._id, 
@@ -97,7 +103,7 @@ const filteredBins = computed(() => {
     }
   }
   
-  // Applica filtro per tipo
+  // Apply type filter
   if (selectedType.value) {
     filtered = filtered.filter(bin => {
       const binType = bin.type?.toUpperCase();
@@ -108,7 +114,7 @@ const filteredBins = computed(() => {
     });
   }
   
-  // Applica filtro per status
+  // Apply status filter
   if (selectedStatus.value) {
     filtered = filtered.filter(bin => {
       const binStatus = bin.status?.toLowerCase() || 'attivo';
@@ -225,12 +231,12 @@ function formatAddress(bin) {
   return 'Indirizzo non disponibile';
 }
 
-// Log quando i cestini cambiano
+// Log when bins change
 watch(() => props.bins, (newBins) => {
   console.log('BinList received new bins:', newBins);
 }, { deep: true });
 
-// Log iniziale dei cestini
+// Initial bins log
 onMounted(() => {
   console.log('BinList initial bins:', props.bins);
 });
@@ -250,7 +256,7 @@ defineExpose({
 
 <template>
   <div class="bins-list-container">
-    <!-- Header con conteggio -->
+    <!-- Header with count -->
     <div class="list-header" v-if="!hideHeader">
       <h3>Cestini <span class="bins-count">{{ filteredBins.length }}</span></h3>
       <div class="filter-status" v-if="getFilterState().hasActiveFilters">
@@ -264,7 +270,7 @@ defineExpose({
       </div>
     </div>
     
-    <!-- Controlli di ricerca e filtri -->
+    <!-- Controls for search and filters -->
     <div class="controls">
       <div class="search-box">
         <input 
@@ -298,7 +304,7 @@ defineExpose({
       </div>
     </div>
     
-    <!-- Lista cestini -->
+    <!-- Bin List -->
     <div class="bins-list">
       <div v-if="loading" class="loading-indicator">
         <div class="spinner"></div>
@@ -312,13 +318,14 @@ defineExpose({
         <p v-else>Nessun cestino disponibile</p>
       </div>
       
+      <!-- Show bin list -->
       <div v-else class="bins-container">
         <div 
           v-for="bin in filteredBins" 
           :key="bin.id || bin._id"
           class="bin-item"
           :class="{ 'selected': selectedBinId === (bin.id || bin._id) }"
-          @click="$emit('select-bin', bin)"
+          @click="handleBinSelect(bin)"
         >
           <div class="bin-icon" :style="{ backgroundColor: getBinColor(bin.type) + '20' }">
             <i class="fas" :class="getBinIcon(bin.type)" :style="{ color: getBinColor(bin.type) }"></i>
@@ -356,19 +363,25 @@ defineExpose({
   overflow: hidden;
 }
 
+/* Lista scrollabile */
 .bins-list {
-  overflow-y: scroll;
+  flex: 1;
+  overflow-y: scroll !important;
   overflow-x: hidden;
-  
+  min-height: 0;
+  height: calc(100vh - 250px) !important; /* Dynamic default height */
+  max-height: calc(100vh - 250px) !important;
 }
 
-/* Sidebar */
+/* Contenitore dei cestini */
 .bins-container {
-  flex: 1;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  min-height: 500px; /* Force a minimum height to activate scrolling */
 }
+
 /* Header */
 .list-header {
   padding: 16px;
@@ -469,22 +482,6 @@ defineExpose({
   border: 1px solid #ddd;
   border-radius: 4px;
   box-sizing: border-box;
-}
-
-/* Lista scrollabile */
-.bins-list {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 0;
-  min-height: 0;
-}
-
-.bins-container {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px;
 }
 
 .bin-item {
