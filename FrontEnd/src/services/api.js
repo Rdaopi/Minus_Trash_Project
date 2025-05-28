@@ -199,6 +199,56 @@ export const binsAPI = {
     }
   },
 
+  //Fetches a single waste bin by ID
+  async getBinById(binId) {
+    const url = `${API_BASE_URL}/waste/bins/${binId}`;
+    logApiCall('GET', url);
+    
+    try {
+      const response = await fetch(url, {
+        headers: getBaseHeaders()
+      });
+      
+      const data = await handleResponse(response);
+      console.log('Raw bin data from server:', data);
+      
+      // Transform location data to lat/lng format if needed
+      let transformedBin = {
+        ...data,
+        address: 'Indirizzo non disponibile'
+      };
+
+      // Handle coordinates
+      if (data.location && data.location.coordinates) {
+        transformedBin.lng = data.location.coordinates[0];
+        transformedBin.lat = data.location.coordinates[1];
+      }
+
+      // Handle address - check all possible sources
+      if (data.street && data.streetNumber) {
+        transformedBin.address = `${data.street}, ${data.streetNumber}`;
+      } else if (data.address && typeof data.address === 'object') {
+        if (data.address.street) {
+          transformedBin.street = data.address.street;
+          transformedBin.streetNumber = data.address.streetNumber || '';
+          transformedBin.address = data.address.streetNumber ? 
+            `${data.address.street}, ${data.address.streetNumber}` : 
+            data.address.street;
+        }
+      } else if (data.location && data.location.address) {
+        transformedBin.address = data.location.address;
+      } else if (typeof data.address === 'string' && data.address) {
+        transformedBin.address = data.address;
+      }
+
+      console.log('Transformed bin:', transformedBin);
+      return transformedBin;
+    } catch (error) {
+      console.error('Error fetching bin by ID:', error);
+      throw new Error(`Failed to fetch bin details: ${error.message}`);
+    }
+  },
+
   //Updates an existing waste bin
   async updateBin(binId, binData) {
     const url = `${API_BASE_URL}/waste/bins/${binId}`;

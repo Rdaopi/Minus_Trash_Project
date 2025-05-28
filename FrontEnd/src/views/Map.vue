@@ -37,15 +37,31 @@
         
         <!-- Bins list -->
         <div v-else class="bins-container">
-          <BinList 
-            :bins="bins"
-            :loading="loading"
-            :selected-bin-id="selectedBinId"
-            :hide-header="true"
-            @select-bin="selectBin"
-            @bins-filtered="handleBinsFiltered"
-            ref="binListRef"
-          />
+          <!-- Show bin details if a bin is selected -->
+          <div v-if="selectedBinDetails" class="bin-details-panel">
+            <BinDetails 
+              :bin="selectedBinDetails"
+              :loading="loadingBinDetails"
+              :error="binDetailsError"
+              @close="clearSelectedBin"
+              @retry="retryLoad"
+              @center-on-map="centerOnSelectedBin"
+              @report-issue="handleReportIssue"
+            />
+          </div>
+          
+          <!-- Show bin list if no bin is selected -->
+          <div v-else>
+            <BinList 
+              :bins="bins"
+              :loading="loading"
+              :selected-bin-id="selectedBinId"
+              :hide-header="true"
+              @select-bin="selectBin"
+              @bins-filtered="handleBinsFiltered"
+              ref="binListRef"
+            />
+          </div>
         </div>
       </div>
       
@@ -82,6 +98,8 @@ import { ref, onMounted } from 'vue';
 import { binsAPI } from '../services/api';
 import MapComponent from '../components/MapComponent.vue';
 import BinList from '../components/BinList.vue';
+import BinDetails from '../components/BinDetails.vue';
+import { useBinDetails } from '../composables/useBinDetails';
 
 //Core state
 const bins = ref([]);
@@ -89,9 +107,20 @@ const loading = ref(false);
 const error = ref(null);
 const showSidebar = ref(true);
 const showLegend = ref(false);
-const selectedBinId = ref(null);
 const mapRef = ref(null);
 const binListRef = ref(null);
+
+// Use the bin details composable
+const {
+  selectedBinId,
+  selectedBinDetails,
+  loading: loadingBinDetails,
+  error: binDetailsError,
+  hasSelectedBin,
+  loadBinDetails,
+  clearSelection,
+  retryLoad
+} = useBinDetails();
 
 // Stato per i cestini filtrati (gestito da BinList)
 const displayedBins = ref([]);
@@ -126,8 +155,11 @@ const loadBins = async () => {
 const toggleSidebar = () => showSidebar.value = !showSidebar.value;
 const toggleLegend = () => showLegend.value = !showLegend.value;
 
-const selectBin = (bin) => {
-  selectedBinId.value = bin.id || bin._id;
+const selectBin = async (bin) => {
+  const binId = bin.id || bin._id;
+  
+  // Carica i dettagli del cestino selezionato
+  await loadBinDetails(binId);
   
   // Centra la mappa sul cestino selezionato
   if (mapRef.value) {
@@ -177,10 +209,36 @@ const getFilterState = () => {
   return binListRef.value ? binListRef.value.getFilterState() : null;
 };
 
+const clearSelectedBin = () => {
+  clearSelection();
+  // Dont close the sidebar, just go back to the list
+};
+
+const centerOnSelectedBin = (bin) => {
+  if (mapRef.value) {
+    const latitude = bin.lat || bin.latitude || (bin.location?.coordinates?.[1]);
+    const longitude = bin.lng || bin.longitude || (bin.location?.coordinates?.[0]);
+    
+    if (latitude && longitude) {
+      console.log('Centering map on bin:', { latitude, longitude });
+      mapRef.value.centerOnBin({
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude)
+      });
+    }
+  }
+};
+
+const handleReportIssue = (bin) => {
+  // Implement the logic to report an issue with the bin
+  console.log('Reporting issue for bin:', bin);
+  alert(`Segnalazione problema per cestino ${bin.id || bin._id} - Funzionalità da implementare`);
+};
+
 //Load bins when component mounts
 onMounted(loadBins);
 
-// Esponi metodi per controllo esterno (utile per integrazioni future)
+// Expose methods for external control (useful for future integrations)
 defineExpose({
   loadBins,
   setFilter,
@@ -195,7 +253,7 @@ defineExpose({
 <style scoped>
 /* Main container */
 .map-container {
-  height: calc(100vh - 80px);
+  height: calc(100vh - 60px);
   width: 100%;
   position: relative;
 }
@@ -484,6 +542,32 @@ defineExpose({
 
 /* Sidebar */
 .bins-container {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Assicuriamoci che BinList sia scrollabile */
+.bins-container :deep(.bins-list-container) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.bins-container :deep(.bins-list) {
+  flex: 1;
+  overflow-y: scroll !important;
+  overflow-x: hidden;
+  min-height: 0;
+  height: calc(100vh - 250px) !important; /* Ripristino altezza precedente */
+  max-height: calc(100vh - 250px) !important;
+}
+
+/* Bin details panel */
+.bin-details-panel {
   flex: 1;
   overflow: hidden;
   display: flex;
