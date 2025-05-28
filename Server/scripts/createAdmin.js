@@ -23,7 +23,7 @@ const createAdminUser = async () => {
         // Admin credentials
         const adminData = {
             username: 'admin',
-            email: 'admin@minustrash.com',
+            email: 'admin@admin.com',
             password: 'Admin@123!', // This will be hashed
             fullName: {
                 name: 'Admin',

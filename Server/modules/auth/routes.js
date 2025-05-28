@@ -1,11 +1,21 @@
 import express from 'express';
 import { basicAuth } from "./middlewares/basicAuth.js";
-import { login, register, changePassword, profile_update, user_delete, updateUserRole } from './controllers/userController.js';
+import { 
+  login, 
+  register, 
+  changePassword, 
+  profile_update, 
+  user_delete, 
+  updateUserRole,
+  getAllUsers,
+  deleteUserById,
+  updateUserById
+} from './controllers/userController.js';
 import { auditOnSuccess } from "./middlewares/withAudit.js";
 import { googleAuth, googleAuthCallback } from "./middlewares/googleAuth.js";
+import { jwtAuth } from "./middlewares/jwtAuth.js";
 import User from "./models/User.js";
 import bcrypt from "bcryptjs";
-//import { jwtAuth } from "./middlewares/jwtAuth.js";
 
 const router = express.Router()
 
@@ -290,54 +300,10 @@ router.post('/change_password', basicAuth, login /*jwtAuth*/, changePassword);
  *         description: Errore nel cambio password
  */
 
-router.delete('/user_delete', basicAuth, login /*jwtAuth*/, user_delete);
-/**
- * @swagger
- * /api/auth/user_delete:
- *   delete:
- *     summary: Elimina account utente
- *     tags: [Auth]
- *     security:
- *       - BearerAuth: []
- *     responses:
- *       200:
- *         description: Account eliminato con successo
- *       400:
- *         description: Errore nell'eliminazione dell'account
- */
 
-/**
- * @swagger
- * /api/auth/update-role:
- *   put:
- *     summary: Aggiorna il ruolo di un utente (solo amministratori)
- *     tags: [Auth]
- *     security:
- *       - BearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - userId
- *               - newRole
- *             properties:
- *               userId:
- *                 type: string
- *                 description: ID dell'utente da modificare
- *               newRole:
- *                 type: string
- *                 enum: [cittadino, operatore_comunale, amministratore]
- *     responses:
- *       200:
- *         description: Ruolo aggiornato con successo
- *       403:
- *         description: Non autorizzato
- *       404:
- *         description: Utente non trovato
- */
-router.put('/update-role', basicAuth, login /*jwtAuth*/, updateUserRole);
+// Admin routes for user management
+router.get('/users', jwtAuth, getAllUsers);
+router.put('/users/:userId', jwtAuth, updateUserById);
+router.delete('/users/:userId', jwtAuth, deleteUserById);
 
 export default router;

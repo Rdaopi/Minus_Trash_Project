@@ -2,6 +2,27 @@ import { createRouter, createWebHistory, createWebHashHistory } from 'vue-router
 import { requireOperator } from './guards'
 import { jwtDecode } from 'jwt-decode';
 
+// Function to check if user is admin
+const requireAdmin = (to, from, next) => {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    next('/auth');
+    return;
+  }
+
+  try {
+    const decoded = jwtDecode(token);
+    if (decoded && decoded.role === 'amministratore') {
+      next();
+    } else {
+      next('/profile');
+    }
+  } catch (error) {
+    console.error('Error verifying admin status:', error);
+    next('/auth');
+  }
+};
+
 // Definisco le rotte dell'applicazione
 // Utilizzo il lazy-loading per caricare le pagine solo quando servono
 const routes = [
@@ -37,6 +58,16 @@ const routes = [
       requiresOperator: true
     },
     beforeEnter: requireOperator
+  },
+  {
+    path: '/account-management',
+    name: 'AccountManagement',
+    component: () => import('../views/AccountManagement.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true
+    },
+    beforeEnter: requireAdmin
   },
   // TODO: Aggiungere pagina contatti
 ]
