@@ -1,8 +1,8 @@
 <template>
   <div class="profile-container">
     <div class="profile-card">
-      <h2>Area Personale</h2>
-      <p>Benvenuto, <strong>{{ userEmail }}</strong>!</p>
+      <h1>{{ isAdmin ? 'Amministratore' : 'Area Personale' }}</h1>
+      <p>Benvenuto, <strong>{{ userEmail }}</strong>{{ isAdmin ? ' (Amministratore)' : '' }}!</p>
       <div class="buttons-container">
         <button v-if="isOperator" class="manage-bins-button" @click="goToBinManagement">
           Gestione Cestini
@@ -38,6 +38,20 @@ const isOperator = computed(() => {
     localStorage.removeItem('userEmail');
     localStorage.removeItem('userRole');
     router.push('/auth');
+    return false;
+  }
+});
+
+// Computed property to check if user is admin
+const isAdmin = computed(() => {
+  const token = localStorage.getItem('token');
+  if (!token) return false;
+  
+  try {
+    const decoded = jwtDecode(token);
+    return decoded && decoded.role === 'amministratore';
+  } catch (error) {
+    console.error('Error decoding token:', error);
     return false;
   }
 });

@@ -1,6 +1,6 @@
 import express from 'express';
 import { basicAuth } from "./middlewares/basicAuth.js";
-import { login, register, changePassword, profile_update, user_delete } from './controllers/userController.js';
+import { login, register, changePassword, profile_update, user_delete, updateUserRole } from './controllers/userController.js';
 import { auditOnSuccess } from "./middlewares/withAudit.js";
 import { googleAuth, googleAuthCallback } from "./middlewares/googleAuth.js";
 import User from "./models/User.js";
@@ -305,5 +305,39 @@ router.delete('/user_delete', basicAuth, login /*jwtAuth*/, user_delete);
  *       400:
  *         description: Errore nell'eliminazione dell'account
  */
+
+/**
+ * @swagger
+ * /api/auth/update-role:
+ *   put:
+ *     summary: Aggiorna il ruolo di un utente (solo amministratori)
+ *     tags: [Auth]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *               - newRole
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: ID dell'utente da modificare
+ *               newRole:
+ *                 type: string
+ *                 enum: [cittadino, operatore_comunale, amministratore]
+ *     responses:
+ *       200:
+ *         description: Ruolo aggiornato con successo
+ *       403:
+ *         description: Non autorizzato
+ *       404:
+ *         description: Utente non trovato
+ */
+router.put('/update-role', basicAuth, login /*jwtAuth*/, updateUserRole);
 
 export default router;
