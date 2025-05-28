@@ -76,6 +76,15 @@ export const updateUserById = async (req, res) => {
       return res.status(400).json({ error: 'Usa l\'endpoint di aggiornamento profilo per il tuo account' });
     }
 
+    // Set blockedAt timestamp when deactivating a user
+    if (updateData.hasOwnProperty('isActive')) {
+      if (!updateData.isActive) {
+        updateData.blockedAt = new Date();
+      } else {
+        updateData.blockedAt = null;  // Clear blockedAt when reactivating
+      }
+    }
+
     // If password is provided, hash it
     if (updateData.password) {
       const salt = await bcrypt.genSalt(10);

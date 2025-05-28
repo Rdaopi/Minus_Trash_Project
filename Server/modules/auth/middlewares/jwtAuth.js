@@ -22,6 +22,22 @@ export const jwtAuth = async (req, res, next) => {
                 return res.status(401).json({ error: 'Utente non trovato' });
             }
 
+            // Check if user is blocked
+            if (!user.isActive) {
+                const blockedDate = user.blockedAt ? user.blockedAt.toLocaleString('it-IT', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }) : 'data sconosciuta';
+                
+                logger.warn(`Tentativo di accesso da account bloccato: ${user._id}`);
+                return res.status(403).json({ 
+                    error: `Il tuo account è stato bloccato il ${blockedDate}`
+                });
+            }
+
             // Add user to request
             req.user = user;
             next();

@@ -44,6 +44,10 @@ const userSchema = new Schema({
         type: Boolean,
         default: true
     },
+    blockedAt: {
+        type: Date,
+        default: null
+    },
     password: {
         type: String,
         required: [true, "Password obbligatoria"],

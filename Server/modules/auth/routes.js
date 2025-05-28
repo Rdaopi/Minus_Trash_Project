@@ -303,6 +303,7 @@ router.post('/change_password', basicAuth, login /*jwtAuth*/, changePassword);
 
 // Admin routes for user management
 router.get('/users', jwtAuth, getAllUsers);
+router.post('/users', jwtAuth, register);
 router.put('/users/:userId', jwtAuth, updateUserById);
 router.delete('/users/:userId', jwtAuth, deleteUserById);
 

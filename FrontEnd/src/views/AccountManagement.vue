@@ -107,6 +107,24 @@
                   required
                 >
               </div>
+              <div class="form-group">
+                <label for="name">Nome</label>
+                <input
+                  type="text"
+                  id="name"
+                  v-model="userForm.fullName.name"
+                  required
+                >
+              </div>
+              <div class="form-group">
+                <label for="surname">Cognome</label>
+                <input
+                  type="text"
+                  id="surname"
+                  v-model="userForm.fullName.surname"
+                  required
+                >
+              </div>
             </template>
             
             <!-- Always show role and status -->
@@ -173,7 +191,11 @@ const userForm = ref({
   password: '',
   username: '',
   role: 'cittadino',
-  isActive: true
+  isActive: true,
+  fullName: {
+    name: '',
+    surname: ''
+  }
 });
 
 // Check if user is admin
@@ -319,7 +341,11 @@ function closeModal() {
     password: '',
     username: '',
     role: 'cittadino',
-    isActive: true
+    isActive: true,
+    fullName: {
+      name: '',
+      surname: ''
+    }
   };
 }
 
@@ -425,6 +451,8 @@ th {
   padding: 0.3rem 0.8rem;
   border-radius: 20px;
   font-size: 0.9rem;
+  white-space: nowrap;
+  display: inline-block;
 }
 
 .role-badge.cittadino {
