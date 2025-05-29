@@ -240,7 +240,7 @@ router.get('/googleOAuth/callback', googleAuthCallback);
 
 //Route Protette da JWT
 //Da implementare con il JWT, attualmente richiede autenticazione base
-router.post('/profile_update', basicAuth, login /*jwtAuth*/, profile_update);
+router.post('/profile_update', jwtAuth, login, profile_update);
 /**
  * @swagger
  * /api/auth/profile_update:
@@ -270,7 +270,7 @@ router.post('/profile_update', basicAuth, login /*jwtAuth*/, profile_update);
  *         description: Profilo aggiornato con successo
  */
 
-router.post('/change_password', basicAuth, login /*jwtAuth*/, changePassword);
+router.post('/change_password', jwtAuth, login , changePassword);
 /**
  * @swagger
  * /api/auth/change_password:
