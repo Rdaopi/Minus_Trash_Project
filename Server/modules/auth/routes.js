@@ -5,8 +5,8 @@ import {
   register, 
   changePassword, 
   profile_update, 
-  user_delete, 
-  updateUserRole,
+  //user_delete, 
+  //updateUserRole,
   getAllUsers,
   deleteUserById,
   updateUserById

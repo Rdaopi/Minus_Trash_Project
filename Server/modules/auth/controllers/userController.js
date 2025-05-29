@@ -283,31 +283,29 @@ export const changePassword = [
 
     }
 ];
-
-//Eliminazione utente
-export const user_delete = [
-    auditOnSuccess('user_delete'),
-    async(req,res) => {
-        try {
-            await User.findByIdAndDelete(req.user._id);
-            res.json( {message: "Utente eliminato con successo"});
-        }catch(error) {
-            error.statusCode = 500;
-            throw error;
-        }
-    }
-];
+/*
+  //Eliminazione utente
+  export const user_delete = [
+      auditOnSuccess('user_delete'),
+      async(req,res) => {
+          try {
+              await User.findByIdAndDelete(req.user._id);
+              res.json( {message: "Utente eliminato con successo"});
+          }catch(error) {
+              error.statusCode = 500;
+              throw error;
+          }
+      }
+  ];
+*/
 
 //Modifica ruolo utente (solo per amministratori)
-export const updateUserRole = async(req, res) => {
-    try {
-        // Verifica che l'utente richiedente sia un amministratore
-        /* Temporarily disabled admin check
-        if (req.user.role !== "amministratore") {
-            return res.status(403).json({ error: 'Solo gli amministratori possono modificare i ruoli' });
-        }
-        */
 
+//export const updateUserRole = async(req, res) => 
+//  {
+  /*
+    try {
+  
         const { userId, newRole } = req.body;
 
         // Verifica che il nuovo ruolo sia valido
@@ -315,22 +313,26 @@ export const updateUserRole = async(req, res) => {
         if (!validRoles.includes(newRole)) {
             return res.status(400).json({ error: 'Ruolo non valido' });
         }
-
+        
         // Trova e aggiorna l'utente
         const updatedUser = await User.findByIdAndUpdate(
             userId,
             { role: newRole },
             { new: true, runValidators: true }
         ).select('-password');
-
+        
+       
         if (!updatedUser) {
             return res.status(404).json({ error: 'Utente non trovato' });
         }
-
+        
         logger.info(`Ruolo utente ${userId} aggiornato a ${newRole} da utente ${req.user._id}`);
         res.json(updatedUser);
-    } catch (error) {
+        
+      } catch (error) {
         logger.error('Errore durante l\'aggiornamento del ruolo:', error);
         res.status(500).json({ error: 'Errore durante l\'aggiornamento del ruolo' });
-    }
-};
+      }
+    */
+//  };
+
