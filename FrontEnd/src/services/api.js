@@ -285,11 +285,10 @@ export const authAPI = {
       });
       const data = await handleResponse(response);
       
-      // Clear tokens and redirect to login after successful password change
+      // Clear tokens but let the component handle redirect
       localStorage.removeItem('token');
       localStorage.removeItem('refreshToken');
-      console.log('%cPassword Changed - Please Login Again', 'background: #2196f3; color: white; padding: 2px 5px; border-radius: 3px');
-      window.location.href = '/auth';
+      console.log('%cPassword Changed Successfully - Tokens Cleared', 'background: #2196f3; color: white; padding: 2px 5px; border-radius: 3px');
       
       return data;
     } catch (error) {
@@ -315,6 +314,34 @@ export const authAPI = {
       console.error('Refresh token error:', error);
       throw error;
     }
+  },
+
+  // Request password reset
+  async requestPasswordReset(email) {
+    const url = `${API_BASE_URL}/auth/forgot-password`;
+    logApiCall('POST', url);
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: getBaseHeaders(),
+      body: JSON.stringify({ email })
+    });
+    
+    return handleResponse(response);
+  },
+
+  // Reset password with token
+  async resetPassword(token, password) {
+    const url = `${API_BASE_URL}/auth/reset-password`;
+    logApiCall('POST', url);
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: getBaseHeaders(),
+      body: JSON.stringify({ token, password })
+    });
+    
+    return handleResponse(response);
   }
 };
 

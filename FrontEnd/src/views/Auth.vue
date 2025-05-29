@@ -72,6 +72,9 @@
                     <small v-if="!isLogin" class="password-requirements">
                         La password deve contenere almeno 8 caratteri, una lettera maiuscola e un carattere speciale
                     </small>
+                    <router-link v-if="isLogin" to="/forgot-password" class="forgot-password-link">
+                        Password dimenticata?
+                    </router-link>
                 </div>
                 <button type="submit" class="auth-button">
                     {{ isLogin ? 'Accedi' : 'Registrati' }}
@@ -465,5 +468,18 @@ export default {
     padding: 0 10px;
     color: #666;
     font-size: 14px;
+}
+
+.forgot-password-link {
+    display: block;
+    text-align: right;
+    margin-top: 0.5rem;
+    color: #4CAF50;
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+.forgot-password-link:hover {
+    text-decoration: underline;
 }
 </style>

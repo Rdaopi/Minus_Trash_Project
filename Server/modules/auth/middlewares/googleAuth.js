@@ -82,9 +82,8 @@ export const googleAuthCallback = (req, res, next) => {
                     status: 'success',
                     ip: req.ip,
                     device: req.headers['user-agent'],
-                    metadata: {
-                        email: user.email
-                    }
+                    email: user.email,
+                    metadata: {}
                 });
             } else {
                 await auditService.logEvent({
@@ -94,9 +93,8 @@ export const googleAuthCallback = (req, res, next) => {
                     status: 'success',
                     ip: req.ip,
                     device: req.headers['user-agent'],
-                    metadata: {
-                        email: user.email
-                    }
+                    email: user.email,
+                    metadata: {}
                 });
             }
 

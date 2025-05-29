@@ -23,6 +23,16 @@ const routes = [
     name: 'Profile',
     component: () => import('../views/Profile.vue') // Pagina area personale
   },
+  {
+    path: '/forgot-password',
+    name: 'ForgotPassword',
+    component: () => import('../views/ForgotPassword.vue')
+  },
+  {
+    path: '/reset-password',
+    name: 'ResetPassword',
+    component: () => import('../views/ResetPassword.vue')
+  },
   // TODO: Aggiungere pagina contatti
 ]
 

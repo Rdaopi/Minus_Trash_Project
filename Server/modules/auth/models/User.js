@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 import Token from './Token.js';
+import crypto from 'crypto';
 
 const { Schema } = mongoose;
 
@@ -65,7 +66,15 @@ const userSchema = new Schema({
         ip: String,
         createdAt: Date
     }],
-    passwordChangedAt: Date
+    passwordChangedAt: Date,
+    passwordResetToken: {
+        type: String,
+        select: false
+    },
+    passwordResetExpires: {
+        type: Date,
+        select: false
+    },
 }, {
     timestamps: true,
     toJSON: { virtuals: true },
@@ -132,6 +141,20 @@ userSchema.methods.changedPasswordAfter = function(timestamp) {
         return timestamp < changedTimestamp;
     }
     return false;
+};
+
+// Method to create password reset token
+userSchema.methods.createPasswordResetToken = function() {
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    
+    this.passwordResetToken = crypto
+        .createHash('sha256')
+        .update(resetToken)
+        .digest('hex');
+        
+    this.passwordResetExpires = Date.now() + 3600000; // 1 hour
+    
+    return resetToken;
 };
 
 export default mongoose.model('User', userSchema);

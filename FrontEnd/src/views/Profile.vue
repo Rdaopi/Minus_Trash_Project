@@ -103,10 +103,18 @@ function handlePasswordChange({ type, message }) {
   notificationMessage.value = message;
   showNotification.value = true;
   
-  // Hide notification after 4 seconds
-  setTimeout(() => {
-    showNotification.value = false;
-  }, 4000);
+  if (type === 'success') {
+    // For success, show message for 2.5 seconds then redirect
+    setTimeout(() => {
+      showNotification.value = false;
+      logout(); // This will clean up localStorage and redirect
+    }, 2500);
+  } else {
+    // For errors, just hide after 2.5 seconds
+    setTimeout(() => {
+      showNotification.value = false;
+    }, 2500);
+  }
 }
 </script>
 

@@ -8,6 +8,7 @@ import Token from "./models/Token.js";
 import bcrypt from "bcryptjs";
 import { jwtAuth } from "./middlewares/jwtAuth.js";
 import { logger } from '../../core/utils/logger.js';
+import { forgotPassword, resetPassword } from './controllers/passwordController.js';
 
 const router = express.Router()
 
@@ -313,5 +314,9 @@ router.post('/refresh-token', refreshTokenHandler);
 
 // Add logout handler to the router
 router.post('/logout', jwtAuth, logout);
+
+// Password Reset Routes
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', resetPassword);
 
 export default router;
