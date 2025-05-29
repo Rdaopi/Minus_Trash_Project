@@ -40,6 +40,14 @@ const userSchema = new Schema({
         enum: ["cittadino", "operatore_comunale", "amministratore"],
         default: "cittadino"
     },
+    isActive: {
+        type: Boolean,
+        default: true
+    },
+    blockedAt: {
+        type: Date,
+        default: null
+    },
     password: {
         type: String,
         required: [true, "Password obbligatoria"],

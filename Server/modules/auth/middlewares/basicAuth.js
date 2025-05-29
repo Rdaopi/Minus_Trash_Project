@@ -28,7 +28,30 @@ const authenticateBasic = async (identifier, password, req) => {
                 ip: req.ip || 'unknown',
                 device: req.headers?.['user-agent'] || 'unknown'
             });
-            return null;
+            return { error: 'Credenziali non valide', status: 401 };
+        }
+
+        // Verifica se l'utente è bloccato
+        if (!user.isActive) {
+            const blockedDate = user.blockedAt ? user.blockedAt.toLocaleString('it-IT', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            }) : 'data sconosciuta';
+            
+            await auditService.logFailedAttempt('login', new Error('Account bloccato'), {
+                identifier: identifier,
+                method: method,
+                ip: req.ip || 'unknown',
+                device: req.headers?.['user-agent'] || 'unknown'
+            });
+            
+            return {
+                error: `Il tuo account è stato bloccato il ${blockedDate}`,
+                status: 403
+            };
         }
 
         // Registra login riuscito
@@ -41,11 +64,11 @@ const authenticateBasic = async (identifier, password, req) => {
             success: true
         });
 
-        return user;//Ritorna l'utente autenticato
+        return { user };//Ritorna l'utente autenticato
 
     } catch (error) {
         logger.error("Errore autenticazione: " + error.stack);
-        throw error;
+        return { error: 'Errore interno del server', status: 500 };
     }
 }
 
@@ -66,13 +89,14 @@ export const basicAuth = async (req, res, next) => {
         const [identifier, password] = credentials.split(':'); //Separa identifier e password
 
         //Esegue l'autenticazione
-        const user = await authenticateBasic(identifier, password, req);
+        const result = await authenticateBasic(identifier, password, req);
 
-        //Gestione fallimento autenticazione
-        if (!user) return res.status(401).json({ error: "Credenziali non valide" });
+        if (result.error) {
+            return res.status(result.status).json({ error: result.error });
+        }
 
         //Aggiunge l'utente autenticato alla request
-        req.user = user;
+        req.user = result.user;
         next(); //Procede al prossimo middleware/controller
     } catch (error) {
         //gestione errori generici

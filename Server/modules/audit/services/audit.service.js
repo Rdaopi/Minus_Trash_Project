@@ -79,28 +79,29 @@ const auditService = {
     try {
         const method = context.identifier.includes('@') ? 'email' : 'username';
   
-        await AuditLog.create({
+        const logEntry = await AuditLog.create({
             action: `failed_${action}`,
             method,
             status: 'failed',
             metadata: {
                 identifier: context.identifier,
-                error: error.message
+                error: error.message,
+                timestamp: new Date()
             },
             ip: context.ip,
             device: context.device
-      });
+        });
 
-      logger.warn(`[AUDIT] Tentativo fallito registrato: ${action}`, {
-        logId: logEntry._id,
-        user: context.user?.toString()
-      });
+        logger.warn(`[AUDIT] Tentativo fallito registrato: ${action}`, {
+            logId: logEntry._id,
+            identifier: context.identifier
+        });
 
     } catch (loggingError) {
-      logger.error(`[AUDIT] Fallito log tentativo fallito: ${loggingError.message}`, {
-        originalError: error.message,
-        action
-      });
+        logger.error(`[AUDIT] Fallito log tentativo fallito: ${loggingError.message}`, {
+            originalError: error.message,
+            action
+        });
     }
   },
 

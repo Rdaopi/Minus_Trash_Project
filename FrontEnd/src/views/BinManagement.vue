@@ -194,6 +194,7 @@ const displayedBins = ref([]);
 const loading = ref(false);
 const error = ref(null);
 const successMessage = ref(null);
+const selectedBinId = ref(null);
 const mapRef = ref(null);
 const binFormRef = ref(null);
 const binListRef = ref(null);
@@ -201,7 +202,6 @@ const editMode = ref(false);
 
 // Use the bin details composable
 const {
-  selectedBinId,
   selectedBinDetails,
   loading: loadingBinDetails,
   error: binDetailsError,
@@ -211,11 +211,11 @@ const {
   retryLoad
 } = useBinDetails();
 
-//Check if current user has operator privileges
+//Check if current user has operator or admin privileges
 const isOperator = computed(() => {
   const userRole = localStorage.getItem('userRole');
   console.log('Current user role:', userRole);
-  const isAuthorized = userRole === 'operatore_comunale';
+  const isAuthorized = userRole === 'operatore_comunale' || userRole === 'amministratore';
   console.log('Is user authorized?', isAuthorized);
   return isAuthorized;
 });

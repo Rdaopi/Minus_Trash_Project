@@ -1,11 +1,14 @@
 <template>
   <div class="profile-container">
     <div class="profile-card">
-      <h2>Area Personale</h2>
-      <p>Benvenuto, <strong>{{ userEmail }}</strong>!</p>
+      <h1>{{ isAdmin ? 'Amministratore' : 'Area Personale' }}</h1>
+      <p>Benvenuto, <strong>{{ userEmail }}</strong>{{ isAdmin ? ' (Amministratore)' : '' }}!</p>
       <div class="buttons-container">
-        <button v-if="isOperator" class="manage-bins-button" @click="goToBinManagement">
+        <button v-if="isOperator || isAdmin" class="manage-bins-button" @click="goToBinManagement">
           Gestione Cestini
+        </button>
+        <button v-if="isAdmin" class="manage-account-button" @click="goToAccountManagement">
+          Gestione Account
         </button>
         <button class="logout-button" @click="logout">Logout</button>
       </div>
@@ -42,6 +45,20 @@ const isOperator = computed(() => {
   }
 });
 
+// Computed property to check if user is admin
+const isAdmin = computed(() => {
+  const token = localStorage.getItem('token');
+  if (!token) return false;
+  
+  try {
+    const decoded = jwtDecode(token);
+    return decoded && decoded.role === 'amministratore';
+  } catch (error) {
+    console.error('Error decoding token:', error);
+    return false;
+  }
+});
+
 // Verifica il token all'avvio del componente
 onMounted(() => {
   const token = localStorage.getItem('token');
@@ -73,6 +90,10 @@ function logout() {
 
 function goToBinManagement() {
   router.push('/bin-management');
+}
+
+function goToAccountManagement() {
+  router.push('/account-management');
 }
 </script>
 
@@ -112,7 +133,7 @@ function goToBinManagement() {
 }
 .manage-bins-button {
   padding: 0.8rem 2rem;
-  background-color: #2196F3;
+  background-color: #13d523;
   color: white;
   border: none;
   border-radius: 8rem;
@@ -121,6 +142,19 @@ function goToBinManagement() {
   transition: background 0.2s;
 }
 .manage-bins-button:hover {
+  background-color: #13d523;
+}
+.manage-account-button {
+  padding: 0.8rem 2rem;
+  background-color: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 8rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.manage-account-button:hover {
   background-color: #1976D2;
 }
 </style> 
