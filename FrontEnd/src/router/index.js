@@ -1,4 +1,6 @@
 import { createRouter, createWebHistory, createWebHashHistory } from 'vue-router'
+import { requireOperator } from './guards'
+import { jwtDecode } from 'jwt-decode';
 
 // Definisco le rotte dell'applicazione
 // Utilizzo il lazy-loading per caricare le pagine solo quando servono
@@ -21,7 +23,20 @@ const routes = [
   {
     path: '/profile',
     name: 'Profile',
-    component: () => import('../views/Profile.vue') // Pagina area personale
+    component: () => import('../views/Profile.vue'), // Pagina area personale
+    meta: {
+      requiresAuth: true
+    }
+  },
+  {
+    path: '/bin-management',
+    name: 'BinManagement',
+    component: () => import('../views/BinManagement.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresOperator: true
+    },
+    beforeEnter: requireOperator
   },
   // TODO: Aggiungere pagina contatti
 ]
@@ -35,16 +50,45 @@ const router = createRouter({
   routes
 })
 
-// In futuro qui potrei aggiungere controlli di accesso (guards)
-
-// Route guard: protect /profile from unauthenticated access
+// Route guard: protect routes and check roles
 router.beforeEach((to, from, next) => {
-  const isAuthenticated = !!localStorage.getItem('token');
-  if (to.path === '/profile' && !isAuthenticated) {
+  const token = localStorage.getItem('token');
+
+  // Se la rotta richiede autenticazione
+  if (to.meta.requiresAuth && !token) {
     next('/auth');
-  } else {
-    next();
+    return;
   }
+
+  // Se c'è un token, verifichiamo che sia valido
+  if (token) {
+    try {
+      const decoded = jwtDecode(token);
+      const currentTime = Date.now() / 1000;
+      
+      // Se il token è scaduto, rimuoviamo tutto e reindirizziamo al login
+      if (decoded.exp < currentTime) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('userEmail');
+        if (to.meta.requiresAuth) {
+          next('/auth');
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('Error decoding token:', error);
+      localStorage.removeItem('token');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userEmail');
+      if (to.meta.requiresAuth) {
+        next('/auth');
+        return;
+      }
+    }
+  }
+
+  next();
 });
 
 export default router 
