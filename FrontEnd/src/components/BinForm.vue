@@ -1,6 +1,18 @@
 //Reusable form component for bin creation and editing
 <script setup>
-import { ref, defineEmits } from 'vue';
+import { ref, defineEmits, defineProps, watch, onMounted } from 'vue';
+
+// Variables for the update bin form management
+const props = defineProps({
+  editMode: {
+    type: Boolean,
+    default: false
+  },
+  binData: {
+    type: Object,
+    default: null
+  }
+});
 
 const emit = defineEmits(['submit', 'cancel']);
 
@@ -65,7 +77,7 @@ async function fetchSuggestions(query) {
   try {
     //Build search query with city context
     const cityQuery = `${query}, ${binForm.value.city}`;
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cityQuery)}&addressdetails=1&limit=10&countrycodes=it`;
+    const url = `/nominatim/search?format=json&q=${encodeURIComponent(cityQuery)}&addressdetails=1&limit=10&countrycodes=it`;
     console.log('Address API URL:', url);
     
     const res = await fetch(url);
@@ -114,7 +126,7 @@ async function fetchCitySuggestions(query) {
   
   try {
     //Search for Italian cities with simplified approach
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Italia')}&addressdetails=1&limit=8&countrycodes=it`;
+    const url = `/nominatim/search?format=json&q=${encodeURIComponent(query + ', Italia')}&addressdetails=1&limit=8&countrycodes=it`;
     console.log('City API URL:', url);
     
     const res = await fetch(url);
@@ -174,15 +186,6 @@ function parseAddress(addressDetails) {
   binForm.value.cap = addressDetails.postcode || '';
 }
 
-//Handle address suggestion selection
-function selectSuggestion(s) {
-  binForm.value.address = s.display_name;
-  binForm.value.latitude = s.lat;
-  binForm.value.longitude = s.lon;
-  parseAddress(s.address);
-  showSuggestions.value = false;
-}
-
 //Handle address input with debouncing
 function handleAddressInput(e) {
   const query = e.target.value;
@@ -212,9 +215,11 @@ function selectCitySuggestion(s) {
     console.log('Updated CAP to:', s.postcode);
   }
   
-  //Clear suggestions
-  showCitySuggestions.value = false;
-  citySuggestions.value = [];
+  //Clear suggestions with timeout
+  setTimeout(() => {
+    showCitySuggestions.value = false;
+    citySuggestions.value = [];
+  }, 100);
   
   //Clear address field since city changed
   binForm.value.address = '';
@@ -224,12 +229,40 @@ function selectCitySuggestion(s) {
   binForm.value.longitude = '';
 }
 
+//Handle address suggestion selection
+function selectSuggestion(s) {
+  console.log('Selected address suggestion:', s);
+  binForm.value.address = s.display_name;
+  binForm.value.latitude = s.lat;
+  binForm.value.longitude = s.lon;
+  parseAddress(s.address);
+  
+  //Clear suggestions with timeout
+  setTimeout(() => {
+    showSuggestions.value = false;
+    suggestions.value = [];
+  }, 100);
+}
+
 //Handle form submission
 function handleSubmit() {
+  console.log('=== BIN FORM HANDLE SUBMIT ===');
   console.log('BinForm handleSubmit called');
   console.log('Form data:', binForm.value);
-  emit('submit', { ...binForm.value });
-  console.log('Submit event emitted');
+  console.log('Edit mode:', props.editMode);
+  console.log('About to emit submit event...');
+  
+  // Always emit the submit event
+  const dataToEmit = { ...binForm.value };
+  console.log('Data being emitted:', dataToEmit);
+  emit('submit', dataToEmit);
+  console.log('Submit event emitted successfully');
+}
+
+//Force submit for external calls
+function forceSubmit() {
+  console.log('BinForm forceSubmit called');
+  handleSubmit();
 }
 
 //Handle form cancellation
@@ -260,15 +293,114 @@ function resetForm() {
   showCitySuggestions.value = false;
 }
 
+//Load bin data for editing
+function loadBinData(bin) {
+  if (!bin) return;
+  
+  console.log('Loading bin data for editing:', bin);
+  
+  // Helper function to safely extract address string
+  const extractAddress = (bin) => {
+    // If bin.address exists and is a string
+    if (bin.address && typeof bin.address === 'string') {
+      return bin.address;
+    }
+    
+    // If bin.location.address exists
+    if (bin.location && bin.location.address) {
+      if (typeof bin.location.address === 'string') {
+        return bin.location.address;
+      }
+      
+      // If it's an object, construct the address string
+      if (typeof bin.location.address === 'object' && bin.location.address !== null) {
+        const addr = bin.location.address;
+        const parts = [];
+        
+        if (addr.street) parts.push(addr.street);
+        if (addr.streetNumber) parts.push(addr.streetNumber);
+        if (addr.city) parts.push(addr.city);
+        if (addr.postalCode) parts.push(addr.postalCode);
+        
+        if (parts.length > 0) {
+          return parts.join(', ');
+        }
+      }
+    }
+    
+    // Fallback to coordinates if available
+    const lat = bin.lat || bin.latitude || (bin.location?.coordinates?.[1]);
+    const lng = bin.lng || bin.longitude || (bin.location?.coordinates?.[0]);
+    if (lat && lng) {
+      return `Coordinate: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+    }
+    
+    return '';
+  };
+  
+  binForm.value = {
+    serialNumber: bin.serialNumber || '',
+    manufacturer: bin.manufacturer || '',
+    type: bin.type || '',
+    capacity: bin.capacity || null,
+    address: extractAddress(bin),
+    street: bin.street || (bin.location?.address?.street) || '',
+    streetNumber: bin.streetNumber || (bin.location?.address?.streetNumber) || '',
+    city: bin.city || (bin.location?.address?.city) || '',
+    cap: bin.cap || (bin.location?.address?.postalCode) || '',
+    latitude: bin.lat || bin.latitude || (bin.location?.coordinates?.[1]) || '',
+    longitude: bin.lng || bin.longitude || (bin.location?.coordinates?.[0]) || '',
+    installationDate: bin.installationDate ? bin.installationDate.split('T')[0] : new Date().toISOString().split('T')[0]
+  };
+}
+
+// Watch for changes in binData prop
+watch(() => props.binData, (newBinData) => {
+  if (newBinData && props.editMode) {
+    loadBinData(newBinData);
+  }
+}, { immediate: true });
+
+// Watch for changes in editMode
+watch(() => props.editMode, (newEditMode) => {
+  if (!newEditMode) {
+    resetForm();
+  }
+});
+
 //Expose methods for parent component access
-defineExpose({ resetForm, handleSubmit });
+defineExpose({ 
+  resetForm, 
+  handleSubmit, 
+  forceSubmit,
+  loadBinData, 
+  getFormData: () => ({ ...binForm.value }),
+  formData: binForm // Espongo anche il reactive object direttamente
+});
 </script>
 
 <template>
   <form @submit.prevent="handleSubmit" class="bin-form" autocomplete="off">
+    <div class="form-header" v-if="editMode">
+      <h3><i class="fas fa-edit"></i> Modifica Cestino</h3>
+    </div>
+    <div class="form-header" v-else>
+      <h3><i class="fas fa-plus"></i> Nuovo Cestino</h3>
+    </div>
+    
     <div class="form-group">
       <label for="serialNumber">Serial Number:</label>
-      <input id="serialNumber" v-model="binForm.serialNumber" type="text" required />
+      <input 
+        id="serialNumber" 
+        v-model="binForm.serialNumber" 
+        type="text" 
+        required 
+        minlength="6"
+        placeholder="Almeno 6 caratteri"
+      />
+      <small v-if="binForm.serialNumber && binForm.serialNumber.length < 6" class="validation-hint">
+        Il numero seriale deve essere lungo almeno 6 caratteri
+      </small>
     </div>
     
     <div class="form-group">
@@ -296,7 +428,14 @@ defineExpose({ resetForm, handleSubmit });
     
     <div class="form-group">
       <label for="city">Città:</label>
-      <input id="city" v-model="binForm.city" type="text" required placeholder="Inserisci la città" @input="handleCityInput" />
+      <input 
+        id="city" 
+        v-model="binForm.city" 
+        type="text" 
+        required 
+        placeholder="Inserisci la città" 
+        @input="handleCityInput"
+      />
       <div v-if="loadingCitySuggestions" class="suggestions-loading">Caricamento città...</div>
       <ul v-if="showCitySuggestions && citySuggestions.length" class="suggestions-list city-suggestions">
         <li v-for="s in citySuggestions" :key="s.place_id" @click.prevent="selectCitySuggestion(s)">
@@ -331,36 +470,36 @@ defineExpose({ resetForm, handleSubmit });
     <!-- 2x2 grid for address details -->
     <div class="address-details-grid">
       <div class="form-group">
-        <label for="street">Via:</label>
-        <input id="street" v-model="binForm.street" type="text" readonly />
+        <label for="street-readonly">Via:</label>
+        <input id="street-readonly" v-model="binForm.street" type="text" readonly />
       </div>
       
       <div class="form-group">
-        <label for="streetNumber">Numero Civico:</label>
-        <input id="streetNumber" v-model="binForm.streetNumber" type="text" readonly />
+        <label for="streetNumber-readonly">Numero Civico:</label>
+        <input id="streetNumber-readonly" v-model="binForm.streetNumber" type="text" readonly />
       </div>
       
       <div class="form-group">
-        <label for="city">Città:</label>
-        <input id="city" v-model="binForm.city" type="text" readonly />
+        <label for="city-readonly">Città:</label>
+        <input id="city-readonly" v-model="binForm.city" type="text" readonly />
       </div>
       
       <div class="form-group">
-        <label for="cap">CAP:</label>
-        <input id="cap" v-model="binForm.cap" type="text" readonly />
+        <label for="cap-readonly">CAP:</label>
+        <input id="cap-readonly" v-model="binForm.cap" type="text" readonly />
       </div>
     </div>
 
     <!-- Coordinates display -->
     <div class="coordinates-group">
       <div class="form-group">
-        <label for="latitude">Latitudine:</label>
-        <input id="latitude" v-model="binForm.latitude" type="text" readonly />
+        <label for="latitude-readonly">Latitudine:</label>
+        <input id="latitude-readonly" v-model="binForm.latitude" type="text" readonly />
       </div>
       
       <div class="form-group">
-        <label for="longitude">Longitudine:</label>
-        <input id="longitude" v-model="binForm.longitude" type="text" readonly />
+        <label for="longitude-readonly">Longitudine:</label>
+        <input id="longitude-readonly" v-model="binForm.longitude" type="text" readonly />
       </div>
     </div>
   </form>
@@ -464,10 +603,36 @@ input[readonly] {
   margin-top: 2px;
 }
 
+.validation-hint {
+  display: block;
+  font-size: 11px;
+  color: #e74c3c;
+  margin-top: 4px;
+  font-style: italic;
+}
+
 @media (max-width: 768px) {
   .address-details-grid,
   .coordinates-group {
     grid-template-columns: 1fr;
   }
+}
+
+.form-header {
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #4CAF50;
+}
+
+.form-header h3 {
+  margin: 0;
+  color: #4CAF50;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.form-header i {
+  font-size: 1.2rem;
 }
 </style> 

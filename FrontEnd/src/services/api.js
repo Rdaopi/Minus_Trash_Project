@@ -252,13 +252,22 @@ export const binsAPI = {
   //Updates an existing waste bin
   async updateBin(binId, binData) {
     const url = `${API_BASE_URL}/waste/bins/${binId}`;
+    console.log('=== API UPDATE BIN DEBUG ===');
+    console.log('URL:', url);
+    console.log('Bin ID:', binId);
+    console.log('Bin Data:', binData);
     logApiCall('PUT', url);
     
     try {
       const token = localStorage.getItem('token');
       if (!token) {
+        console.error('ERROR: No auth token found');
         throw new Error('No auth token found');
       }
+      console.log('Token found:', token.substring(0, 20) + '...');
+
+      const requestBody = JSON.stringify(binData);
+      console.log('Request body:', requestBody);
 
       const response = await fetch(url, {
         method: 'PUT',
@@ -266,13 +275,27 @@ export const binsAPI = {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(binData)
+        body: requestBody
       });
 
-      return await handleResponse(response);
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Server error response:', errorText);
+        throw new Error(`Server responded with ${response.status}: ${errorText}`);
+      }
+
+      const result = await handleResponse(response);
+      console.log('=== UPDATE SUCCESS ===');
+      console.log('Update result:', result);
+      return result;
     } catch (error) {
+      console.error('=== ERROR IN UPDATE API ===');
       console.error('Error updating bin:', error);
-      throw new Error('Failed to update waste bin');
+      console.error('Error stack:', error.stack);
+      throw new Error('Failed to update waste bin: ' + error.message);
     }
   },
 
