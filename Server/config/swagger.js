@@ -3,6 +3,7 @@ import mongooseToSwagger from 'mongoose-to-swagger';
 import User from '../modules/auth/models/User.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs/promises'; //Importa la libreria per gestire i file.
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -176,5 +177,11 @@ if (swaggerSpec.components && swaggerSpec.components.schemas) {
     swaggerSpec.components.schemas[key] = cleanSchema(swaggerSpec.components.schemas[key]);
   });
 }
+
+// Write the specification to swagger-output.json
+const outputPath = path.resolve(__dirname, '../swagger-output.json');
+await fs.writeFile(outputPath, JSON.stringify(swaggerSpec, null, 2), 'utf8')
+  .then(() => console.log('Swagger documentation updated successfully'))
+  .catch(err => console.error('Failed to update swagger documentation:', err));
 
 export default swaggerSpec;   
