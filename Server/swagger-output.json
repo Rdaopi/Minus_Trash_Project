@@ -7,7 +7,7 @@
   },
   "servers": [
     {
-      "url": "undefined",
+      "url": "http://localhost:5000",
       "description": "Development server"
     }
   ],
@@ -482,6 +482,24 @@
           },
           "400": {
             "description": "Errore nel cambio password"
+          }
+        }
+      }
+    },
+    "/api/auth/user_delete": {
+      "delete": {
+        "summary": "Elimina account utente",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Account eliminato con successo"
+          },
+          "400": {
+            "description": "Errore nell'eliminazione dell'account"
           }
         }
       }

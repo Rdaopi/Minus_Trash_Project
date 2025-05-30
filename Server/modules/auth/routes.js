@@ -240,7 +240,7 @@ router.get('/googleOAuth/callback', googleAuthCallback);
 
 //Route Protette da JWT
 //Da implementare con il JWT, attualmente richiede autenticazione base
-router.post('/profile_update', basicAuth, login /*jwtAuth*/, profile_update);
+router.post('/profile_update', jwtAuth, login, profile_update);
 /**
  * @swagger
  * /api/auth/profile_update:
@@ -270,7 +270,7 @@ router.post('/profile_update', basicAuth, login /*jwtAuth*/, profile_update);
  *         description: Profilo aggiornato con successo
  */
 
-router.post('/change_password', basicAuth, login /*jwtAuth*/, changePassword);
+router.post('/change_password', jwtAuth, login , changePassword);
 /**
  * @swagger
  * /api/auth/change_password:
@@ -300,6 +300,114 @@ router.post('/change_password', basicAuth, login /*jwtAuth*/, changePassword);
  *         description: Errore nel cambio password
  */
 
+
+/**
+ * @swagger
+ * /api/auth/users:
+ *   get:
+ *     summary: Ottieni tutti gli utenti (Solo amministratore)
+ *     tags: [Auth]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista di tutti gli utenti recuperata con successo
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Non autorizzato - Token mancante o non valido
+ *       403:
+ *         description: Vietato - L'utente non ha privilegi di amministratore
+ * 
+ *   post:
+ *     summary: Crea un nuovo utente (Solo amministratore)
+ *     tags: [Auth]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/User'
+ *     responses:
+ *       201:
+ *         description: Utente creato con successo
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Dati non validi
+ *       401:
+ *         description: Non autorizzato - Token mancante o non valido
+ *       403:
+ *         description: Vietato - L'utente non ha privilegi di amministratore
+ */
+
+/**
+ * @swagger
+ * /api/auth/users/{userId}:
+ *   put:
+ *     summary: Aggiorna un utente tramite ID (Solo amministratore)
+ *     tags: [Auth]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: L'ID dell'utente da aggiornare
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/User'
+ *     responses:
+ *       200:
+ *         description: Utente aggiornato con successo
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Dati non validi
+ *       401:
+ *         description: Non autorizzato - Token mancante o non valido
+ *       403:
+ *         description: Vietato - L'utente non ha privilegi di amministratore
+ *       404:
+ *         description: Utente non trovato
+ * 
+ *   delete:
+ *     summary: Elimina un utente tramite ID (Solo amministratore)
+ *     tags: [Auth]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: L'ID dell'utente da eliminare
+ *     responses:
+ *       200:
+ *         description: Utente eliminato con successo
+ *       401:
+ *         description: Non autorizzato - Token mancante o non valido
+ *       403:
+ *         description: Vietato - L'utente non ha privilegi di amministratore
+ *       404:
+ *         description: Utente non trovato
+ */
 
 // Admin routes for user management
 router.get('/users', jwtAuth, getAllUsers);
