@@ -2,6 +2,7 @@
 <script setup>
 import { ref, defineEmits, defineProps, watch, computed } from 'vue';
 import BaseForm from './BaseForm.vue';
+import { reportsAPI } from '../services/api';
 
 // Variables for the report form management
 const props = defineProps({
@@ -12,13 +13,21 @@ const props = defineProps({
   reportData: {
     type: Object,
     default: null
+  },
+  selectedReportId: {
+    type: String,
+    default: null
   }
 });
 
-const emit = defineEmits(['submit', 'cancel']);
+const emit = defineEmits(['success', 'error', 'cancel', 'loading']);
 
 // Reference to BaseForm component
 const baseFormRef = ref(null);
+
+// Form internal state
+const loading = ref(false);
+const error = ref(null);
 
 //Form data reactive object (only report-specific fields)
 const reportForm = ref({
@@ -115,43 +124,118 @@ watch(() => reportForm.value.reportType, (newType) => {
   }
 });
 
-//Handle form submission
-function handleSubmit() {
+//Handle form submission with API calls
+async function handleSubmit() {
   console.log('=== REPORT FORM HANDLE SUBMIT ===');
   console.log('ReportForm handleSubmit called');
   console.log('Report form data:', reportForm.value);
   console.log('Address form data:', baseFormRef.value?.addressForm);
   console.log('Edit mode:', props.editMode);
-  console.log('About to emit submit event...');
+  console.log('Selected report ID:', props.selectedReportId);
   
-  // Build location object for backend using BaseForm helper
-  const locationData = baseFormRef.value?.buildLocationData();
+  // Clear previous errors
+  error.value = null;
   
-  // Build data object matching backend model
-  const dataToEmit = {
-    reportType: reportForm.value.reportType,
-    severity: reportForm.value.severity,
-    description: reportForm.value.description,
-    location: locationData,
-    images: reportForm.value.images
-  };
-  
-  // Add optional fields based on report type
-  if (showSubtype.value) {
-    dataToEmit.reportSubtype = reportForm.value.reportSubtype;
+  try {
+    // Set loading state
+    loading.value = true;
+    emit('loading', true);
+    
+    // Validate required fields
+    const addressData = baseFormRef.value?.addressForm;
+    if (!addressData?.city || !addressData?.latitude || !addressData?.longitude) {
+      throw new Error('Dati di localizzazione mancanti. Assicurati di aver selezionato una città e un indirizzo validi.');
+    }
+    
+    if (!reportForm.value.reportType || !reportForm.value.severity || !reportForm.value.description) {
+      throw new Error('Compila tutti i campi obbligatori della segnalazione.');
+    }
+    
+    if (reportForm.value.description.length < 10) {
+      throw new Error('La descrizione deve essere di almeno 10 caratteri.');
+    }
+    
+    if (showSubtype.value && !reportForm.value.reportSubtype) {
+      throw new Error('Seleziona il sottotipo per questo tipo di segnalazione.');
+    }
+    
+    if (showMissedCollectionDetails.value) {
+      if (!reportForm.value.missedCollectionDetails.wasteType || !reportForm.value.missedCollectionDetails.scheduledDate) {
+        throw new Error('Compila tutti i dettagli obbligatori per la raccolta saltata.');
+      }
+    }
+    
+    // Build location object for backend using BaseForm helper
+    const locationData = baseFormRef.value?.buildLocationData();
+    
+    // Build API payload
+    const reportPayload = {
+      reportType: reportForm.value.reportType,
+      severity: reportForm.value.severity,
+      description: reportForm.value.description,
+      location: locationData,
+      images: reportForm.value.images
+    };
+    
+    // Add optional fields based on report type
+    if (showSubtype.value) {
+      reportPayload.reportSubtype = reportForm.value.reportSubtype;
+    }
+    
+    if (showMissedCollectionDetails.value) {
+      reportPayload.missedCollectionDetails = reportForm.value.missedCollectionDetails;
+    }
+    
+    if (showBinSelection.value && reportForm.value.relatedBin) {
+      reportPayload.relatedBin = reportForm.value.relatedBin;
+    }
+    
+    console.log('Sending API request...');
+    console.log('Payload:', reportPayload);
+    
+    // Make API call
+    let result;
+    if (props.editMode && props.selectedReportId) {
+      console.log('Updating report with ID:', props.selectedReportId);
+      result = await reportsAPI.updateReport(props.selectedReportId, reportPayload);
+      console.log('Report updated successfully:', result);
+      
+      // Emit success event
+      emit('success', {
+        type: 'update',
+        message: 'Segnalazione aggiornata con successo!',
+        report: result
+      });
+    } else {
+      console.log('Creating new report...');
+      result = await reportsAPI.createReport(reportPayload);
+      console.log('Report created successfully:', result);
+      
+      // Emit success event
+      emit('success', {
+        type: 'create',
+        message: 'Segnalazione creata con successo!',
+        report: result
+      });
+    }
+    
+    // Reset form after successful operation
+    resetForm();
+    
+  } catch (err) {
+    console.error('Error in report form submission:', err);
+    error.value = err.message || 'Errore durante l\'operazione. Riprova più tardi.';
+    
+    // Emit error event
+    emit('error', {
+      message: error.value,
+      originalError: err
+    });
+    
+  } finally {
+    loading.value = false;
+    emit('loading', false);
   }
-  
-  if (showMissedCollectionDetails.value) {
-    dataToEmit.missedCollectionDetails = reportForm.value.missedCollectionDetails;
-  }
-  
-  if (showBinSelection.value && reportForm.value.relatedBin) {
-    dataToEmit.relatedBin = reportForm.value.relatedBin;
-  }
-  
-  console.log('Data being emitted:', dataToEmit);
-  emit('submit', dataToEmit);
-  console.log('Submit event emitted successfully');
 }
 
 //Force submit for external calls
@@ -162,8 +246,10 @@ function forceSubmit() {
 
 //Handle form cancellation
 function handleCancel() {
+  console.log('ReportForm handleCancel called');
   resetForm();
-  baseFormRef.value?.handleCancel();
+  error.value = null;
+  emit('cancel');
 }
 
 //Reset form to initial state
@@ -182,6 +268,7 @@ function resetForm() {
     relatedBin: ''
   };
   baseFormRef.value?.resetAddressForm();
+  error.value = null;
 }
 
 //Load report data for editing
@@ -207,6 +294,9 @@ function loadReportData(report) {
   
   // Load address data through BaseForm
   baseFormRef.value?.loadAddressData(report);
+  
+  // Clear errors when loading new data
+  error.value = null;
 }
 
 // Watch for changes in reportData prop
@@ -233,7 +323,9 @@ defineExpose({
     ...reportForm.value,
     ...(baseFormRef.value?.addressForm || {})
   }),
-  formData: reportForm
+  formData: reportForm,
+  loading,
+  error
 });
 </script>
 
@@ -248,12 +340,19 @@ defineExpose({
   >
     <!-- Campi specifici per le segnalazioni -->
     <template #specific-fields>
+      <!-- Error message display -->
+      <div v-if="error" class="error-message">
+        <i class="fas fa-exclamation-circle"></i>
+        {{ error }}
+      </div>
+      
       <div class="form-group">
         <label for="reportType">Tipo di segnalazione:</label>
         <select 
           id="reportType" 
           v-model="reportForm.reportType" 
           required
+          :disabled="loading"
         >
           <option value="">Seleziona il tipo di segnalazione</option>
           <option v-for="type in reportTypes" :key="type.value" :value="type.value">
@@ -268,6 +367,7 @@ defineExpose({
           id="reportSubtype" 
           v-model="reportForm.reportSubtype" 
           :required="showSubtype"
+          :disabled="loading"
         >
           <option value="">Seleziona il sottotipo</option>
           <option v-for="subtype in availableSubtypes" :key="subtype.value" :value="subtype.value">
@@ -282,6 +382,7 @@ defineExpose({
           id="severity" 
           v-model="reportForm.severity" 
           required
+          :disabled="loading"
         >
           <option v-for="level in severityLevels" :key="level.value" :value="level.value">
             {{ level.label }}
@@ -299,6 +400,7 @@ defineExpose({
             id="wasteType" 
             v-model="reportForm.missedCollectionDetails.wasteType" 
             required
+            :disabled="loading"
           >
             <option value="">Seleziona il tipo di rifiuto</option>
             <option v-for="waste in wasteTypes" :key="waste.value" :value="waste.value">
@@ -314,6 +416,7 @@ defineExpose({
             v-model="reportForm.missedCollectionDetails.scheduledDate" 
             type="date" 
             required 
+            :disabled="loading"
           />
         </div>
         
@@ -324,6 +427,7 @@ defineExpose({
             v-model="reportForm.missedCollectionDetails.area" 
             type="text" 
             placeholder="Specificare l'area interessata"
+            :disabled="loading"
           />
         </div>
       </div>
@@ -336,6 +440,7 @@ defineExpose({
           v-model="reportForm.relatedBin" 
           type="text" 
           placeholder="ID o codice del cestino (se noto)"
+          :disabled="loading"
         />
       </div>
     </template>
@@ -351,6 +456,7 @@ defineExpose({
           maxlength="1000"
           placeholder="Descrivi il problema (max 1000 caratteri)"
           rows="4"
+          :disabled="loading"
         ></textarea>
         <small class="char-counter">{{ reportForm.description.length }}/1000 caratteri</small>
       </div>
@@ -359,11 +465,23 @@ defineExpose({
     <!-- Pulsanti del form -->
     <template #form-buttons>
       <div class="form-buttons">
-        <button type="button" @click="handleCancel" class="btn-cancel">
+        <button 
+          type="button" 
+          @click="handleCancel" 
+          class="btn-cancel"
+          :disabled="loading"
+        >
           <i class="fas fa-times"></i> Annulla
         </button>
-        <button type="button" @click="handleSubmit" class="btn-submit">
-          <i class="fas fa-save"></i> {{ editMode ? 'Aggiorna' : 'Crea' }} Segnalazione
+        <button 
+          type="button" 
+          @click="handleSubmit" 
+          class="btn-submit"
+          :disabled="loading"
+        >
+          <i v-if="loading" class="fas fa-spinner fa-spin"></i>
+          <i v-else class="fas fa-save"></i>
+          {{ loading ? 'Salvando...' : (editMode ? 'Aggiorna' : 'Crea') }} Segnalazione
         </button>
       </div>
     </template>
@@ -396,6 +514,12 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
 }
 
+input:disabled, select:disabled, textarea:disabled {
+  background-color: #f5f5f5;
+  color: #999;
+  cursor: not-allowed;
+}
+
 textarea {
   resize: vertical;
   min-height: 80px;
@@ -403,6 +527,26 @@ textarea {
 
 select {
   cursor: pointer;
+}
+
+select:disabled {
+  cursor: not-allowed;
+}
+
+.error-message {
+  background: #f8d7da;
+  color: #721c24;
+  padding: 12px;
+  border-radius: 4px;
+  border: 1px solid #f5c6cb;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.error-message i {
+  color: #e74c3c;
 }
 
 .missed-collection-details {
@@ -451,7 +595,7 @@ select {
   color: white;
 }
 
-.btn-cancel:hover {
+.btn-cancel:hover:not(:disabled) {
   background: #5a6268;
 }
 
@@ -460,8 +604,22 @@ select {
   color: white;
 }
 
-.btn-submit:hover {
+.btn-submit:hover:not(:disabled) {
   background: #45a049;
+}
+
+.btn-cancel:disabled, .btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.fa-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 @media (max-width: 768px) {
