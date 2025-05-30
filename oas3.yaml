@@ -4,7 +4,7 @@ info:
   version: 1.0.0
   description: Documentazione API per Minus Trash
 servers:
-  - url: undefined/api
+  - url: undefined
     description: Development server
 components:
   schemas:
@@ -28,6 +28,10 @@ components:
             - cittadino
             - operatore_comunale
             - amministratore
+        isActive:
+          type: boolean
+        blockedAt:
+          type: string
         password:
           type: string
         authMethods:
@@ -309,16 +313,6 @@ paths:
           description: Password cambiata con successo
         '400':
           description: Errore nel cambio password
-  /api/auth/user_delete:
-    delete:
-      summary: Elimina account utente
-      security:
-        - BearerAuth: []
-      responses:
-        '200':
-          description: Account eliminato con successo
-        '400':
-          description: Errore nell'eliminazione dell'account
   /api/waste/reports:
     get:
       summary: Recupera tutte le segnalazioni

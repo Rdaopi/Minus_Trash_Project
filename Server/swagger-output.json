@@ -7,7 +7,7 @@
   },
   "servers": [
     {
-      "url": "undefined/api",
+      "url": "undefined",
       "description": "Development server"
     }
   ],
@@ -40,6 +40,12 @@
               "operatore_comunale",
               "amministratore"
             ]
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "blockedAt": {
+            "type": "string"
           },
           "password": {
             "type": "string"
@@ -476,24 +482,6 @@
           },
           "400": {
             "description": "Errore nel cambio password"
-          }
-        }
-      }
-    },
-    "/api/auth/user_delete": {
-      "delete": {
-        "summary": "Elimina account utente",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Account eliminato con successo"
-          },
-          "400": {
-            "description": "Errore nell'eliminazione dell'account"
           }
         }
       }
