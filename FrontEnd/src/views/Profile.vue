@@ -7,6 +7,9 @@
         <button v-if="isOperator || isAdmin" class="manage-bins-button" @click="goToBinManagement">
           Gestione Cestini
         </button>
+        <button v-if="isOperator || isAdmin" class="manage-reports-button" @click="goToReportManagement">
+          Gestione Segnalazioni
+        </button>
         <button v-if="isAdmin" class="manage-account-button" @click="goToAccountManagement">
           Gestione Account
         </button>
@@ -92,6 +95,10 @@ function goToBinManagement() {
   router.push('/bin-management');
 }
 
+function goToReportManagement() {
+  router.push('/report-management');
+}
+
 function goToAccountManagement() {
   router.push('/account-management');
 }
@@ -118,20 +125,8 @@ function goToAccountManagement() {
   gap: 1rem;
   margin-top: 2rem;
 }
-.logout-button {
-  padding: 0.8rem 2rem;
-  background-color: #e53935;
-  color: white;
-  border: none;
-  border-radius: 8rem;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.logout-button:hover {
-  background-color: #b71c1c;
-}
-.manage-bins-button {
+
+.manage-bins-button, .manage-reports-button, .manage-account-button, .logout-button {
   padding: 0.8rem 2rem;
   background-color: #13d523;
   color: white;
@@ -141,20 +136,29 @@ function goToAccountManagement() {
   cursor: pointer;
   transition: background 0.2s;
 }
-.manage-bins-button:hover {
+.manage-bins-button:hover, .manage-reports-button:hover, .manage-account-button:hover {
   background-color: #13d523;
 }
 .manage-account-button {
-  padding: 0.8rem 2rem;
-  background-color: #2196F3;
-  color: white;
-  border: none;
-  border-radius: 8rem;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background 0.2s;
+  background-color: #2196F3;;
 }
 .manage-account-button:hover {
   background-color: #1976D2;
+}
+
+.manage-bins-button{
+  background-color: #13d523;
+  color: white;
+}
+
+.manage-reports-button{
+  background-color: #288da1;
+}
+
+.logout-button {
+  background-color: #e53935;
+}
+.logout-button:hover {
+  background-color: #b71c1c;
 }
 </style> 

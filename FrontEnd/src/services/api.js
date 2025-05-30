@@ -364,4 +364,354 @@ export const binsAPI = {
     console.log('Successfully fetched nearby bins');
     return data;
   }
+};
+
+//Report management API endpoints
+export const reportsAPI = {
+  //Creates a new report
+  async createReport(reportData) {
+    const url = `${API_BASE_URL}/reports`;
+    logApiCall('POST', url);
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No auth token found');
+      }
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(reportData)
+      });
+
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('Error creating report:', error);
+      throw new Error('Failed to create report: ' + error.message);
+    }
+  },
+
+  //Fetches all reports
+  async getAllReports() {
+    const url = `${API_BASE_URL}/reports`;
+    logApiCall('GET', url);
+    
+    try {
+      const response = await fetch(url, {
+        headers: getBaseHeaders()
+      });
+      
+      const data = await handleResponse(response);
+      console.log('Raw reports data from server:', data);
+      
+      // Ensure we have an array of reports
+      if (!Array.isArray(data)) {
+        throw new Error('Invalid data format: expected array');
+      }
+      
+      // Transform report data if needed
+      const transformedReports = data.map(report => {
+        console.log('Processing report:', report);
+        let transformedReport = {
+          ...report,
+          address: 'Indirizzo non disponibile'
+        };
+
+        // Handle address formatting for display
+        if (report.location && report.location.address) {
+          if (typeof report.location.address === 'string') {
+            transformedReport.address = report.location.address;
+          } else if (typeof report.location.address === 'object') {
+            const address = report.location.address;
+            const parts = [];
+            
+            if (address.street) parts.push(address.street);
+            if (address.streetNumber) parts.push(address.streetNumber);
+            if (address.city) parts.push(address.city);
+            
+            if (parts.length > 0) {
+              transformedReport.address = parts.join(', ');
+            }
+          }
+        } else if (report.location?.coordinates) {
+          // Fallback to coordinates if no address
+          const [lng, lat] = report.location.coordinates;
+          transformedReport.address = `Coordinate: ${lat?.toFixed(4)}, ${lng?.toFixed(4)}`;
+        }
+
+        console.log('Transformed report address:', transformedReport.address);
+        return transformedReport;
+      });
+      
+      console.log('Transformed reports:', transformedReports);
+      return transformedReports;
+    } catch (error) {
+      console.error('Error fetching reports:', error);
+      throw new Error('Failed to fetch reports: ' + error.message);
+    }
+  },
+
+  //Fetches a single report by ID
+  async getReportById(reportId) {
+    const url = `${API_BASE_URL}/reports/${reportId}`;
+    logApiCall('GET', url);
+    
+    try {
+      const response = await fetch(url, {
+        headers: getBaseHeaders()
+      });
+      
+      const data = await handleResponse(response);
+      console.log('Raw report data from server:', data);
+      
+      // Transform report data if needed
+      let transformedReport = {
+        ...data,
+        address: 'Indirizzo non disponibile'
+      };
+
+      // Handle address formatting
+      if (data.location && data.location.address) {
+        if (typeof data.location.address === 'string') {
+          transformedReport.address = data.location.address;
+        } else if (typeof data.location.address === 'object') {
+          const address = data.location.address;
+          const parts = [];
+          
+          if (address.street) parts.push(address.street);
+          if (address.streetNumber) parts.push(address.streetNumber);
+          if (address.city) parts.push(address.city);
+          if (address.postalCode) parts.push(address.postalCode);
+          
+          if (parts.length > 0) {
+            transformedReport.address = parts.join(', ');
+          }
+        }
+      } else if (data.location?.coordinates) {
+        // Fallback to coordinates if no address
+        const [lng, lat] = data.location.coordinates;
+        transformedReport.address = `Coordinate: ${lat?.toFixed(4)}, ${lng?.toFixed(4)}`;
+      }
+
+      console.log('Transformed report:', transformedReport);
+      return transformedReport;
+    } catch (error) {
+      console.error('Error fetching report by ID:', error);
+      throw new Error(`Failed to fetch report details: ${error.message}`);
+    }
+  },
+
+  //Updates an existing report
+  async updateReport(reportId, reportData) {
+    const url = `${API_BASE_URL}/reports/${reportId}`;
+    console.log('=== API UPDATE REPORT DEBUG ===');
+    console.log('URL:', url);
+    console.log('Report ID:', reportId);
+    console.log('Report Data:', reportData);
+    logApiCall('PUT', url);
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('ERROR: No auth token found');
+        throw new Error('No auth token found');
+      }
+      console.log('Token found:', token.substring(0, 20) + '...');
+
+      const requestBody = JSON.stringify(reportData);
+      console.log('Request body:', requestBody);
+
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: requestBody
+      });
+
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Server error response:', errorText);
+        throw new Error(`Server responded with ${response.status}: ${errorText}`);
+      }
+
+      const result = await handleResponse(response);
+      console.log('=== UPDATE SUCCESS ===');
+      console.log('Update result:', result);
+      return result;
+    } catch (error) {
+      console.error('=== ERROR IN UPDATE API ===');
+      console.error('Error updating report:', error);
+      console.error('Error stack:', error.stack);
+      throw new Error('Failed to update report: ' + error.message);
+    }
+  },
+
+  //Removes a report from the system
+  async deleteReport(reportId) {
+    const url = `${API_BASE_URL}/reports/${reportId}`;
+    logApiCall('DELETE', url);
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No auth token found');
+      }
+
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('Error deleting report:', error);
+      throw new Error('Failed to delete report: ' + error.message);
+    }
+  },
+
+  //Fetches reports by type
+  async getReportsByType(type) {
+    const upperType = type.toUpperCase();
+    console.log('Fetching reports by type:', upperType);
+    
+    const url = `${API_BASE_URL}/reports/type/${upperType}`;
+    logApiCall('GET', url);
+    
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: getBaseHeaders()
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Successfully fetched filtered reports by type');
+      return data;
+    } catch (error) {
+      console.error('Error fetching reports by type:', error);
+      throw new Error('Failed to fetch reports by type: ' + error.message);
+    }
+  },
+
+  //Fetches reports by status
+  async getReportsByStatus(status) {
+    const lowerStatus = status.toLowerCase();
+    console.log('Fetching reports by status:', lowerStatus);
+    
+    const url = `${API_BASE_URL}/reports/status/${lowerStatus}`;
+    logApiCall('GET', url);
+    
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: getBaseHeaders()
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Successfully fetched filtered reports by status');
+      return data;
+    } catch (error) {
+      console.error('Error fetching reports by status:', error);
+      throw new Error('Failed to fetch reports by status: ' + error.message);
+    }
+  },
+
+  //Fetches reports by severity
+  async getReportsBySeverity(severity) {
+    const upperSeverity = severity.toUpperCase();
+    console.log('Fetching reports by severity:', upperSeverity);
+    
+    const url = `${API_BASE_URL}/reports/severity/${upperSeverity}`;
+    logApiCall('GET', url);
+    
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: getBaseHeaders()
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Successfully fetched filtered reports by severity');
+      return data;
+    } catch (error) {
+      console.error('Error fetching reports by severity:', error);
+      throw new Error('Failed to fetch reports by severity: ' + error.message);
+    }
+  },
+
+  //Finds reports near a geographic location
+  async getNearbyReports(latitude, longitude, radius = 1000) {
+    console.log(`Finding reports near [${latitude}, ${longitude}]`);
+    
+    const url = `${API_BASE_URL}/reports/area?lat=${latitude}&lng=${longitude}&radius=${radius}`;
+    logApiCall('GET', url);
+    
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: getBaseHeaders()
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Successfully fetched nearby reports');
+      return data;
+    } catch (error) {
+      console.error('Error fetching nearby reports:', error);
+      throw new Error('Failed to fetch nearby reports: ' + error.message);
+    }
+  },
+
+  //Updates report status
+  async updateReportStatus(reportId, status) {
+    const url = `${API_BASE_URL}/reports/${reportId}/status`;
+    console.log('Updating report status:', reportId, 'to', status);
+    logApiCall('PATCH', url);
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No auth token found');
+      }
+
+      const response = await fetch(url, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status })
+      });
+
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('Error updating report status:', error);
+      throw new Error('Failed to update report status: ' + error.message);
+    }
+  }
 }; 

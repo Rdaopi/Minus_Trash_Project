@@ -60,6 +60,16 @@ const routes = [
     beforeEnter: requireOperator
   },
   {
+    path: '/report-management',
+    name: 'ReportManagement',
+    component: () => import('../views/ReportManagement.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresOperator: true
+    },
+    beforeEnter: requireOperator
+  },
+  {
     path: '/account-management',
     name: 'AccountManagement',
     component: () => import('../views/AccountManagement.vue'),
