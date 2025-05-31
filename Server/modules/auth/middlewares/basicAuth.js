@@ -6,25 +6,17 @@ import bcrypt from "bcryptjs";
 //Funzione per l'autenticazione di b
 const authenticateBasic = async (identifier, password, req) => {
     try {
-        //Determina se è email o username
-        const isEmail = /\S+@\S+\.\S+/.test(identifier);
-        const method = isEmail ? 'email' : 'username';
+        // For regular users, we only accept email login
+        const user = await User.findOne({ email: identifier }).select('+password');
 
-        const user = await (User.findOne({
-            $or: [
-                { email: identifier },
-                { username: identifier }
-            ]
-        }).select('+password'));
-
-        // Registra nel log con il metodo corretto
-        logger.info(`Tentativo login via ${method}: ${identifier}`);
+        // Registra nel log
+        logger.info(`Tentativo login via email: ${identifier}`);
 
         //Verifica utente e corrispondenza password
-        if (!user || !(await bcrypt.compare(password, user.password))) {
+        if (!user || !(await bcrypt.compare(password, user?.password || ''))) {
             await auditService.logFailedAttempt('login', new Error('Credenziali non valide'), {
                 identifier: identifier,
-                method: method,
+                method: 'email',
                 ip: req.ip || 'unknown',
                 device: req.headers?.['user-agent'] || 'unknown'
             });
@@ -58,10 +50,11 @@ const authenticateBasic = async (identifier, password, req) => {
         await auditService.logEvent({
             action: 'login',
             user: user._id,
-            method: method,
+            method: 'email',
             ip: req.ip || 'unknown',
             device: req.headers?.['user-agent'] || 'unknown',
-            success: true
+            success: true,
+            email: user.email
         });
 
         return { user };//Ritorna l'utente autenticato

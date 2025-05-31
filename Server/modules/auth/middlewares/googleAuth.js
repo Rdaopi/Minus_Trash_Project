@@ -26,7 +26,6 @@ passport.use(new GoogleStrategy({
                     name: profile.name.givenName || profile.displayName.split(' ')[0],
                     surname: profile.name.familyName || profile.displayName.split(' ').slice(1).join(' ')
                 },
-                password: Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8),
                 authMethods: {
                     google: {
                         id: profile.id,
@@ -68,16 +67,28 @@ export const googleAuthCallback = (req, res, next) => {
         const { user, isNewUser } = data;
 
         try {
-            // Generate JWT token with user role
-            const token = jwt.sign(
-                { 
-                    id: user._id,
-                    email: user.email,
-                    role: user.role // Include the role in the token
+              const accessToken = jwt.sign(
+                {
+                  id: user._id,
+                  email: user.email,
+                  role: user.role
                 },
                 process.env.JWT_ACCESS_SECRET,
                 { expiresIn: '24h' }
-            );
+              );
+              const refreshToken = await generateAndStoreRefreshToken(user, req.ip, req.headers['user-agent']);
+              return res.json({
+              token: accessToken,
+              refreshToken,
+              user: {
+                id: user._id,
+                username: user.username,
+                email: user.email,
+                fullName: user.fullName,
+                role: user.role
+              }
+            });
+           
 
             // Update lastLogin
             user.lastLogin = Date.now();
@@ -92,10 +103,8 @@ export const googleAuthCallback = (req, res, next) => {
                     status: 'success',
                     ip: req.ip,
                     device: req.headers['user-agent'],
-                    metadata: {
-                        email: user.email,
-                        role: user.role
-                    }
+                    email: user.email,
+                    metadata: {}
                 });
             } else {
                 await auditService.logEvent({
@@ -105,15 +114,13 @@ export const googleAuthCallback = (req, res, next) => {
                     status: 'success',
                     ip: req.ip,
                     device: req.headers['user-agent'],
-                    metadata: {
-                        email: user.email,
-                        role: user.role
-                    }
+                    email: user.email,
+                    metadata: {}
                 });
             }
 
-            // Redirect to frontend auth page with token and role
-            res.redirect(`${process.env.FRONTEND_URL}/auth?token=${token}&role=${user.role}`);
+            // Redirect to frontend auth page with both tokens
+            res.redirect(`${process.env.FRONTEND_URL}/auth?token=${accessToken}&refreshToken=${refreshToken}&role=${user.role}`);
         } catch (error) {
             console.error('Auth error:', error);
             res.redirect(`${process.env.FRONTEND_URL}/auth?error=Authentication failed`);

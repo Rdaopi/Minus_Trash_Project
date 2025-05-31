@@ -5,17 +5,21 @@ import {
   register, 
   changePassword, 
   profile_update, 
-  //user_delete, 
-  //updateUserRole,
+  refreshTokenHandler, 
+  logout,
   getAllUsers,
   deleteUserById,
   updateUserById
 } from './controllers/userController.js';
+
 import { auditOnSuccess } from "./middlewares/withAudit.js";
 import { googleAuth, googleAuthCallback } from "./middlewares/googleAuth.js";
 import { jwtAuth } from "./middlewares/jwtAuth.js";
 import User from "./models/User.js";
+import Token from "./models/Token.js";
 import bcrypt from "bcryptjs";
+import { logger } from '../../core/utils/logger.js';
+import { forgotPassword, resetPassword } from './controllers/passwordController.js';
 
 const router = express.Router()
 
@@ -240,7 +244,7 @@ router.get('/googleOAuth/callback', googleAuthCallback);
 
 //Route Protette da JWT
 //Da implementare con il JWT, attualmente richiede autenticazione base
-router.post('/profile_update', jwtAuth, login, profile_update);
+router.post('/profile_update', jwtAuth, profile_update);
 /**
  * @swagger
  * /api/auth/profile_update:
@@ -270,7 +274,7 @@ router.post('/profile_update', jwtAuth, login, profile_update);
  *         description: Profilo aggiornato con successo
  */
 
-router.post('/change_password', jwtAuth, login , changePassword);
+router.post('/change_password', jwtAuth, changePassword);
 /**
  * @swagger
  * /api/auth/change_password:
@@ -349,6 +353,15 @@ router.post('/change_password', jwtAuth, login , changePassword);
  *         description: Vietato - L'utente non ha privilegi di amministratore
  */
 
+// Route per il refresh token
+router.post('/refresh-token', refreshTokenHandler);
+
+// Add logout handler to the router
+router.post('/logout', jwtAuth, logout);
+
+// Password Reset Routes
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', resetPassword);
 /**
  * @swagger
  * /api/auth/users/{userId}:

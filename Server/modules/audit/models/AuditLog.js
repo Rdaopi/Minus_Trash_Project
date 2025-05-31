@@ -29,6 +29,12 @@ const auditLogSchema = new Schema({
       return ['login', 'failed_login'].includes(this.action);
     }
   },
+  email: {
+    type: String,
+    required: function() {
+      return ['login', 'failed_login', 'user_registration'].includes(this.action);
+    }
+  },
   initiator: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -77,5 +83,6 @@ auditLogSchema.index({ user: 1, action: 1, timestamp: -1 }); // Query utente
 auditLogSchema.index({ initiator: 1, timestamp: -1 }); // Tracking admin
 auditLogSchema.index({ 'metadata.targetUser': 1 }); // Ricerche cross-utente
 auditLogSchema.index({ method: 1, action: 1, timestamp: 1 });
+auditLogSchema.index({ email: 1, action: 1, timestamp: -1 });
 
 export default mongoose.model('AuditLog', auditLogSchema);

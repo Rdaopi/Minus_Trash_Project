@@ -69,6 +69,16 @@ const routes = [
     },
     beforeEnter: requireAdmin
   },
+  {
+    path: '/forgot-password',
+    name: 'ForgotPassword',
+    component: () => import('../views/ForgotPassword.vue')
+  },
+  {
+    path: '/reset-password',
+    name: 'ResetPassword',
+    component: () => import('../views/ResetPassword.vue')
+  },
   // TODO: Aggiungere pagina contatti
 ]
 
