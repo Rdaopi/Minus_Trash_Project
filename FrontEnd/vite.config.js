@@ -18,6 +18,15 @@ export default defineConfig({
         // Keep the /api prefix in the path
         // rewrite: (path) => path.replace(/^\/api/, ''),
       },
+      '/nominatim': {
+        target: 'https://nominatim.openstreetmap.org',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/nominatim/, ''),
+        secure: true,
+        headers: {
+          'User-Agent': 'MinusTrash-App/1.0 (development)'
+        }
+      }
     },
   }
 }) 

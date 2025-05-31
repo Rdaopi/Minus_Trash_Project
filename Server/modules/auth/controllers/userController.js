@@ -8,6 +8,117 @@ import Token from "../models/Token.js";
 //Regex per  validità password
 const REGEX_PASSWORD = /^(?=.*[A-Z])(?=.*[!@#$%^&*])(?=.{8,})/;
 
+// Get all users (admin only)
+export const getAllUsers = async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== 'amministratore') {
+      return res.status(403).json({ error: 'Accesso non autorizzato' });
+    }
+
+    // Get all users except their passwords
+    const users = await User.find({})
+      .select('-password')
+      .sort({ createdAt: -1 });
+
+    return res.json(users);
+  } catch (error) {
+    logger.error('Error fetching users:', error);
+    return res.status(500).json({ error: 'Errore nel recupero degli utenti' });
+  }
+};
+
+// Delete user by ID (admin only)
+export const deleteUserById = async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== 'amministratore') {
+      return res.status(403).json({ error: 'Accesso non autorizzato' });
+    }
+
+    const { userId } = req.params;
+
+    // Don't allow deleting own account
+    if (userId === req.user._id.toString()) {
+      return res.status(400).json({ error: 'Non puoi eliminare il tuo account' });
+    }
+
+    // Check if user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'Utente non trovato' });
+    }
+
+    // Don't allow deleting other admins
+    if (user.role === 'amministratore') {
+      return res.status(403).json({ error: 'Non puoi eliminare altri amministratori' });
+    }
+
+    await User.findByIdAndDelete(userId);
+    return res.json({ message: 'Utente eliminato con successo' });
+  } catch (error) {
+    logger.error('Error deleting user:', error);
+    return res.status(500).json({ error: 'Errore nell\'eliminazione dell\'utente' });
+  }
+};
+
+// Update user by ID (admin only)
+export const updateUserById = async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== 'amministratore') {
+      return res.status(403).json({ error: 'Accesso non autorizzato' });
+    }
+
+    const { userId } = req.params;
+    const updateData = req.body;
+
+    // Don't allow updating own account through this endpoint
+    if (userId === req.user._id.toString()) {
+      return res.status(400).json({ error: 'Usa l\'endpoint di aggiornamento profilo per il tuo account' });
+    }
+
+    // Set blockedAt timestamp when deactivating a user
+    if (updateData.hasOwnProperty('isActive')) {
+      if (!updateData.isActive) {
+        updateData.blockedAt = new Date();
+      } else {
+        updateData.blockedAt = null;  // Clear blockedAt when reactivating
+      }
+    }
+
+    // If password is provided, hash it
+    if (updateData.password) {
+      const salt = await bcrypt.genSalt(10);
+      updateData.password = await bcrypt.hash(updateData.password, salt);
+    }
+
+    // Get the user before update to check if role is being changed
+    const existingUser = await User.findById(userId).select('-password');
+    if (!existingUser) {
+      return res.status(404).json({ error: 'Utente non trovato' });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    // If role was changed, we'll return this info to the frontend
+    const roleChanged = updateData.role && existingUser.role !== updateData.role;
+    
+    return res.json({
+      ...user.toObject(),
+      roleChanged,
+      previousRole: roleChanged ? existingUser.role : undefined
+    });
+  } catch (error) {
+    logger.error('Error updating user:', error);
+    return res.status(500).json({ error: 'Errore nell\'aggiornamento dell\'utente' });
+  }
+};
+
 //Metodo di login
 export const login = async(req, res) => {
     try {
@@ -35,7 +146,8 @@ export const login = async(req, res) => {
                     id: user._id,
                     username: user.username,
                     email: user.email,
-                    fullName: user.fullName
+                    fullName: user.fullName,
+                    role: user.role
                 }
             });
         } catch (tokenError) {
@@ -78,8 +190,26 @@ export const refreshTokenHandler = async (req, res) => {
 
         if (!validToken) {
             return res.status(401).json({ error: 'Refresh token non valido' });
-        }
+                /*
+                const token = user.generateAuthToken();
+                logger.info('Generated token for user:', { userId: user._id, token });
 
+                //Aggiorna lastLogin
+                user.lastLogin = Date.now();
+                await user.save();
+
+                logger.info(`Utente loggato (JWT emesso): ${user._id}`);
+                return res.json({
+                    token,
+                    user: {
+                    id: user._id,
+                    username: user.username,
+                    email: user.email,
+                    fullName: user.fullName,
+                    role: user.role
+                    }
+                */
+        }            
         // Generate new tokens
         const { accessToken: newAccessToken, refreshToken: newRefreshToken } = await validToken.user.generateTokens(
             validToken.ipAddress,
@@ -94,7 +224,6 @@ export const refreshTokenHandler = async (req, res) => {
             refreshToken: newRefreshToken,
             expiresIn: 900 // 15 minutes in seconds
         });
-
     } catch (error) {
         logger.error('Errore refresh token:', error);
         res.status(401).json({ error: 'Token non valido' });

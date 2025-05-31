@@ -7,7 +7,7 @@
   },
   "servers": [
     {
-      "url": "undefined/api",
+      "url": "http://localhost:5000",
       "description": "Development server"
     }
   ],
@@ -40,6 +40,12 @@
               "operatore_comunale",
               "amministratore"
             ]
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "blockedAt": {
+            "type": "string"
           },
           "password": {
             "type": "string"
@@ -480,9 +486,9 @@
         }
       }
     },
-    "/api/auth/user_delete": {
-      "delete": {
-        "summary": "Elimina account utente",
+    "/api/auth/users": {
+      "get": {
+        "summary": "Ottieni tutti gli utenti (Solo amministratore)",
         "security": [
           {
             "BearerAuth": []
@@ -490,10 +496,148 @@
         ],
         "responses": {
           "200": {
-            "description": "Account eliminato con successo"
+            "description": "Lista di tutti gli utenti recuperata con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/User"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Non autorizzato - Token mancante o non valido"
+          },
+          "403": {
+            "description": "Vietato - L'utente non ha privilegi di amministratore"
+          }
+        }
+      },
+      "post": {
+        "summary": "Crea un nuovo utente (Solo amministratore)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/User"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Utente creato con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
           },
           "400": {
-            "description": "Errore nell'eliminazione dell'account"
+            "description": "Dati non validi"
+          },
+          "401": {
+            "description": "Non autorizzato - Token mancante o non valido"
+          },
+          "403": {
+            "description": "Vietato - L'utente non ha privilegi di amministratore"
+          }
+        }
+      }
+    },
+    "/api/auth/users/{userId}": {
+      "put": {
+        "summary": "Aggiorna un utente tramite ID (Solo amministratore)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "L'ID dell'utente da aggiornare"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/User"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Utente aggiornato con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dati non validi"
+          },
+          "401": {
+            "description": "Non autorizzato - Token mancante o non valido"
+          },
+          "403": {
+            "description": "Vietato - L'utente non ha privilegi di amministratore"
+          },
+          "404": {
+            "description": "Utente non trovato"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Elimina un utente tramite ID (Solo amministratore)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "L'ID dell'utente da eliminare"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Utente eliminato con successo"
+          },
+          "401": {
+            "description": "Non autorizzato - Token mancante o non valido"
+          },
+          "403": {
+            "description": "Vietato - L'utente non ha privilegi di amministratore"
+          },
+          "404": {
+            "description": "Utente non trovato"
           }
         }
       }

@@ -67,11 +67,32 @@ export const googleAuthCallback = (req, res, next) => {
         const { user, isNewUser } = data;
 
         try {
-            // Generate both access and refresh tokens using the user's method
-            const { accessToken, refreshToken } = await user.generateTokens(
-                req.ip,
-                req.headers['user-agent']
-            );
+              const accessToken = jwt.sign(
+                {
+                  id: user._id,
+                  email: user.email,
+                  role: user.role
+                },
+                process.env.JWT_ACCESS_SECRET,
+                { expiresIn: '24h' }
+              );
+              const refreshToken = await generateAndStoreRefreshToken(user, req.ip, req.headers['user-agent']);
+              return res.json({
+              token: accessToken,
+              refreshToken,
+              user: {
+                id: user._id,
+                username: user.username,
+                email: user.email,
+                fullName: user.fullName,
+                role: user.role
+              }
+            });
+           
+
+            // Update lastLogin
+            user.lastLogin = Date.now();
+            await user.save();
 
             // Log the appropriate event
             if (isNewUser) {
@@ -99,7 +120,7 @@ export const googleAuthCallback = (req, res, next) => {
             }
 
             // Redirect to frontend auth page with both tokens
-            res.redirect(`${process.env.FRONTEND_URL}/auth?token=${accessToken}&refreshToken=${refreshToken}`);
+            res.redirect(`${process.env.FRONTEND_URL}/auth?token=${accessToken}&refreshToken=${refreshToken}&role=${user.role}`);
         } catch (error) {
             console.error('Auth error:', error);
             res.redirect(`${process.env.FRONTEND_URL}/auth?error=Authentication failed`);

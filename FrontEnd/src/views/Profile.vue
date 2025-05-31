@@ -1,8 +1,8 @@
 <template>
   <div class="profile-container">
     <div class="profile-card">
-      <h2>Area Personale</h2>
-      <p>Benvenuto, <strong>{{ userEmail }}</strong>!</p>
+      <h1>{{ isAdmin ? 'Amministratore' : 'Area Personale' }}</h1>
+      <p>Benvenuto, <strong>{{ userEmail }}</strong>{{ isAdmin ? ' (Amministratore)' : '' }}!</p>
       
       <div v-if="isGoogleUser" class="google-user-message">
         <i class="fas fa-info-circle"></i>
@@ -12,7 +12,14 @@
       <div v-else>
         <ChangePassword @password-changed="handlePasswordChange" />
       </div>
-      
+      <div class="buttons-container">
+        <button v-if="isOperator || isAdmin" class="manage-bins-button" @click="goToBinManagement">
+          Gestione Cestini
+        </button>
+        <button v-if="isAdmin" class="manage-account-button" @click="goToAccountManagement">
+          Gestione Account
+        </button>
+      </div>
       <Notification
         :show="showNotification"
         :message="notificationMessage"
@@ -30,6 +37,8 @@ import { useRouter } from 'vue-router';
 import ChangePassword from '../components/ChangePassword.vue';
 import Notification from '../components/Notification.vue';
 import { authAPI } from '../services/api.js';
+import { jwtDecode } from 'jwt-decode';
+
 
 const router = useRouter();
 const userEmail = ref(localStorage.getItem('userEmail') || 'utente');
@@ -58,12 +67,63 @@ const isGoogleUser = computed(() => {
   return authMethod === 'google';
 });
 
+// Computed property to check if user is operator
+const isOperator = computed(() => {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    router.push('/auth');
+    return false;
+  }
+  
+  try {
+    const decoded = jwtDecode(token);
+    return decoded && decoded.role === 'operatore_comunale';
+  } catch (error) {
+    console.error('Error decoding token:', error);
+    localStorage.removeItem('token');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('userRole');
+    router.push('/auth');
+    return false;
+  }
+});
+// Computed property to check if user is admin
+const isAdmin = computed(() => {
+  const token = localStorage.getItem('token');
+  if (!token) return false;
+  
+  try {
+    const decoded = jwtDecode(token);
+    return decoded && decoded.role === 'amministratore';
+  } catch (error) {
+    console.error('Error decoding token:', error);
+    return false;
+  }
+});
+
 // Check auth method on component mount
 onMounted(() => {
   const authMethod = localStorage.getItem('authMethod');
   const email = localStorage.getItem('userEmail');
   console.log('On mount - Auth method:', authMethod, 'Email:', email);
-  
+  const token = localStorage.getItem('token');
+  if (!token) {
+    router.push('/auth');
+    return;
+  }
+
+  try {
+    const decoded = jwtDecode(token);
+    if (!decoded) {
+      throw new Error('Token non valido');
+    }
+  } catch (error) {
+    console.error('Error validating token:', error);
+    localStorage.removeItem('token');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('userRole');
+    router.push('/auth');
+  }
   // Set auth method if not already set
   if (!authMethod && email) {
     const isGoogle = email.endsWith('@gmail.com');
@@ -76,6 +136,9 @@ window.addEventListener('storage', () => {
   console.log('Storage changed, updating auth method');
   userEmail.value = localStorage.getItem('userEmail') || 'utente';
 });
+
+
+
 
 async function logout() {
   try {
@@ -94,6 +157,7 @@ async function logout() {
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('userEmail');
     localStorage.removeItem('authMethod');
+    localStorage.removeItem('userRole');
     router.push('/auth');
   }
 }
@@ -116,6 +180,14 @@ function handlePasswordChange({ type, message }) {
     }, 2500);
   }
 }
+
+function goToBinManagement() {
+  router.push('/bin-management');
+}
+
+function goToAccountManagement() {
+  router.push('/account-management');
+}
 </script>
 
 <style scoped>
@@ -136,9 +208,13 @@ function handlePasswordChange({ type, message }) {
   width: 100%;
   max-width: 600px;
 }
-
-.logout-button {
+.buttons-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
   margin-top: 2rem;
+}
+.logout-button {
   padding: 0.8rem 2rem;
   background-color: #e53935;
   color: white;
@@ -174,4 +250,30 @@ function handlePasswordChange({ type, message }) {
   color: #1565c0;
   text-align: left;
 }
-</style> 
+.manage-bins-button {
+  padding: 0.8rem 2rem;
+  background-color: #13d523;
+  color: white;
+  border: none;
+  border-radius: 8rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.manage-bins-button:hover {
+  background-color: #13d523;
+}
+.manage-account-button {
+  padding: 0.8rem 2rem;
+  background-color: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 8rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.manage-account-button:hover {
+  background-color: #1976D2;
+}
+</style>
