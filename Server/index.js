@@ -62,9 +62,22 @@ app.get('/test-next', (req, res) => {
 });
 
 // Middleware per gestire il routing lato client
-app.use(express.static(path.join(__dirname, '../FrontEnd/dist')));
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../FrontEnd/dist', 'index.html'));
+// Comment out these lines if you don't want to serve the frontend
+// app.use(express.static(path.join(__dirname, '../FrontEnd/dist')));
+// app.get('*', (req, res) => {
+//   res.sendFile(path.join(__dirname, '../FrontEnd/dist', 'index.html'));
+// });
+
+// Add a simple API status route
+app.get('/', (req, res) => {
+  res.json({ 
+    status: 'API running', 
+    endpoints: {
+      auth: '/api/auth',
+      waste: '/api/waste',
+      docs: '/api-docs'
+    }
+  });
 });
 
 //Error Handling

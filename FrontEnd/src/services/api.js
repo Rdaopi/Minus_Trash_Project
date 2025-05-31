@@ -1,4 +1,3 @@
-
 //const API_BASE_URL = '/api';
 // Get the API base URL from environment variable or fallback to relative path
 const API_BASE_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api';
@@ -218,6 +217,11 @@ export const authAPI = {
         if (!response.ok) {
           if (response.status === 401) {
             throw new Error('Email o password non corretti');
+          }
+          if (response.status === 403) {
+            // Try to parse the error message for blocked accounts
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Account bloccato');
           }
           throw new Error('Errore durante il login');
         }

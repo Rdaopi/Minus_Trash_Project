@@ -4,6 +4,12 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import auditService from '../../audit/services/audit.service.js';
 
+// Helper function to generate and store refresh token
+const generateAndStoreRefreshToken = async (user, ip, userAgent) => {
+  const { refreshToken } = await user.generateTokens(ip, userAgent);
+  return refreshToken;
+};
+
 // Google OAuth Strategy
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
@@ -77,17 +83,19 @@ export const googleAuthCallback = (req, res, next) => {
                 { expiresIn: '24h' }
               );
               const refreshToken = await generateAndStoreRefreshToken(user, req.ip, req.headers['user-agent']);
-              return res.json({
-              token: accessToken,
-              refreshToken,
-              user: {
-                id: user._id,
-                username: user.username,
-                email: user.email,
-                fullName: user.fullName,
-                role: user.role
-              }
-            });
+              
+              // Remove this JSON response - it's causing the problem
+              // return res.json({
+              // token: accessToken,
+              // refreshToken,
+              // user: {
+              //   id: user._id,
+              //   username: user.username,
+              //   email: user.email,
+              //   fullName: user.fullName,
+              //   role: user.role
+              // }
+              // });
            
 
             // Update lastLogin

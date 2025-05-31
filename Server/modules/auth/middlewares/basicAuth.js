@@ -35,7 +35,7 @@ const authenticateBasic = async (identifier, password, req) => {
             
             await auditService.logFailedAttempt('login', new Error('Account bloccato'), {
                 identifier: identifier,
-                method: method,
+                method: 'email',
                 ip: req.ip || 'unknown',
                 device: req.headers?.['user-agent'] || 'unknown'
             });
