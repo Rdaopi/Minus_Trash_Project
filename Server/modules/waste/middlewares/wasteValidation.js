@@ -38,9 +38,7 @@ export const validateWasteReport = (req, res, next) => {
         'CARTA',
         'VETRO',
         'ORGANICO',
-        'METALLO',
-        'ELETTRONICO',
-        'INGOMBRANTI',
+        'RAEE',
         'INDIFFERENZIATO',
         'ALTRO'
     ];

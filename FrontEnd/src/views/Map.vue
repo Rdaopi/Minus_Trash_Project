@@ -30,6 +30,15 @@
           </button>
         </div>
         
+        <!-- Success message -->
+        <div v-if="successMessage" class="success-message">
+          <i class="fas fa-check-circle"></i>
+          <span>{{ successMessage }}</span>
+          <button @click="successMessage = null" class="close-message">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        
         <!-- Empty state -->
         <div v-else-if="bins.length === 0" class="empty-state">
           <p>Nessun cestino disponibile</p>
@@ -46,7 +55,7 @@
               @close="clearSelectedBin"
               @retry="retryLoad"
               @center-on-map="centerOnSelectedBin"
-              @report-issue="handleReportIssue"
+              @report-created="handleReportCreatedFromBin"
             />
           </div>
           
@@ -67,7 +76,11 @@
       
       <!-- Map area using MapComponent -->
       <div class="map-area">
-        <MapComponent :bins="displayedBins.length > 0 ? displayedBins : bins" ref="mapRef" />
+        <MapComponent 
+          :bins="displayedBins.length > 0 ? displayedBins : bins" 
+          ref="mapRef"
+          @report-created="handleReportCreated"
+        />
         
         <!-- Mobile controls -->
         <button @click="toggleSidebar" class="fab show-list-button" v-if="!showSidebar">
@@ -100,6 +113,7 @@ import MapComponent from '../components/MapComponent.vue';
 import BinList from '../components/BinList.vue';
 import BinDetails from '../components/BinDetails.vue';
 import { useBinDetails } from '../composables/useBinDetails';
+import { useMessages } from '../composables/useMessages';
 
 //Core state
 const bins = ref([]);
@@ -110,7 +124,7 @@ const showLegend = ref(false);
 const mapRef = ref(null);
 const binListRef = ref(null);
 
-// Use the bin details composable
+// Use composables
 const {
   selectedBinId,
   selectedBinDetails,
@@ -121,6 +135,8 @@ const {
   clearSelection,
   retryLoad
 } = useBinDetails();
+
+const { successMessage, handleReportSuccess } = useMessages();
 
 // Stato per i cestini filtrati (gestito da BinList)
 const displayedBins = ref([]);
@@ -229,10 +245,18 @@ const centerOnSelectedBin = (bin) => {
   }
 };
 
-const handleReportIssue = (bin) => {
-  // Implement the logic to report an issue with the bin
-  console.log('Reporting issue for bin:', bin);
-  alert(`Segnalazione problema per cestino ${bin.id || bin._id} - Funzionalità da implementare`);
+const handleReportCreated = (report) => {
+  console.log('Report created successfully:', report);
+  
+  // Show success message
+  handleReportSuccess('Segnalazione inviata con successo! Il problema segnalato verrà preso in carico dal nostro team.');
+};
+
+const handleReportCreatedFromBin = (report) => {
+  console.log('Report created from bin details:', report);
+  
+  // Show success message
+  handleReportSuccess('Segnalazione inviata con successo! Il problema segnalato verrà preso in carico dal nostro team.');
 };
 
 //Load bins when component mounts
@@ -572,5 +596,26 @@ defineExpose({
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+/* Success message */
+.success-message {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: #E8F5E9;
+  color: #4CAF50;
+  padding: 8px 16px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.close-message {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #4CAF50;
 }
 </style>

@@ -100,7 +100,7 @@
           <i class="fas fa-crosshairs"></i>
           Centra sulla mappa
         </button>
-        <button @click="reportIssue" class="action-button secondary">
+        <button @click="openReportModal" class="action-button secondary">
           <i class="fas fa-exclamation-triangle"></i>
           Segnala problema
         </button>
@@ -112,11 +112,21 @@
       <i class="fas fa-trash-can"></i>
       <p>Seleziona un cestino per vedere i dettagli</p>
     </div>
+
+    <!-- Bin Report Modal -->
+    <BinReportModal
+      :show="showReportModal"
+      :bin="selectedBinForReport"
+      @close="closeReportModal"
+      @success="handleReportSuccess"
+    />
   </div>
 </template>
 
 <script setup>
-import { defineProps, defineEmits } from 'vue';
+import { defineProps, defineEmits, ref } from 'vue';
+import BinReportModal from './BinReportModal.vue';
+import { useBinUtils } from '../composables/useBinUtils';
 
 const props = defineProps({
   bin: {
@@ -133,91 +143,60 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['close', 'retry', 'center-on-map', 'report-issue']);
+const emit = defineEmits(['close', 'retry', 'center-on-map', 'report-issue', 'report-created']);
 
-// Utility functions
-const getBinIcon = (type) => {
-  const typeMap = {
-    'PLASTICA': 'fa-bottle-water',
-    'CARTA': 'fa-newspaper',
-    'VETRO': 'fa-wine-bottle',
-    'INDIFFERENZIATO': 'fa-trash',
-    'ORGANICO': 'fa-apple-whole',
-    'RAEE': 'fa-laptop',
-    'default': 'fa-trash-can'
-  };
-  return typeMap[type?.toUpperCase()] || typeMap.default;
-};
+// Use utility composables
+const {
+  getBinIcon,
+  getBinColor,
+  getFillLevelColor,
+  formatBinAddress,
+  getBinCoordinates,
+  formatDate,
+  getBinId
+} = useBinUtils();
 
-const getBinColor = (type) => {
-  const colorMap = {
-    'PLASTICA': '#ffeb3b',
-    'CARTA': '#2196f3',
-    'VETRO': '#4caf50',
-    'INDIFFERENZIATO': '#9e9e9e',
-    'ORGANICO': '#795548',
-    'RAEE': '#f44336',
-    'default': '#9e9e9e'
-  };
-  return colorMap[type?.toUpperCase()] || colorMap.default;
-};
-
-const getFillLevelColor = (level) => {
-  if (level >= 80) return '#F44336'; // Red
-  if (level >= 50) return '#FFC107'; // Yellow
-  return '#4CAF50'; // Green
-};
-
-const formatAddress = (bin) => {
-  if (!bin) return 'Indirizzo non disponibile';
-  
-  if (bin.address && typeof bin.address === 'string') {
-    return bin.address;
-  }
-  
-  if (bin.location && bin.location.address) {
-    if (typeof bin.location.address === 'string') {
-      return bin.location.address;
-    }
-    
-    if (typeof bin.location.address === 'object') {
-      const address = bin.location.address;
-      const parts = [];
-      
-      if (address.street) parts.push(address.street);
-      if (address.streetNumber) parts.push(address.streetNumber);
-      if (address.city) parts.push(address.city);
-      if (address.postalCode) parts.push(address.postalCode);
-      
-      if (parts.length > 0) {
-        return parts.join(', ');
-      }
-    }
-  }
-  
-  if (bin.lat && bin.lng) {
-    return `Coordinate: ${bin.lat.toFixed(4)}, ${bin.lng.toFixed(4)}`;
-  }
-  
-  return 'Indirizzo non disponibile';
-};
-
-const formatDate = (dateString) => {
-  if (!dateString) return 'Non disponibile';
-  try {
-    return new Date(dateString).toLocaleDateString('it-IT');
-  } catch {
-    return 'Data non valida';
-  }
-};
+// Report modal state
+const showReportModal = ref(false);
+const selectedBinForReport = ref(null);
 
 const centerOnMap = () => {
   emit('center-on-map', props.bin);
 };
 
-const reportIssue = () => {
+const openReportModal = () => {
+  console.log('Opening report modal for bin:', props.bin);
+  selectedBinForReport.value = props.bin;
+  showReportModal.value = true;
+  
+  // Also emit the old event for backward compatibility
   emit('report-issue', props.bin);
 };
+
+const closeReportModal = () => {
+  showReportModal.value = false;
+  selectedBinForReport.value = null;
+  
+  // Ensure modal is fully reset after animation
+  setTimeout(() => {
+    if (!showReportModal.value) {
+      selectedBinForReport.value = null;
+    }
+  }, 500);
+};
+
+const handleReportSuccess = (report) => {
+  console.log('Report created successfully from BinDetails:', report);
+  
+  // Emit report-created event to notify parent components
+  emit('report-created', report);
+  
+  // Close the modal
+  closeReportModal();
+};
+
+// Use composable functions for formatting
+const formatAddress = (bin) => formatBinAddress(bin);
 </script>
 
 <style scoped>

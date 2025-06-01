@@ -18,6 +18,9 @@
         <button v-if="isOperator || isAdmin" class="manage-bins-button" @click="goToBinManagement">
           Gestione Cestini
         </button>
+        <button v-if="isOperator || isAdmin" class="manage-reports-button" @click="goToReportManagement">
+          Gestione Segnalazioni
+        </button>
         <button v-if="isAdmin" class="manage-account-button" @click="goToAccountManagement">
           Gestione Account
         </button>
@@ -163,6 +166,10 @@ function goToBinManagement() {
   router.push('/bin-management');
 }
 
+function goToReportManagement() {
+  router.push('/report-management');
+}
+
 function goToAccountManagement() {
   router.push('/account-management');
 }
@@ -196,6 +203,7 @@ function goToChangePassword() {
   gap: 1rem;
   margin-top: 2rem;
 }
+
 .change-password-button {
   padding: 0.8rem 2rem;
   background-color: var(--primary-color);
@@ -279,28 +287,12 @@ function goToChangePassword() {
   width: 100%;
   max-width: 300px;
 
-}
-.manage-bins-button:hover {
-  background-color: var(--background-hover-color);
-  transform: translateY(-3px);
-  box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
-  animation: pulseGlow 1.5s infinite;
-  outline: none;
+
+.manage-bins-button:hover, .manage-reports-button:hover, .manage-account-button:hover {
+  background-color: #13d523;
 }
 .manage-account-button {
-  padding: 0.8rem 2rem;
-  background-color: #2196F3;
-  color: white;
-  border: none;
-  border-radius: 8rem;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: all 0.3s ease-in-out;
-  box-shadow: 0 2px 5px rgba(76, 175, 80, 0.2);
-  margin: 0.2rem auto;
-  display: block;
-  width: 100%;
-  max-width: 300px;
+  background-color: #2196F3;;
 }
 .manage-account-button:hover {
   background-color: #1976D2;
@@ -308,5 +300,19 @@ function goToChangePassword() {
   box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
   animation: pulseGlow 1.5s infinite;
   outline: none;
+}manage-bins-button{
+  background-color: #13d523;
+  color: white;
 }
-</style>
+
+.manage-reports-button{
+  background-color: #288da1;
+}
+
+.logout-button {
+  background-color: #e53935;
+}
+.logout-button:hover {
+  background-color: #b71c1c;
+}
+</style> 

@@ -35,6 +35,14 @@
           Reset Form
         </button>
         <button 
+          @click="handleChangeStatus" 
+          class="action-button status-button"
+          :disabled="loading || !selectedBinId"
+        >
+          <i class="fas fa-toggle-on"></i>
+          Cambia Stato
+        </button>
+        <button 
           @click="toggleBinList" 
           class="toggle-list-button"
           :class="{ 'active': showBinList }"
@@ -71,6 +79,7 @@
           :bins="displayedBins.length > 0 ? displayedBins : bins"
           :selected-bin-id="selectedBinId"
           @bin-click="handleBinClick"
+          @report-created="handleReportCreated"
         />
       </div>
 
@@ -79,36 +88,15 @@
         <!-- Form per l'inserimento/modifica dei cestini -->
         <div class="form-container">
           <BinForm 
-            @submit="editMode ? handleBinUpdate : handleBinSubmit" 
-            @cancel="handleBinCancel"
-            :edit-mode="editMode"
-            :bin-data="selectedBinDetails"
             ref="binFormRef"
-          >
-            <div class="form-actions">
-              <button v-if="!editMode" type="submit" class="submit-btn" @click="console.log('Submit button clicked, editMode:', editMode)">
-                <i class="fas fa-plus"></i>
-                Inserisci cestino
-              </button>
-              <!-- Update bin button -->
-              <button v-else type="submit" class="submit-btn update-btn" @click="console.log('Update button clicked, editMode:', editMode)">
-                <i class="fas fa-save"></i>
-                Aggiorna cestino
-              </button>
-              <button type="button" @click="resetForm" class="reset-btn">
-                <i class="fas fa-undo"></i>
-                Reset
-              </button>
-              <button type="button" @click="handleCancel" class="cancel-btn">
-                <i class="fas fa-times"></i>
-                Annulla
-              </button>
-              <button v-if="editMode" type="button" @click="exitEditMode" class="exit-edit-btn">
-                <i class="fas fa-arrow-left"></i>
-                Esci da modifica
-              </button>
-            </div>
-          </BinForm>
+            :editMode="editMode"
+            :binData="selectedBinDetails"
+            :selectedBinId="selectedBinId"
+            @success="handleFormSuccess"
+            @error="handleFormError"
+            @cancel="handleFormCancel"
+            @loading="handleFormLoading"
+          />
         </div>
 
         <!-- Overlay della lista cestini -->
@@ -149,7 +137,7 @@
                   @close="clearSelectedBin"
                   @retry="retryLoad"
                   @center-on-map="centerOnSelectedBin"
-                  @report-issue="handleReportIssue"
+                  @report-created="handleReportCreatedFromBin"
                 />
               </div>
               
@@ -170,6 +158,69 @@
         </div>
       </div>
     </div>
+
+    <!-- Status Change Modal -->
+    <div v-if="showStatusModal" class="modal-overlay" @click.self="closeStatusModal">
+      <div class="modal-container">
+        <div class="modal-header">
+          <h3>Cambia Stato Cestino</h3>
+          <button @click="closeStatusModal" class="close-button">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div v-if="selectedBinDetails" class="bin-info">
+            <div class="bin-icon" :style="{ backgroundColor: getBinColor(selectedBinDetails.type) + '20' }">
+              <i class="fas" :class="getBinIcon(selectedBinDetails.type)" :style="{ color: getBinColor(selectedBinDetails.type) }"></i>
+            </div>
+            <div class="bin-details">
+              <h4>{{ selectedBinDetails.type || 'Cestino' }}</h4>
+              <p class="bin-address">{{ formatBinAddress(selectedBinDetails) }}</p>
+              <p class="current-status">
+                <strong>Stato attuale:</strong> 
+                <span class="status-badge" :class="`status-${selectedBinDetails.status || 'attivo'}`">
+                  {{ selectedBinDetails.status || 'attivo' }}
+                </span>
+              </p>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="newStatus">
+              <i class="fas fa-toggle-on"></i>
+              Nuovo Stato *
+            </label>
+            <select 
+              id="newStatus" 
+              v-model="newStatus" 
+              required
+              class="form-control"
+            >
+              <option value="">Seleziona nuovo stato</option>
+              <option value="attivo">Attivo</option>
+              <option value="manutenzione">Manutenzione</option>
+              <option value="inattivo">Inattivo</option>
+            </select>
+          </div>
+          
+          <div v-if="statusError" class="error-message">
+            <i class="fas fa-exclamation-circle"></i>
+            <span>{{ statusError }}</span>
+          </div>
+          
+          <div class="form-actions">
+            <button type="button" @click="closeStatusModal" class="cancel-button" :disabled="statusLoading">
+              <i class="fas fa-times"></i>
+              Annulla
+            </button>
+            <button @click="confirmStatusChange" class="submit-button" :disabled="statusLoading || !newStatus">
+              <i class="fas fa-check" :class="{ 'fa-spin': statusLoading }"></i>
+              {{ statusLoading ? 'Aggiornamento...' : 'Conferma Cambio' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
   <div v-else class="unauthorized">
     <i class="fas fa-lock"></i>
@@ -180,12 +231,17 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue';
+import { useRouter } from 'vue-router';
 import BinForm from '../components/BinForm.vue';
 import BinList from '../components/BinList.vue';
 import MapComponent from '../components/MapComponent.vue';
 import BinDetails from '../components/BinDetails.vue';
 import { binsAPI } from '../services/api';
 import { useBinDetails } from '../composables/useBinDetails';
+import { useMessages } from '../composables/useMessages';
+import { useBinUtils } from '../composables/useBinUtils';
+
+const router = useRouter();
 
 //Component state management
 const showBinList = ref(false);
@@ -193,15 +249,20 @@ const bins = ref([]);
 const displayedBins = ref([]);
 const loading = ref(false);
 const error = ref(null);
-const successMessage = ref(null);
-const selectedBinId = ref(null);
 const mapRef = ref(null);
 const binFormRef = ref(null);
 const binListRef = ref(null);
 const editMode = ref(false);
 
-// Use the bin details composable
+// Status change modal state
+const showStatusModal = ref(false);
+const newStatus = ref('');
+const statusLoading = ref(false);
+const statusError = ref(null);
+
+// Use composables
 const {
+  selectedBinId,
   selectedBinDetails,
   loading: loadingBinDetails,
   error: binDetailsError,
@@ -210,6 +271,10 @@ const {
   clearSelection,
   retryLoad
 } = useBinDetails();
+
+const { successMessage, showSuccess, handleReportSuccess } = useMessages();
+
+const { getBinIcon, getBinColor, formatBinAddress } = useBinUtils();
 
 //Check if current user has operator or admin privileges
 const isOperator = computed(() => {
@@ -249,79 +314,39 @@ async function toggleBinList() {
   showBinList.value = !showBinList.value;
 }
 
-//Handle bin form submission and data processing
-async function handleBinSubmit(binData) {
-  console.log('=== HANDLE BIN SUBMIT DEBUG ===');
-  console.log('handleBinSubmit called with data:', binData);
-  console.log('editMode.value:', editMode.value);
-  console.log('This should be called for NEW bin creation');
+//New event handlers for form events
+function handleFormSuccess(event) {
+  console.log('Form success event received:', event);
   
-  try {
-    loading.value = true;
-    error.value = null; //Clear previous errors
-    
-    //Validate essential location data
-    if (!binData.city || !binData.latitude || !binData.longitude) {
-      throw new Error('Dati di localizzazione mancanti. Assicurati di aver selezionato una città e un indirizzo validi.');
-    }
-    
-    //Validate required bin data
-    if (!binData.type || !binData.capacity || !binData.serialNumber || !binData.manufacturer) {
-      throw new Error('Dati del cestino mancanti. Compila tutti i campi obbligatori.');
-    }
-    
-    //Transform form data to match server schema
-    const binPayload = {
-      type: binData.type,
-      capacity: parseInt(binData.capacity),
-      serialNumber: binData.serialNumber,
-      manufacturer: binData.manufacturer,
-      installationDate: binData.installationDate,
-      location: {
-        type: 'Point',
-        coordinates: [parseFloat(binData.longitude), parseFloat(binData.latitude)],
-        address: {
-          street: binData.street || '',
-          streetNumber: binData.streetNumber || '',
-          city: binData.city,
-          postalCode: binData.cap || '',
-          country: 'Italia'
-        }
-      },
-      currentFillLevel: 0, //New bin starts empty
-      status: 'attivo' //Active bin status
-    };
-    
-    console.log('Sending bin data to server:', binPayload);
-    
-    //Send data to server
-    const result = await binsAPI.createBin(binPayload);
-    console.log('Bin created successfully:', result);
-    
-    //Reload bins list
-    await loadBins();
-    
-    //Reset form after successful submission
-    binFormRef.value?.resetForm();
-    
-    //Show success message
-    showSuccessMessage('Cestino inserito con successo nel database!');
-    
-  } catch (err) {
-    console.error('Errore durante il salvataggio del cestino:', err);
-    error.value = err.message || 'Errore durante il salvataggio del cestino. Riprova più tardi.';
-  } finally {
-    loading.value = false;
+  // Reload bins list
+  loadBins();
+  
+  // Show success message using composable
+  showSuccess(event.message);
+  
+  // Clear edit mode and selection if this was an update/delete
+  if (event.type === 'update') {
+    editMode.value = false;
+    clearSelection();
   }
 }
 
-//Display success message with auto-hide functionality
-function showSuccessMessage(message) {
-  successMessage.value = message;
-  //Auto-hide success message after 5 seconds
-  setTimeout(() => {
-    successMessage.value = null;
-  }, 5000);
+function handleFormError(event) {
+  console.log('Form error event received:', event);
+  error.value = event.message;
+}
+
+function handleFormCancel() {
+  console.log('Form cancel event received');
+  
+  // Reset edit mode and clear selection
+  editMode.value = false;
+  clearSelection();
+}
+
+function handleFormLoading(isLoading) {
+  console.log('Form loading state:', isLoading);
+  loading.value = isLoading;
 }
 
 //Handle form reset button click
@@ -330,37 +355,6 @@ function handleResetForm() {
     binFormRef.value.resetForm();
   }
   // If in edit mode, also clear selection
-  if (editMode.value) {
-    editMode.value = false;
-    clearSelection();
-  }
-}
-
-//Handle form cancellation
-function handleBinCancel() {
-  binFormRef.value?.resetForm();
-  if (editMode.value) {
-    editMode.value = false;
-    clearSelection();
-  }
-}
-
-//Reset form function
-function resetForm() {
-  if (binFormRef.value) {
-    binFormRef.value.resetForm();
-  }
-  if (editMode.value) {
-    editMode.value = false;
-    clearSelection();
-  }
-}
-
-//Handle cancel button
-function handleCancel() {
-  if (binFormRef.value) {
-    binFormRef.value.resetForm();
-  }
   if (editMode.value) {
     editMode.value = false;
     clearSelection();
@@ -427,25 +421,12 @@ function handleBinsFiltered(filtered) {
 //Handle insert bin button click from header
 function handleInsertBin() {
   console.log('handleInsertBin called');
-  console.log('binFormRef.value:', binFormRef.value);
   
-  if (!binFormRef.value) {
-    console.error('binFormRef is null');
-    error.value = 'Errore: riferimento al form non trovato.';
-    return;
-  }
-  
-  try {
-    // Get form data and call handleBinSubmit directly
-    console.log('Getting form data for insert...');
-    const formData = binFormRef.value.getFormData();
-    console.log('Form data retrieved:', formData);
-    
-    // Call handleBinSubmit directly
-    handleBinSubmit(formData);
-  } catch (err) {
-    console.error('Error during insert:', err);
-    error.value = 'Errore durante l\'inserimento: ' + err.message;
+  // Simply trigger the form submit if not in edit mode
+  if (!editMode.value && binFormRef.value) {
+    binFormRef.value.forceSubmit();
+  } else {
+    error.value = 'Impossibile inserire: form in modalità modifica o riferimento non trovato.';
   }
 }
 
@@ -495,48 +476,47 @@ function centerOnSelectedBin(bin) {
   }
 }
 
-// Handle report issue
-function handleReportIssue(bin) {
-  console.log('Reporting issue for bin:', bin);
-  // Implement the logic to report an issue for the selected bin
-  alert(`Segnalazione problema per cestino ${bin.id || bin._id} - Funzionalità da implementare`);
+// Handle report created event from MapComponent
+function handleReportCreated(report) {
+  console.log('Report created successfully:', report);
+  
+  // Show success message
+  showSuccess('Segnalazione inviata con successo! Il problema segnalato verrà preso in carico dal nostro team.');
+  
+  // Optionally reload bins data to reflect any changes
+  // loadBins();
+}
+
+// Handle report created event from BinDetails component
+function handleReportCreatedFromBin(report) {
+  console.log('Report created from bin details:', report);
+  
+  // Show success message
+  showSuccess('Segnalazione inviata con successo! Il problema segnalato verrà preso in carico dal nostro team.');
+  
+  // Optionally reload bins data to reflect any changes
+  // loadBins();
 }
 
 // Handle update bin button click
 function handleUpdateBin() {
-  if (!selectedBinId.value) {
-    error.value = 'Nessun cestino selezionato per l\'aggiornamento.';
-    return;
-  }
-  
+  console.log('=== HANDLE UPDATE BIN DEBUG ===');
   console.log('handleUpdateBin called');
+  console.log('editMode.value:', editMode.value);
+  console.log('selectedBinId.value:', selectedBinId.value);
   console.log('binFormRef.value:', binFormRef.value);
   
-  if (!binFormRef.value) {
-    console.error('binFormRef is null');
-    error.value = 'Errore: riferimento al form non trovato.';
-    return;
-  }
-  
-  try {
-    // Get form data directly and call handleBinUpdate
-    console.log('Getting form data...');
-    let formData;
-    
-    try {
-      formData = binFormRef.value.getFormData();
-      console.log('Form data retrieved via getFormData:', formData);
-    } catch (getDataErr) {
-      console.log('getFormData failed, trying direct access:', getDataErr);
-      formData = { ...binFormRef.value.formData };
-      console.log('Form data retrieved via direct access:', formData);
-    }
-    
-    // Call handleBinUpdate directly
-    handleBinUpdate(formData);
-  } catch (err) {
-    console.error('Error getting form data or calling update:', err);
-    error.value = 'Errore durante l\'aggiornamento: ' + err.message;
+  // Simply trigger the form submit if in edit mode
+  if (editMode.value && binFormRef.value && selectedBinId.value) {
+    console.log('All conditions met, calling forceSubmit...');
+    binFormRef.value.forceSubmit();
+  } else {
+    console.log('Conditions not met:', {
+      editMode: editMode.value,
+      hasFormRef: !!binFormRef.value,
+      hasSelectedBinId: !!selectedBinId.value
+    });
+    error.value = 'Nessun cestino selezionato per l\'aggiornamento o form non in modalità modifica.';
   }
 }
 
@@ -576,8 +556,8 @@ async function handleDeleteBin() {
     //Reset form
     binFormRef.value?.resetForm();
     
-    //Show success message
-    showSuccessMessage('Cestino eliminato con successo!');
+    //Show success message using composable
+    showSuccess('Cestino eliminato con successo!');
     
   } catch (err) {
     console.error('Errore durante l\'eliminazione del cestino:', err);
@@ -587,114 +567,74 @@ async function handleDeleteBin() {
   }
 }
 
-// Handle bin update submission
-async function handleBinUpdate(binData) {
-  console.log('=== HANDLE BIN UPDATE DEBUG ===');
-  console.log('handleBinUpdate called with data:', binData);
-  console.log('selectedBinId.value:', selectedBinId.value);
-  console.log('editMode.value:', editMode.value);
-  
+// Handle change status button click
+function handleChangeStatus() {
   if (!selectedBinId.value) {
-    console.error('ERROR: No bin selected for update');
-    error.value = 'Nessun cestino selezionato per l\'aggiornamento.';
+    error.value = 'Nessun cestino selezionato per il cambio di stato.';
     return;
   }
   
+  if (!selectedBinDetails.value) {
+    error.value = 'Dettagli del cestino non disponibili.';
+    return;
+  }
+  
+  // Reset modal state
+  newStatus.value = '';
+  statusError.value = null;
+  
+  // Open status modal
+  showStatusModal.value = true;
+}
+
+// Status change modal functions
+function openStatusModal() {
+  showStatusModal.value = true;
+}
+
+function closeStatusModal() {
+  showStatusModal.value = false;
+  newStatus.value = '';
+  statusError.value = null;
+}
+
+async function confirmStatusChange() {
+  if (!newStatus.value) {
+    statusError.value = 'Seleziona un nuovo stato.';
+    return;
+  }
+  
+  if (newStatus.value === selectedBinDetails.value.status) {
+    statusError.value = 'Il nuovo stato è uguale a quello attuale.';
+    return;
+  }
+
+  statusLoading.value = true;
+  statusError.value = null;
+
   try {
-    loading.value = true;
-    error.value = null;
+    console.log('Updating bin status:', selectedBinId.value, 'to', newStatus.value);
     
-    console.log('Validating location data...');
-    //Validate essential location data
-    if (!binData.city || !binData.latitude || !binData.longitude) {
-      console.error('ERROR: Missing location data', {
-        city: binData.city,
-        latitude: binData.latitude,
-        longitude: binData.longitude
-      });
-      throw new Error('Dati di localizzazione mancanti. Assicurati di aver selezionato una città e un indirizzo validi.');
-    }
+    // Update bin status via API
+    await binsAPI.updateBinStatus(selectedBinId.value, newStatus.value);
     
-    console.log('Validating bin data...');
-    //Validate required bin data
-    if (!binData.type || !binData.capacity || !binData.serialNumber || !binData.manufacturer) {
-      console.error('ERROR: Missing bin data', {
-        type: binData.type,
-        capacity: binData.capacity,
-        serialNumber: binData.serialNumber,
-        manufacturer: binData.manufacturer
-      });
-      throw new Error('Dati del cestino mancanti. Compila tutti i campi obbligatori.');
-    }
+    // Show success message
+    showSuccess(`Stato cestino aggiornato a "${newStatus.value}" con successo!`);
     
-    //Additional validations to match server requirements
-    if (binData.serialNumber.length < 6) {
-      console.error('ERROR: Serial number too short:', binData.serialNumber);
-      throw new Error('Il numero seriale deve essere lungo almeno 6 caratteri.');
-    }
-    
-    if (!Number.isInteger(parseInt(binData.capacity)) || parseInt(binData.capacity) <= 0) {
-      console.error('ERROR: Invalid capacity:', binData.capacity);
-      throw new Error('La capacità deve essere un numero intero positivo.');
-    }
-    
-    const validTypes = ['INDIFFERENZIATO', 'PLASTICA', 'CARTA', 'VETRO', 'ORGANICO', 'METALLO', 'RAEE'];
-    if (!validTypes.includes(binData.type.toUpperCase())) {
-      console.error('ERROR: Invalid bin type:', binData.type);
-      throw new Error('Tipo di cestino non valido.');
-    }
-    
-    console.log('Creating payload...');
-    //Transform form data to match server schema
-    const binPayload = {
-      type: binData.type,
-      capacity: parseInt(binData.capacity),
-      serialNumber: binData.serialNumber,
-      manufacturer: binData.manufacturer,
-      installationDate: binData.installationDate,
-      location: {
-        type: 'Point',
-        coordinates: [parseFloat(binData.longitude), parseFloat(binData.latitude)],
-        address: {
-          street: binData.street || '',
-          streetNumber: binData.streetNumber || '',
-          city: binData.city,
-          postalCode: binData.cap || '',
-          country: 'Italia'
-        }
-      }
-    };
-    
-    console.log('Sending bin update data to server:', binPayload);
-    console.log('Bin ID for update:', selectedBinId.value);
-    
-    //Send update data to server
-    const result = await binsAPI.updateBin(selectedBinId.value, binPayload);
-    console.log('Bin updated successfully:', result);
-    
-    //Reload bins list
+    // Reload bins and bin details
     await loadBins();
+    if (selectedBinId.value) {
+      await loadBinDetails(selectedBinId.value);
+    }
     
-    //Exit edit mode
-    editMode.value = false;
-    
-    //Clear selection
-    clearSelection();
-    
-    //Reset form
-    binFormRef.value?.resetForm();
-    
-    //Show success message
-    showSuccessMessage('Cestino aggiornato con successo!');
+    // Close modal
+    closeStatusModal();
     
   } catch (err) {
-    console.error('=== ERROR IN UPDATE ===');
-    console.error('Errore durante l\'aggiornamento del cestino:', err);
-    console.error('Error stack:', err.stack);
-    error.value = err.message || 'Errore durante l\'aggiornamento del cestino. Riprova più tardi.';
+    console.error('Error updating bin status:', err);
+    statusError.value = err.message || 'Errore durante l\'aggiornamento dello stato del cestino.';
   } finally {
-    console.log('=== UPDATE PROCESS FINISHED ===');
-    loading.value = false;
+    statusLoading.value = false;
   }
 }
 </script>
@@ -1327,5 +1267,273 @@ async function handleBinUpdate(binData) {
   cursor: pointer;
   transition: all 0.3s ease;
   font-weight: 500;
+}
+
+.status-button {
+  background: #17a2b8;
+  color: white;
+}
+
+.status-button:hover:not(:disabled) {
+  background: #138496;
+  transform: translateY(-2px);
+}
+
+.status-button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+/* Modal styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+}
+
+.modal-container {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.close-button:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.bin-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.bin-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.bin-icon i {
+  font-size: 1.5rem;
+}
+
+.bin-details h4 {
+  margin: 0 0 4px 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.bin-address {
+  margin: 0 0 8px 0;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.current-status {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #374151;
+  font-size: 0.9rem;
+}
+
+.form-group label i {
+  color: #6b7280;
+  width: 16px;
+}
+
+.form-control {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.cancel-button, .submit-button {
+  flex: 1;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.cancel-button {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.cancel-button:hover:not(:disabled) {
+  background: #e5e7eb;
+}
+
+.submit-button {
+  background: #3b82f6;
+  color: white;
+}
+
+.submit-button:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.submit-button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.cancel-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+}
+
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-attivo {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-manutenzione {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-inattivo {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.toggle-list-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.toggle-list-button:hover {
+  background: #0056b3;
+  color: #fff;
+}
+
+.toggle-list-button.active {
+  background: #0056b3;
 }
 </style> 

@@ -156,7 +156,7 @@ router.route('/reports')
  *         description: Dettaglio della segnalazione
  *       404:
  *         description: Segnalazione non trovata
- *   put:
+ *   patch:
  *     summary: Aggiorna una segnalazione
  *     tags: [Reports]
  *     security:
@@ -193,13 +193,13 @@ router.route('/reports')
  */
 router.route('/reports/:id')
     .get(jwtAuth, reportController.getReportById)//GET /reports/:id - Dettaglio segnalazione
-    .put(jwtAuth, validateWasteReport, reportController.updateReport) //PUT /reports/:id - Aggiorna segnalazione
+    .patch(jwtAuth, validateWasteReport, reportController.updateReport) //PATCH /reports/:id - Aggiorna segnalazione
     .delete(jwtAuth, reportController.deleteReport);//DELETE /reports/:id - Elimina segnalazione
 
 /**
  * @swagger
  * /api/waste/reports/{id}/status:
- *   put:
+ *   patch:
  *     summary: Aggiorna lo stato di una segnalazione
  *     tags: [Reports]
  *     security:
@@ -226,7 +226,7 @@ router.route('/reports/:id')
  */
 //Report Status Management
 router.route('/reports/:id/status')
-    .put(jwtAuth, reportController.updateReportStatus); //PUT /reports/:id/status - Aggiorna stato
+    .patch(jwtAuth, reportController.updateReportStatus); //PATCH /reports/:id/status - Aggiorna stato
 
 //Report
 router.route('/reports/:id/verify')
@@ -304,7 +304,7 @@ router.get('/bins/maintenance', jwtAuth, binController.getBinsNeedingMaintenance
  *         description: Dettaglio del cestino
  *       404:
  *         description: Cestino non trovato
- *   put:
+ *   patch:
  *     summary: Aggiorna un cestino
  *     tags: [Bins]
  *     security:
@@ -341,14 +341,14 @@ router.get('/bins/maintenance', jwtAuth, binController.getBinsNeedingMaintenance
  */
 router.route('/bins/:id')
     .get(binController.getBinById)//GET /bins/:id - Dettaglio cestino
-    .put(jwtAuth, validateBin, binController.updateBin)//PUT /bins/:id - Aggiorna cestino
+    .patch(jwtAuth, validateBin, binController.updateBin)//PATCH /bins/:id - Aggiorna cestino
     .delete(jwtAuth, binController.deleteBin);//DELETE /bins/:id - Elimina cestino
 
 //Bin Status Management
 /**
  * @swagger
  * /api/waste/bins/{id}/status:
- *   put:
+ *   patch:
  *     summary: Aggiorna lo stato di un cestino
  *     tags: [Bins]
  *     security:
@@ -374,7 +374,7 @@ router.route('/bins/:id')
  *         description: Stato aggiornato
  */
 router.route('/bins/:id/status')
-    .put(jwtAuth, binController.updateBinStatus);//PUT /bins/:id/status - Aggiorna stato
+    .patch(jwtAuth, binController.updateBinStatus);//PATCH /bins/:id/status - Aggiorna stato
 
 //Statistics Routes
 router.get('/stats/reports', reportController.getReportStats);//GET /stats/reports - Statistiche segnalazioni

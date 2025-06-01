@@ -1,6 +1,8 @@
 //Reusable form component for bin creation and editing
 <script setup>
-import { ref, defineEmits, defineProps, watch, onMounted } from 'vue';
+import { ref, defineEmits, defineProps, watch } from 'vue';
+import BaseForm from './BaseForm.vue';
+import { binsAPI } from '../services/api';
 
 // Variables for the update bin form management
 const props = defineProps({
@@ -11,25 +13,28 @@ const props = defineProps({
   binData: {
     type: Object,
     default: null
+  },
+  selectedBinId: {
+    type: String,
+    default: null
   }
 });
 
-const emit = defineEmits(['submit', 'cancel']);
+const emit = defineEmits(['success', 'error', 'cancel', 'loading']);
 
-//Form data reactive object
+// Reference to BaseForm component
+const baseFormRef = ref(null);
+
+// Form internal state
+const loading = ref(false);
+const error = ref(null);
+
+//Form data reactive object (only bin-specific fields)
 const binForm = ref({
   serialNumber: '',
   manufacturer: '',
   type: '',
   capacity: null,
-  address: '',
-  //Read-only address fields populated by geocoding
-  street: '',
-  streetNumber: '',
-  city: '',
-  cap: '',
-  latitude: '',
-  longitude: '',
   installationDate: new Date().toISOString().split('T')[0] //Current date as default
 });
 
@@ -43,220 +48,107 @@ const binTypes = [
   { value: 'RAEE', label: 'RAEE' }
 ];
 
-//Address autocomplete state management
-const suggestions = ref([]);
-const showSuggestions = ref(false);
-const loadingSuggestions = ref(false);
-
-//City autocomplete state management (separate from address)
-const citySuggestions = ref([]);
-const showCitySuggestions = ref(false);
-const loadingCitySuggestions = ref(false);
-
-//Debounce timers for API calls
-let cityDebounceTimer = null;
-let addressDebounceTimer = null;
-
-//Fetch address suggestions from Nominatim API
-async function fetchSuggestions(query) {
-  console.log('Fetching address suggestions for:', query, 'in city:', binForm.value.city);
-  
-  if (!query || query.length < 3) {
-    suggestions.value = [];
-    showSuggestions.value = false;
-    return;
-  }
-  
-  if (!binForm.value.city) {
-    console.log('No city selected, cannot search for addresses');
-    return;
-  }
-  
-  loadingSuggestions.value = true;
-  
-  try {
-    //Build search query with city context
-    const cityQuery = `${query}, ${binForm.value.city}`;
-    const url = `/nominatim/search?format=json&q=${encodeURIComponent(cityQuery)}&addressdetails=1&limit=10&countrycodes=it`;
-    console.log('Address API URL:', url);
-    
-    const res = await fetch(url);
-    const data = await res.json();
-    console.log('Address API response:', data);
-    console.log('Raw data length:', data.length);
-    
-    //Debug logging for first few items
-    if (data.length > 0) {
-      console.log('First result sample:', data[0]);
-      console.log('First result address:', data[0].address);
-    }
-    
-    //Filter results to include only valid addresses
-    const addressResults = data.filter(item => {
-      return item.address && (item.address.road || item.address.house_number || item.display_name.includes(query));
-    });
-    
-    console.log('Filtered address results:', addressResults);
-    console.log('Filtered results length:', addressResults.length);
-    
-    suggestions.value = addressResults;
-    showSuggestions.value = addressResults.length > 0;
-    
-  } catch (e) {
-    console.error('Error fetching address suggestions:', e);
-    suggestions.value = [];
-    showSuggestions.value = false;
-  } finally {
-    loadingSuggestions.value = false;
-  }
-}
-
-//Fetch city suggestions from Nominatim API
-async function fetchCitySuggestions(query) {
-  console.log('Fetching city suggestions for:', query);
-  
-  if (!query || query.length < 2) {
-    citySuggestions.value = [];
-    showCitySuggestions.value = false;
-    console.log('Query too short, clearing suggestions');
-    return;
-  }
-  
-  loadingCitySuggestions.value = true;
-  
-  try {
-    //Search for Italian cities with simplified approach
-    const url = `/nominatim/search?format=json&q=${encodeURIComponent(query + ', Italia')}&addressdetails=1&limit=8&countrycodes=it`;
-    console.log('City API URL:', url);
-    
-    const res = await fetch(url);
-    const data = await res.json();
-    console.log('City API response:', data);
-    
-    //Filter for actual cities/towns and format results
-    const cityResults = data.filter(item => {
-      //Look for places that are cities, towns, or villages
-      const hasCity = item.address && (item.address.city || item.address.town || item.address.village);
-      const isPlace = item.class === 'place' || item.type === 'administrative';
-      return hasCity && isPlace;
-    }).map(item => ({
-      ...item,
-      displayName: item.address?.city || item.address?.town || item.address?.village,
-      region: item.address?.state || item.address?.region || '',
-      postcode: item.address?.postcode || ''
-    }));
-    
-    console.log('Filtered city results:', cityResults);
-    citySuggestions.value = cityResults;
-    showCitySuggestions.value = cityResults.length > 0;
-    
-  } catch (e) {
-    console.error('Error fetching city suggestions:', e);
-    citySuggestions.value = [];
-    showCitySuggestions.value = false;
-  } finally {
-    loadingCitySuggestions.value = false;
-  }
-}
-
-//Handle city input with debouncing
-function handleCityInput(e) {
-  const query = e.target.value;
-  binForm.value.city = query;
-  
-  //Clear previous timer
-  if (cityDebounceTimer) {
-    clearTimeout(cityDebounceTimer);
-  }
-  
-  //Debounce the API call
-  cityDebounceTimer = setTimeout(() => {
-    fetchCitySuggestions(query);
-  }, 300);
-}
-
-//Parse address details from geocoding response
-function parseAddress(addressDetails) {
-  if (!addressDetails) return;
-  
-  //Extract address components
-  binForm.value.street = addressDetails.road || '';
-  binForm.value.streetNumber = addressDetails.house_number || '';
-  binForm.value.city = addressDetails.city || addressDetails.town || addressDetails.village || '';
-  binForm.value.cap = addressDetails.postcode || '';
-}
-
-//Handle address input with debouncing
-function handleAddressInput(e) {
-  const query = e.target.value;
-  binForm.value.address = query;
-  
-  //Clear previous timer
-  if (addressDebounceTimer) {
-    clearTimeout(addressDebounceTimer);
-  }
-  
-  //Debounce the API call
-  addressDebounceTimer = setTimeout(() => {
-    fetchSuggestions(query);
-  }, 300);
-}
-
-//Handle city suggestion selection
-function selectCitySuggestion(s) {
-  console.log('Selected city suggestion:', s);
-  
-  //Use the formatted display name
-  binForm.value.city = s.displayName;
-  
-  //Update postal code if available
-  if (s.postcode) {
-    binForm.value.cap = s.postcode;
-    console.log('Updated CAP to:', s.postcode);
-  }
-  
-  //Clear suggestions with timeout
-  setTimeout(() => {
-    showCitySuggestions.value = false;
-    citySuggestions.value = [];
-  }, 100);
-  
-  //Clear address field since city changed
-  binForm.value.address = '';
-  binForm.value.street = '';
-  binForm.value.streetNumber = '';
-  binForm.value.latitude = '';
-  binForm.value.longitude = '';
-}
-
-//Handle address suggestion selection
-function selectSuggestion(s) {
-  console.log('Selected address suggestion:', s);
-  binForm.value.address = s.display_name;
-  binForm.value.latitude = s.lat;
-  binForm.value.longitude = s.lon;
-  parseAddress(s.address);
-  
-  //Clear suggestions with timeout
-  setTimeout(() => {
-    showSuggestions.value = false;
-    suggestions.value = [];
-  }, 100);
-}
-
-//Handle form submission
-function handleSubmit() {
+//Handle form submission with API calls
+async function handleSubmit() {
   console.log('=== BIN FORM HANDLE SUBMIT ===');
   console.log('BinForm handleSubmit called');
-  console.log('Form data:', binForm.value);
+  console.log('Bin form data:', binForm.value);
+  console.log('Address form data:', baseFormRef.value?.addressForm);
   console.log('Edit mode:', props.editMode);
-  console.log('About to emit submit event...');
+  console.log('Selected bin ID:', props.selectedBinId);
   
-  // Always emit the submit event
-  const dataToEmit = { ...binForm.value };
-  console.log('Data being emitted:', dataToEmit);
-  emit('submit', dataToEmit);
-  console.log('Submit event emitted successfully');
+  // Clear previous errors
+  error.value = null;
+  
+  try {
+    // Set loading state
+    loading.value = true;
+    emit('loading', true);
+    
+    // Validate required fields
+    const addressData = baseFormRef.value?.addressForm;
+    if (!addressData?.city || !addressData?.latitude || !addressData?.longitude) {
+      throw new Error('Dati di localizzazione mancanti. Assicurati di aver selezionato una città e un indirizzo validi.');
+    }
+    
+    if (!binForm.value.type || !binForm.value.capacity || !binForm.value.serialNumber || !binForm.value.manufacturer) {
+      throw new Error('Compila tutti i campi obbligatori del cestino.');
+    }
+    
+    if (binForm.value.serialNumber.length < 6) {
+      throw new Error('Il numero seriale deve essere lungo almeno 6 caratteri.');
+    }
+    
+    if (!Number.isInteger(parseInt(binForm.value.capacity)) || parseInt(binForm.value.capacity) <= 0) {
+      throw new Error('La capacità deve essere un numero intero positivo.');
+    }
+    
+    // Build API payload
+    const binPayload = {
+      type: binForm.value.type,
+      capacity: parseInt(binForm.value.capacity),
+      serialNumber: binForm.value.serialNumber,
+      manufacturer: binForm.value.manufacturer,
+      installationDate: binForm.value.installationDate,
+      location: {
+        type: 'Point',
+        coordinates: [parseFloat(addressData.longitude), parseFloat(addressData.latitude)],
+        address: {
+          street: addressData.street || '',
+          streetNumber: addressData.streetNumber || '',
+          city: addressData.city,
+          postalCode: addressData.cap || '',
+          country: 'Italia'
+        }
+      }
+    };
+    
+    console.log('Sending API request...');
+    console.log('Payload:', binPayload);
+    
+    // Make API call
+    let result;
+    if (props.editMode && props.selectedBinId) {
+      console.log('Updating bin with ID:', props.selectedBinId);
+      result = await binsAPI.updateBin(props.selectedBinId, binPayload);
+      console.log('Bin updated successfully:', result);
+      
+      // Emit success event
+      emit('success', {
+        type: 'update',
+        message: 'Cestino aggiornato con successo!',
+        bin: result
+      });
+    } else {
+      console.log('Creating new bin...');
+      result = await binsAPI.createBin(binPayload);
+      console.log('Bin created successfully:', result);
+      
+      // Emit success event
+      emit('success', {
+        type: 'create', 
+        message: 'Cestino creato con successo!',
+        bin: result
+      });
+    }
+    
+    // Reset form after successful operation
+    resetForm();
+    
+  } catch (err) {
+    console.error('Error in bin form submission:', err);
+    error.value = err.message || 'Errore durante l\'operazione. Riprova più tardi.';
+    
+    // Emit error event
+    emit('error', {
+      message: error.value,
+      originalError: err
+    });
+    
+  } finally {
+    loading.value = false;
+    emit('loading', false);
+  }
 }
 
 //Force submit for external calls
@@ -267,7 +159,9 @@ function forceSubmit() {
 
 //Handle form cancellation
 function handleCancel() {
+  console.log('BinForm handleCancel called');
   resetForm();
+  error.value = null;
   emit('cancel');
 }
 
@@ -278,19 +172,10 @@ function resetForm() {
     manufacturer: '',
     type: '',
     capacity: null,
-    address: '',
-    street: '',
-    streetNumber: '',
-    city: '',
-    cap: '',
-    latitude: '',
-    longitude: '',
     installationDate: new Date().toISOString().split('T')[0]
   };
-  suggestions.value = [];
-  showSuggestions.value = false;
-  citySuggestions.value = [];
-  showCitySuggestions.value = false;
+  baseFormRef.value?.resetAddressForm();
+  error.value = null;
 }
 
 //Load bin data for editing
@@ -299,59 +184,20 @@ function loadBinData(bin) {
   
   console.log('Loading bin data for editing:', bin);
   
-  // Helper function to safely extract address string
-  const extractAddress = (bin) => {
-    // If bin.address exists and is a string
-    if (bin.address && typeof bin.address === 'string') {
-      return bin.address;
-    }
-    
-    // If bin.location.address exists
-    if (bin.location && bin.location.address) {
-      if (typeof bin.location.address === 'string') {
-        return bin.location.address;
-      }
-      
-      // If it's an object, construct the address string
-      if (typeof bin.location.address === 'object' && bin.location.address !== null) {
-        const addr = bin.location.address;
-        const parts = [];
-        
-        if (addr.street) parts.push(addr.street);
-        if (addr.streetNumber) parts.push(addr.streetNumber);
-        if (addr.city) parts.push(addr.city);
-        if (addr.postalCode) parts.push(addr.postalCode);
-        
-        if (parts.length > 0) {
-          return parts.join(', ');
-        }
-      }
-    }
-    
-    // Fallback to coordinates if available
-    const lat = bin.lat || bin.latitude || (bin.location?.coordinates?.[1]);
-    const lng = bin.lng || bin.longitude || (bin.location?.coordinates?.[0]);
-    if (lat && lng) {
-      return `Coordinate: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-    }
-    
-    return '';
-  };
-  
+  // Load bin-specific data
   binForm.value = {
     serialNumber: bin.serialNumber || '',
     manufacturer: bin.manufacturer || '',
     type: bin.type || '',
     capacity: bin.capacity || null,
-    address: extractAddress(bin),
-    street: bin.street || (bin.location?.address?.street) || '',
-    streetNumber: bin.streetNumber || (bin.location?.address?.streetNumber) || '',
-    city: bin.city || (bin.location?.address?.city) || '',
-    cap: bin.cap || (bin.location?.address?.postalCode) || '',
-    latitude: bin.lat || bin.latitude || (bin.location?.coordinates?.[1]) || '',
-    longitude: bin.lng || bin.longitude || (bin.location?.coordinates?.[0]) || '',
     installationDate: bin.installationDate ? bin.installationDate.split('T')[0] : new Date().toISOString().split('T')[0]
   };
+  
+  // Load address data through BaseForm
+  baseFormRef.value?.loadAddressData(bin);
+  
+  // Clear errors when loading new data
+  error.value = null;
 }
 
 // Watch for changes in binData prop
@@ -374,145 +220,124 @@ defineExpose({
   handleSubmit, 
   forceSubmit,
   loadBinData, 
-  getFormData: () => ({ ...binForm.value }),
-  formData: binForm // Espongo anche il reactive object direttamente
+  getFormData: () => ({ 
+    ...binForm.value, 
+    ...(baseFormRef.value?.addressForm || {})
+  }),
+  formData: binForm,
+  loading,
+  error
 });
 </script>
 
 <template>
-  <form @submit.prevent="handleSubmit" class="bin-form" autocomplete="off">
-    <div class="form-header" v-if="editMode">
-      <h3><i class="fas fa-edit"></i> Modifica Cestino</h3>
-    </div>
-    <div class="form-header" v-else>
-      <h3><i class="fas fa-plus"></i> Nuovo Cestino</h3>
-    </div>
-    
-    <div class="form-group">
-      <label for="serialNumber">Serial Number:</label>
-      <input 
-        id="serialNumber" 
-        v-model="binForm.serialNumber" 
-        type="text" 
-        required 
-        minlength="6"
-        placeholder="Almeno 6 caratteri"
-      />
-      <small v-if="binForm.serialNumber && binForm.serialNumber.length < 6" class="validation-hint">
-        Il numero seriale deve essere lungo almeno 6 caratteri
-      </small>
-    </div>
-    
-    <div class="form-group">
-      <label for="manufacturer">Produttore:</label>
-      <input id="manufacturer" v-model="binForm.manufacturer" type="text" required />
-    </div>
-    
-    <div class="form-group">
-      <label for="type">Tipo rifiuto:</label>
-      <select id="type" v-model="binForm.type" required>
-        <option value="">Seleziona tipo</option>
-        <option v-for="type in binTypes" :key="type.value" :value="type.value">{{ type.label }}</option>
-      </select>
-    </div>
-    
-    <div class="form-group">
-      <label for="capacity">Capacità (litri):</label>
-      <input id="capacity" v-model.number="binForm.capacity" type="number" min="1" required />
-    </div>
-    
-    <div class="form-group">
-      <label for="installationDate">Data di installazione:</label>
-      <input id="installationDate" v-model="binForm.installationDate" type="date" required />
-    </div>
-    
-    <div class="form-group">
-      <label for="city">Città:</label>
-      <input 
-        id="city" 
-        v-model="binForm.city" 
-        type="text" 
-        required 
-        placeholder="Inserisci la città" 
-        @input="handleCityInput"
-      />
-      <div v-if="loadingCitySuggestions" class="suggestions-loading">Caricamento città...</div>
-      <ul v-if="showCitySuggestions && citySuggestions.length" class="suggestions-list city-suggestions">
-        <li v-for="s in citySuggestions" :key="s.place_id" @click.prevent="selectCitySuggestion(s)">
-          <strong>{{ s.displayName }}</strong>
-          <span class="suggestion-details" v-if="s.region">{{ s.region }}</span>
-          <span class="suggestion-details" v-if="s.postcode">CAP: {{ s.postcode }}</span>
-        </li>
-      </ul>
-    </div>
-    
-    <div class="form-group address-group">
-      <label for="address">Indirizzo:</label>
-      <input 
-        id="address" 
-        v-model="binForm.address" 
-        type="text" 
-        @input="handleAddressInput" 
-        :disabled="!binForm.city" 
-        required 
-        autocomplete="off"
-        placeholder="Inizia a digitare per cercare..."
-      />
-      <div v-if="loadingSuggestions" class="suggestions-loading">Caricamento indirizzi...</div>
-      <ul v-if="showSuggestions && suggestions.length" class="suggestions-list">
-        <li v-for="s in suggestions" :key="s.place_id" @click.prevent="selectSuggestion(s)">
-          <strong>{{ s.address?.road || 'Via' }} {{ s.address?.house_number || '' }}</strong>
-          <span class="suggestion-details">{{ s.address?.city || s.address?.town }}, {{ s.address?.postcode }}</span>
-        </li>
-      </ul>
-    </div>
+  <BaseForm 
+    ref="baseFormRef"
+    :editMode="editMode"
+    formTitle="Cestino"
+    createTitle="Nuovo"
+    editTitle="Modifica"
+    @cancel="handleCancel"
+  >
+    <!-- Campi specifici per i bin -->
+    <template #specific-fields>
+      <!-- Error message display -->
+      <div v-if="error" class="error-message">
+        <i class="fas fa-exclamation-circle"></i>
+        {{ error }}
+      </div>
+      
+      <div class="form-group">
+        <label for="serialNumber">Serial Number:</label>
+        <input 
+          id="serialNumber" 
+          v-model="binForm.serialNumber" 
+          type="text" 
+          required 
+          minlength="6"
+          placeholder="Almeno 6 caratteri"
+          :disabled="loading"
+        />
+        <small v-if="binForm.serialNumber && binForm.serialNumber.length < 6" class="validation-hint">
+          Il numero seriale deve essere lungo almeno 6 caratteri
+        </small>
+      </div>
+      
+      <div class="form-group">
+        <label for="manufacturer">Produttore:</label>
+        <input 
+          id="manufacturer" 
+          v-model="binForm.manufacturer" 
+          type="text" 
+          required 
+          :disabled="loading"
+        />
+      </div>
+      
+      <div class="form-group">
+        <label for="type">Tipo rifiuto:</label>
+        <select 
+          id="type" 
+          v-model="binForm.type" 
+          required
+          :disabled="loading"
+        >
+          <option value="">Seleziona tipo</option>
+          <option v-for="type in binTypes" :key="type.value" :value="type.value">{{ type.label }}</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="capacity">Capacità (litri):</label>
+        <input 
+          id="capacity" 
+          v-model.number="binForm.capacity" 
+          type="number" 
+          min="1" 
+          required 
+          :disabled="loading"
+        />
+      </div>
+      
+      <div class="form-group">
+        <label for="installationDate">Data di installazione:</label>
+        <input 
+          id="installationDate" 
+          v-model="binForm.installationDate" 
+          type="date" 
+          required 
+          :disabled="loading"
+        />
+      </div>
+    </template>
 
-    <!-- 2x2 grid for address details -->
-    <div class="address-details-grid">
-      <div class="form-group">
-        <label for="street-readonly">Via:</label>
-        <input id="street-readonly" v-model="binForm.street" type="text" readonly />
+    <!-- Pulsanti del form -->
+    <template #form-buttons>
+      <div class="form-buttons">
+        <button 
+          type="button" 
+          @click="handleCancel" 
+          class="btn-cancel"
+          :disabled="loading"
+        >
+          <i class="fas fa-times"></i> Annulla
+        </button>
+        <button 
+          type="button" 
+          @click="handleSubmit" 
+          class="btn-submit"
+          :disabled="loading"
+        >
+          <i v-if="loading" class="fas fa-spinner fa-spin"></i>
+          <i v-else class="fas fa-save"></i>
+          {{ loading ? 'Salvando...' : (editMode ? 'Aggiorna' : 'Crea') }} Cestino
+        </button>
       </div>
-      
-      <div class="form-group">
-        <label for="streetNumber-readonly">Numero Civico:</label>
-        <input id="streetNumber-readonly" v-model="binForm.streetNumber" type="text" readonly />
-      </div>
-      
-      <div class="form-group">
-        <label for="city-readonly">Città:</label>
-        <input id="city-readonly" v-model="binForm.city" type="text" readonly />
-      </div>
-      
-      <div class="form-group">
-        <label for="cap-readonly">CAP:</label>
-        <input id="cap-readonly" v-model="binForm.cap" type="text" readonly />
-      </div>
-    </div>
-
-    <!-- Coordinates display -->
-    <div class="coordinates-group">
-      <div class="form-group">
-        <label for="latitude-readonly">Latitudine:</label>
-        <input id="latitude-readonly" v-model="binForm.latitude" type="text" readonly />
-      </div>
-      
-      <div class="form-group">
-        <label for="longitude-readonly">Longitudine:</label>
-        <input id="longitude-readonly" v-model="binForm.longitude" type="text" readonly />
-      </div>
-    </div>
-  </form>
+    </template>
+  </BaseForm>
 </template>
 
 <style scoped>
-.bin-form {
-  background: #f5f5f5;
-  padding: 20px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-}
-
 .form-group {
   margin-bottom: 15px;
   position: relative;
@@ -529,78 +354,27 @@ input, select {
   padding: 8px;
   border: 1px solid #ddd;
   border-radius: 4px;
+  font-family: inherit;
 }
 
-input[readonly] {
-  background: #e9e9e9;
-  color: #666;
+input:focus, select:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+input:disabled, select:disabled {
+  background-color: #f5f5f5;
+  color: #999;
   cursor: not-allowed;
 }
 
-.address-details-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 15px;
-  margin: 15px 0;
-}
-
-.coordinates-group {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 15px;
-  margin: 15px 0;
-}
-
-.suggestions-list {
-  position: absolute;
-  z-index: 10;
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  width: 100%;
-  max-height: 150px;
-  overflow-y: auto;
-  margin-top: 2px;
-  list-style: none;
-  padding: 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.city-suggestions {
-  border-color: #4CAF50;
-}
-
-.suggestions-list li {
-  padding: 8px;
+select {
   cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  border-bottom: 1px solid #f0f0f0;
 }
 
-.suggestions-list li:last-child {
-  border-bottom: none;
-}
-
-.suggestions-list li:hover {
-  background: #f0f0f0;
-}
-
-.city-suggestions li:hover {
-  background: rgba(76, 175, 80, 0.1);
-}
-
-.suggestion-details {
-  font-size: 11px;
-  color: #888;
-  font-style: italic;
-}
-
-.suggestions-loading {
-  font-size: 12px;
-  color: #888;
-  margin-top: 2px;
+select:disabled {
+  cursor: not-allowed;
 }
 
 .validation-hint {
@@ -611,28 +385,78 @@ input[readonly] {
   font-style: italic;
 }
 
-@media (max-width: 768px) {
-  .address-details-grid,
-  .coordinates-group {
-    grid-template-columns: 1fr;
-  }
-}
-
-.form-header {
-  margin-bottom: 20px;
-  padding-bottom: 10px;
-  border-bottom: 2px solid #4CAF50;
-}
-
-.form-header h3 {
-  margin: 0;
-  color: #4CAF50;
+.error-message {
+  background: #f8d7da;
+  color: #721c24;
+  padding: 12px;
+  border-radius: 4px;
+  border: 1px solid #f5c6cb;
+  margin-bottom: 15px;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.form-header i {
-  font-size: 1.2rem;
+.error-message i {
+  color: #e74c3c;
+}
+
+.form-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #ddd;
+}
+
+.btn-cancel, .btn-submit {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.3s;
+}
+
+.btn-cancel {
+  background: #6c757d;
+  color: white;
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background: #5a6268;
+}
+
+.btn-submit {
+  background: #4CAF50;
+  color: white;
+}
+
+.btn-submit:hover:not(:disabled) {
+  background: #45a049;
+}
+
+.btn-cancel:disabled, .btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.fa-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+  .form-buttons {
+    flex-direction: column;
+  }
 }
 </style> 
