@@ -35,6 +35,14 @@
           Reset Form
         </button>
         <button 
+          @click="handleChangeStatus" 
+          class="action-button status-button"
+          :disabled="loading || !selectedBinId"
+        >
+          <i class="fas fa-toggle-on"></i>
+          Cambia Stato
+        </button>
+        <button 
           @click="toggleBinList" 
           class="toggle-list-button"
           :class="{ 'active': showBinList }"
@@ -150,6 +158,69 @@
         </div>
       </div>
     </div>
+
+    <!-- Status Change Modal -->
+    <div v-if="showStatusModal" class="modal-overlay" @click.self="closeStatusModal">
+      <div class="modal-container">
+        <div class="modal-header">
+          <h3>Cambia Stato Cestino</h3>
+          <button @click="closeStatusModal" class="close-button">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div v-if="selectedBinDetails" class="bin-info">
+            <div class="bin-icon" :style="{ backgroundColor: getBinColor(selectedBinDetails.type) + '20' }">
+              <i class="fas" :class="getBinIcon(selectedBinDetails.type)" :style="{ color: getBinColor(selectedBinDetails.type) }"></i>
+            </div>
+            <div class="bin-details">
+              <h4>{{ selectedBinDetails.type || 'Cestino' }}</h4>
+              <p class="bin-address">{{ formatBinAddress(selectedBinDetails) }}</p>
+              <p class="current-status">
+                <strong>Stato attuale:</strong> 
+                <span class="status-badge" :class="`status-${selectedBinDetails.status || 'attivo'}`">
+                  {{ selectedBinDetails.status || 'attivo' }}
+                </span>
+              </p>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="newStatus">
+              <i class="fas fa-toggle-on"></i>
+              Nuovo Stato *
+            </label>
+            <select 
+              id="newStatus" 
+              v-model="newStatus" 
+              required
+              class="form-control"
+            >
+              <option value="">Seleziona nuovo stato</option>
+              <option value="attivo">Attivo</option>
+              <option value="manutenzione">Manutenzione</option>
+              <option value="inattivo">Inattivo</option>
+            </select>
+          </div>
+          
+          <div v-if="statusError" class="error-message">
+            <i class="fas fa-exclamation-circle"></i>
+            <span>{{ statusError }}</span>
+          </div>
+          
+          <div class="form-actions">
+            <button type="button" @click="closeStatusModal" class="cancel-button" :disabled="statusLoading">
+              <i class="fas fa-times"></i>
+              Annulla
+            </button>
+            <button @click="confirmStatusChange" class="submit-button" :disabled="statusLoading || !newStatus">
+              <i class="fas fa-check" :class="{ 'fa-spin': statusLoading }"></i>
+              {{ statusLoading ? 'Aggiornamento...' : 'Conferma Cambio' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
   <div v-else class="unauthorized">
     <i class="fas fa-lock"></i>
@@ -160,6 +231,7 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue';
+import { useRouter } from 'vue-router';
 import BinForm from '../components/BinForm.vue';
 import BinList from '../components/BinList.vue';
 import MapComponent from '../components/MapComponent.vue';
@@ -167,6 +239,9 @@ import BinDetails from '../components/BinDetails.vue';
 import { binsAPI } from '../services/api';
 import { useBinDetails } from '../composables/useBinDetails';
 import { useMessages } from '../composables/useMessages';
+import { useBinUtils } from '../composables/useBinUtils';
+
+const router = useRouter();
 
 //Component state management
 const showBinList = ref(false);
@@ -178,6 +253,12 @@ const mapRef = ref(null);
 const binFormRef = ref(null);
 const binListRef = ref(null);
 const editMode = ref(false);
+
+// Status change modal state
+const showStatusModal = ref(false);
+const newStatus = ref('');
+const statusLoading = ref(false);
+const statusError = ref(null);
 
 // Use composables
 const {
@@ -192,6 +273,8 @@ const {
 } = useBinDetails();
 
 const { successMessage, showSuccess, handleReportSuccess } = useMessages();
+
+const { getBinIcon, getBinColor, formatBinAddress } = useBinUtils();
 
 //Check if current user has operator or admin privileges
 const isOperator = computed(() => {
@@ -481,6 +564,77 @@ async function handleDeleteBin() {
     error.value = err.message || 'Errore durante l\'eliminazione del cestino. Riprova più tardi.';
   } finally {
     loading.value = false;
+  }
+}
+
+// Handle change status button click
+function handleChangeStatus() {
+  if (!selectedBinId.value) {
+    error.value = 'Nessun cestino selezionato per il cambio di stato.';
+    return;
+  }
+  
+  if (!selectedBinDetails.value) {
+    error.value = 'Dettagli del cestino non disponibili.';
+    return;
+  }
+  
+  // Reset modal state
+  newStatus.value = '';
+  statusError.value = null;
+  
+  // Open status modal
+  showStatusModal.value = true;
+}
+
+// Status change modal functions
+function openStatusModal() {
+  showStatusModal.value = true;
+}
+
+function closeStatusModal() {
+  showStatusModal.value = false;
+  newStatus.value = '';
+  statusError.value = null;
+}
+
+async function confirmStatusChange() {
+  if (!newStatus.value) {
+    statusError.value = 'Seleziona un nuovo stato.';
+    return;
+  }
+  
+  if (newStatus.value === selectedBinDetails.value.status) {
+    statusError.value = 'Il nuovo stato è uguale a quello attuale.';
+    return;
+  }
+
+  statusLoading.value = true;
+  statusError.value = null;
+
+  try {
+    console.log('Updating bin status:', selectedBinId.value, 'to', newStatus.value);
+    
+    // Update bin status via API
+    await binsAPI.updateBinStatus(selectedBinId.value, newStatus.value);
+    
+    // Show success message
+    showSuccess(`Stato cestino aggiornato a "${newStatus.value}" con successo!`);
+    
+    // Reload bins and bin details
+    await loadBins();
+    if (selectedBinId.value) {
+      await loadBinDetails(selectedBinId.value);
+    }
+    
+    // Close modal
+    closeStatusModal();
+    
+  } catch (err) {
+    console.error('Error updating bin status:', err);
+    statusError.value = err.message || 'Errore durante l\'aggiornamento dello stato del cestino.';
+  } finally {
+    statusLoading.value = false;
   }
 }
 </script>
@@ -1113,5 +1267,273 @@ async function handleDeleteBin() {
   cursor: pointer;
   transition: all 0.3s ease;
   font-weight: 500;
+}
+
+.status-button {
+  background: #17a2b8;
+  color: white;
+}
+
+.status-button:hover:not(:disabled) {
+  background: #138496;
+  transform: translateY(-2px);
+}
+
+.status-button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+/* Modal styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+}
+
+.modal-container {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.close-button:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.bin-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.bin-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.bin-icon i {
+  font-size: 1.5rem;
+}
+
+.bin-details h4 {
+  margin: 0 0 4px 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.bin-address {
+  margin: 0 0 8px 0;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.current-status {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #374151;
+  font-size: 0.9rem;
+}
+
+.form-group label i {
+  color: #6b7280;
+  width: 16px;
+}
+
+.form-control {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.cancel-button, .submit-button {
+  flex: 1;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.cancel-button {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.cancel-button:hover:not(:disabled) {
+  background: #e5e7eb;
+}
+
+.submit-button {
+  background: #3b82f6;
+  color: white;
+}
+
+.submit-button:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.submit-button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.cancel-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+}
+
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-attivo {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-manutenzione {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-inattivo {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.toggle-list-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.toggle-list-button:hover {
+  background: #0056b3;
+  color: #fff;
+}
+
+.toggle-list-button.active {
+  background: #0056b3;
 }
 </style> 

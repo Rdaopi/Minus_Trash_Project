@@ -78,6 +78,38 @@ class ReportService {
         report.resolve(resolverUserId, actionTaken, followUpRequired, followUpNotes);
         return await report.save();
     }
+
+    async updateReportStatus(id, status, userId) {
+        const report = await Report.findById(id);
+        if (!report) throw new Error('Report non trovato');
+        
+        // Update the status
+        report.status = status;
+        
+        // Add a status change entry to the history if it exists
+        if (report.statusHistory) {
+            report.statusHistory.push({
+                status: status,
+                changedBy: userId,
+                changedAt: new Date(),
+                notes: `Stato cambiato a ${status}`
+            });
+        }
+        
+        // If status is "RISOLTO", also call resolveReport for additional resolution logic
+        if (status === 'RISOLTO') {
+            console.log('Status is RISOLTO, calling resolveReport...');
+            return await this.resolveReport(
+                id, 
+                userId, 
+                'Segnalazione risolta tramite cambio stato', 
+                false, 
+                'Risoluzione automatica tramite aggiornamento stato'
+            );
+        }
+        
+        return await report.save();
+    }
 }
 
 export default new ReportService();
