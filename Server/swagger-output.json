@@ -716,7 +716,7 @@
           }
         }
       },
-      "put": {
+      "patch": {
         "summary": "Aggiorna una segnalazione",
         "security": [
           {
@@ -773,7 +773,7 @@
       }
     },
     "/api/waste/reports/{id}/status": {
-      "put": {
+      "patch": {
         "summary": "Aggiorna lo stato di una segnalazione",
         "security": [
           {
@@ -882,7 +882,7 @@
           }
         }
       },
-      "put": {
+      "patch": {
         "summary": "Aggiorna un cestino",
         "security": [
           {
@@ -939,7 +939,7 @@
       }
     },
     "/api/waste/bins/{id}/status": {
-      "put": {
+      "patch": {
         "summary": "Aggiorna lo stato di un cestino",
         "security": [
           {

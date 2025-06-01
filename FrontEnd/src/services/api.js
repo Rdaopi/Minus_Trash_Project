@@ -292,7 +292,7 @@ export const binsAPI = {
     console.log('URL:', url);
     console.log('Bin ID:', binId);
     console.log('Bin Data:', binData);
-    logApiCall('PUT', url);
+    logApiCall('PATCH', url);
     
     try {
       const token = localStorage.getItem('token');
@@ -306,7 +306,7 @@ export const binsAPI = {
       console.log('Request body:', requestBody);
 
       const response = await fetch(url, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
@@ -399,6 +399,34 @@ export const binsAPI = {
     const data = await response.json();
     console.log('Successfully fetched nearby bins');
     return data;
+  },
+
+  //Updates bin status
+  async updateBinStatus(binId, status) {
+    const url = `${API_BASE_URL}/waste/bins/${binId}/status`;
+    console.log('Updating bin status:', binId, 'to', status);
+    logApiCall('PATCH', url);
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No auth token found');
+      }
+
+      const response = await fetch(url, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status })
+      });
+
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('Error updating bin status:', error);
+      throw new Error('Failed to update bin status: ' + error.message);
+    }
   }
 };
 
@@ -548,7 +576,7 @@ export const reportsAPI = {
     console.log('URL:', url);
     console.log('Report ID:', reportId);
     console.log('Report Data:', reportData);
-    logApiCall('PUT', url);
+    logApiCall('PATCH', url);
     
     try {
       const token = localStorage.getItem('token');
@@ -562,7 +590,7 @@ export const reportsAPI = {
       console.log('Request body:', requestBody);
 
       const response = await fetch(url, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
