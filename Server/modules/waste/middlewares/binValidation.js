@@ -4,7 +4,7 @@ export const validateBin = (req, res, next) => {
     const { type, capacity, location, serialNumber, manufacturer } = req.body;
 
     //Validazione del tipo di cestino
-    const validTypes = ['INDIFFERENZIATO', 'PLASTICA', 'CARTA', 'VETRO', 'ORGANICO', 'METALLO', 'ELETTRONICO'];
+    const validTypes = ['INDIFFERENZIATO', 'PLASTICA', 'CARTA', 'VETRO', 'ORGANICO', 'METALLO', 'RAEE'];
     if (!type || !validTypes.includes(type)) {
         logger.warn(`Tipo di cestino non valido: ${type}`);
         return res.status(400).json({ 

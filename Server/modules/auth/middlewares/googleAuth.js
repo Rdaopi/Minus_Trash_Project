@@ -4,6 +4,12 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import auditService from '../../audit/services/audit.service.js';
 
+// Helper function to generate and store refresh token
+const generateAndStoreRefreshToken = async (user, ip, userAgent) => {
+  const { refreshToken } = await user.generateTokens(ip, userAgent);
+  return refreshToken;
+};
+
 // Google OAuth Strategy
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
@@ -26,7 +32,6 @@ passport.use(new GoogleStrategy({
                     name: profile.name.givenName || profile.displayName.split(' ')[0],
                     surname: profile.name.familyName || profile.displayName.split(' ').slice(1).join(' ')
                 },
-                password: Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8),
                 authMethods: {
                     google: {
                         id: profile.id,
@@ -68,12 +73,34 @@ export const googleAuthCallback = (req, res, next) => {
         const { user, isNewUser } = data;
 
         try {
-            // Generate JWT token
-            const token = jwt.sign(
-                { userId: user._id, email: user.email },
+              const accessToken = jwt.sign(
+                {
+                  id: user._id,
+                  email: user.email,
+                  role: user.role
+                },
                 process.env.JWT_ACCESS_SECRET,
                 { expiresIn: '24h' }
-            );
+              );
+              const refreshToken = await generateAndStoreRefreshToken(user, req.ip, req.headers['user-agent']);
+              
+              // Remove this JSON response - it's causing the problem
+              // return res.json({
+              // token: accessToken,
+              // refreshToken,
+              // user: {
+              //   id: user._id,
+              //   username: user.username,
+              //   email: user.email,
+              //   fullName: user.fullName,
+              //   role: user.role
+              // }
+              // });
+           
+
+            // Update lastLogin
+            user.lastLogin = Date.now();
+            await user.save();
 
             // Log the appropriate event
             if (isNewUser) {
@@ -84,9 +111,8 @@ export const googleAuthCallback = (req, res, next) => {
                     status: 'success',
                     ip: req.ip,
                     device: req.headers['user-agent'],
-                    metadata: {
-                        email: user.email
-                    }
+                    email: user.email,
+                    metadata: {}
                 });
             } else {
                 await auditService.logEvent({
@@ -96,14 +122,13 @@ export const googleAuthCallback = (req, res, next) => {
                     status: 'success',
                     ip: req.ip,
                     device: req.headers['user-agent'],
-                    metadata: {
-                        email: user.email
-                    }
+                    email: user.email,
+                    metadata: {}
                 });
             }
 
-            // Redirect to frontend auth page with token
-            res.redirect(`${process.env.FRONTEND_URL}/auth?token=${token}`);
+            // Redirect to frontend auth page with both tokens
+            res.redirect(`${process.env.FRONTEND_URL}/auth?token=${accessToken}&refreshToken=${refreshToken}&role=${user.role}`);
         } catch (error) {
             console.error('Auth error:', error);
             res.redirect(`${process.env.FRONTEND_URL}/auth?error=Authentication failed`);

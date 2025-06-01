@@ -14,8 +14,8 @@
             <div v-if="error" class="error-message">
                 <i class="fas fa-exclamation-circle"></i> {{ error }}
             </div>
+            
             <form @submit.prevent="handleSubmit" class="auth-form">
-
                 <!-- Registration-only fields -->
                 <template v-if="!isLogin">
                     <div class="form-group">
@@ -72,6 +72,9 @@
                     <small v-if="!isLogin" class="password-requirements">
                         La password deve contenere almeno 8 caratteri, una lettera maiuscola e un carattere speciale
                     </small>
+                    <router-link v-if="isLogin" to="/forgot-password" class="forgot-password-link">
+                        Password dimenticata?
+                    </router-link>
                 </div>
                 <button type="submit" class="auth-button">
                     {{ isLogin ? 'Accedi' : 'Registrati' }}
@@ -92,7 +95,6 @@
                     </a>
                 </p>
             </div>
-
         </div>
     </div>
 </template>
@@ -103,6 +105,7 @@ import { authAPI } from '../services/api';
 import { useRouter } from 'vue-router';
 import Notification from '../components/Notification.vue';
 import GoogleSignIn from '../components/GoogleSignIn.vue';
+import { jwtDecode } from 'jwt-decode';
 
 export default {
     name: 'Auth',
@@ -136,8 +139,9 @@ export default {
                 ? new URLSearchParams(window.location.hash.substring(window.location.hash.indexOf('?'))) 
                 : new URLSearchParams('');
             
-            // Get token and error from either source
+            // Get token, role and error from either source
             const token = urlParams.get('token') || hashParams.get('token');
+            const role = urlParams.get('role') || hashParams.get('role');
             const error = urlParams.get('error') || hashParams.get('error');
 
             if (error) {
@@ -147,17 +151,43 @@ export default {
 
             if (token) {
                 try {
-                    // Store the token
-                    localStorage.setItem('token', token);
-                    
-                    // Decode the token to get user info
-                    const tokenParts = token.split('.');
-                    const payload = JSON.parse(atob(tokenParts[1]));
-                    
-                    // Store email like in regular login
-                    if (payload.email) {
-                        localStorage.setItem('userEmail', payload.email);
-                    }
+                      // Set auth method first
+                      localStorage.setItem('authMethod', 'google');
+
+                      // Store the token
+                      localStorage.setItem('token', token);
+
+                      // Get refresh token from URL if available
+                      const refreshToken = new URLSearchParams(window.location.search).get('refreshToken');
+                      if (refreshToken) {
+                          localStorage.setItem('refreshToken', refreshToken);
+                      }
+
+                      // Decode the token to get user info
+                      let decoded;
+                      try {
+                          decoded = jwtDecode(token); // assuming jwt-decode is available
+                          console.log('Decoded token:', decoded);
+                      } catch (e) {
+                          console.error('Failed to decode token:', e);
+                          throw new Error('Token decoding failed');
+                      }
+
+                      // Store email
+                      if (decoded.email) {
+                          localStorage.setItem('userEmail', decoded.email);
+                      }
+
+                      // First try to get role from URL parameter, then from token
+                      const userRole = role || decoded.role;
+                      if (userRole) {
+                          localStorage.setItem('userRole', userRole);
+                          console.log('Stored role:', userRole);
+                      } else {
+                          console.warn('No role found in token or URL parameters');
+                          throw new Error('Ruolo utente non trovato');
+                      }
+
 
                     showSuccessNotification('Login effettuato con successo!');
                     emit('login-success');
@@ -174,6 +204,7 @@ export default {
                         router.push('/');
                     }, 1000);
                 } catch (err) {
+                    console.error('Error during login:', err);
                     showError('Errore durante il login. Riprova più tardi.');
                 }
             }
@@ -219,21 +250,58 @@ export default {
             try {
                 error.value = '';
                 let response;
+                
                 if (isLogin.value) {
                     // Login flow
-                    response = await authAPI.login(formData.value.email, formData.value.password);
-                    if (response && response.token) {
-                        localStorage.setItem('userEmail', formData.value.email);
-                        localStorage.setItem('token', response.token);
-                        emit('login-success');
-                        showSuccessNotification('Login effettuato con successo!');
-                        // Wait for the notification to be visible before redirecting
+                    try {
+                        response = await authAPI.login(formData.value.email, formData.value.password);
+                        if (response && response.accessToken && response.refreshToken) {
+                            localStorage.setItem('userEmail', formData.value.email);
+                            localStorage.setItem('token', response.accessToken);
+                            localStorage.setItem('refreshToken', response.refreshToken);
+                            localStorage.setItem('authMethod', 'regular');
+                            
+                            // Store role if available in the response
+                            if (response.user && response.user.role) {
+                                localStorage.setItem('userRole', response.user.role);
+                                console.log('Stored role from response:', response.user.role);
+                            } else {
+                                // If role is not in response, try to decode from token
+                                try {
+                                    const decoded = jwtDecode(response.accessToken);
+                                    if (decoded && decoded.role) {
+                                        localStorage.setItem('userRole', decoded.role);
+                                        console.log('Stored role from token:', decoded.role);
+                                    } else {
+                                        console.warn('No role found in token or response');
+                                        throw new Error('Ruolo utente non trovato');
+                                    }
+                                } catch (error) {
+                                    console.error('Error handling user role:', error);
+                                    throw new Error('Errore nella gestione del ruolo utente');
+                                }
+                            }
+                            
+                            emit('login-success');
+                            showSuccessNotification('Login effettuato con successo!');
+                            // Wait for the notification to be visible before redirecting
+                            setTimeout(() => {
+                                router.push('/');
+                            }, 1000);
+                        } else {
+                            throw new Error('Token non ricevuto dal server');
+                        }
+                    } catch (loginError) {
+                        error.value = loginError.message || 'Credenziali non valide. Riprova.';
+                        notificationMessage.value = error.value;
+                        notificationType.value = 'error';
+                        showNotification.value = true;
                         setTimeout(() => {
-                            router.push('/');
-                        }, 1000);
-                    } else {
-                        throw new Error('Token non ricevuto dal server');
+                            showNotification.value = false;
+                        }, 3000);
+                        return; // Stop execution here for login errors
                     }
+                    
                 } else {
                     // Registration flow
                     const registrationData = {
@@ -245,10 +313,11 @@ export default {
                             surname: formData.value.surname
                         }
                     };
+                    
                     await authAPI.register(registrationData);
                     showSuccessNotification('Registrazione completata con successo! Effettua il login per continuare.');
                     
-                    // Clear form data
+                    // Clear form and switch to login
                     formData.value = {
                         email: '',
                         password: '',
@@ -256,20 +325,15 @@ export default {
                         name: '',
                         surname: ''
                     };
-                    
-                    // Switch to login mode after registration
-                    setTimeout(() => {
-                        isLogin.value = true;
-                    }, 1000);
+                    setTimeout(() => isLogin.value = true, 1000);
                 }
             } catch (err) {
-                error.value = err.message || 'Si è verificato un errore. Riprova più tardi.';
-                notificationMessage.value = error.value;
+                const errorMessage = err.message || 'Si è verificato un errore. Riprova più tardi.';
+                error.value = errorMessage;
+                notificationMessage.value = errorMessage;
                 notificationType.value = 'error';
                 showNotification.value = true;
-                setTimeout(() => {
-                    showNotification.value = false;
-                }, 3000);
+                setTimeout(() => showNotification.value = false, 3000);
             }
         };
 
@@ -335,7 +399,6 @@ export default {
 }
 
 .form-group label {
-
     font-weight: 500;
     color: #333;
 }
@@ -418,7 +481,6 @@ export default {
     color: #c62828;
     padding: 0.75rem;
     border-radius: 2.5rem;
-
     margin-bottom: 1rem;
     display: flex;
     align-items: center;
@@ -443,5 +505,18 @@ export default {
     padding: 0 10px;
     color: #666;
     font-size: 14px;
+}
+
+.forgot-password-link {
+    display: block;
+    text-align: right;
+    margin-top: 0.5rem;
+    color: #4CAF50;
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+.forgot-password-link:hover {
+    text-decoration: underline;
 }
 </style>

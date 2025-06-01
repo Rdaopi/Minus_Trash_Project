@@ -158,3 +158,9 @@ npm run test:coverage       # Run tests with coverage report
    - googleAuth.js
    - .env file
 
+
+# auto generate swagger-ooutput.json
+
+npm install swagger-autogen --save-dev
+remember to ignore this command at the start of server otherwise the server will restart constantly
+ modify package.json ->> "dev": "nodemon --ignore swagger-output.json index.js",
