@@ -41,7 +41,7 @@
         
         <div class="status-row">
           <span class="status-badge" :class="`status-${report.status || 'segnalato'}`">
-            {{ formatStatus(report.status) }}
+            {{ formatReportStatus(report.status) }}
           </span>
         </div>
       </div>
@@ -158,6 +158,8 @@
 
 <script setup>
 import { defineProps, defineEmits } from 'vue';
+import { useReportUtils } from '../composables/useReportUtils';
+import { useBinUtils } from '../composables/useBinUtils';
 
 const props = defineProps({
   report: {
@@ -176,132 +178,18 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'retry', 'center-on-map', 'change-status']);
 
-// Utility functions
-const getReportIcon = (type) => {
-  const typeMap = {
-    'RIFIUTI_ABBANDONATI': 'fa-trash',
-    'AREA_SPORCA': 'fa-broom',
-    'PROBLEMA_CESTINO': 'fa-trash-can',
-    'RACCOLTA_SALTATA': 'fa-clock',
-    'VANDALISMO': 'fa-hammer',
-    'SCARICO_ILLEGALE': 'fa-ban',
-    'ALTRO': 'fa-exclamation',
-    'default': 'fa-flag'
-  };
-  return typeMap[type?.toUpperCase()] || typeMap.default;
-};
+// Use utility composables
+const {
+  getReportIcon,
+  getReportColor,
+  formatReportType,
+  formatReportSubtype,
+  formatReportStatus,
+  getSeverityClass,
+  formatReportAddress
+} = useReportUtils();
 
-const getReportColor = (type) => {
-  const colorMap = {
-    'RIFIUTI_ABBANDONATI': '#e74c3c',
-    'AREA_SPORCA': '#f39c12',
-    'PROBLEMA_CESTINO': '#9b59b6',
-    'RACCOLTA_SALTATA': '#3498db',
-    'VANDALISMO': '#e67e22',
-    'SCARICO_ILLEGALE': '#c0392b',
-    'ALTRO': '#95a5a6',
-    'default': '#7f8c8d'
-  };
-  return colorMap[type?.toUpperCase()] || colorMap.default;
-};
-
-const getSeverityClass = (severity) => {
-  const severityMap = {
-    'BASSA': 'severity-low',
-    'MEDIA': 'severity-medium', 
-    'ALTA': 'severity-high',
-    'URGENTE': 'severity-urgent'
-  };
-  return severityMap[severity?.toUpperCase()] || 'severity-low';
-};
-
-const formatReportType = (type) => {
-  const typeLabels = {
-    'RIFIUTI_ABBANDONATI': 'Rifiuti Abbandonati',
-    'AREA_SPORCA': 'Area Sporca',
-    'PROBLEMA_CESTINO': 'Problema Cestino',
-    'RACCOLTA_SALTATA': 'Raccolta Saltata',
-    'VANDALISMO': 'Vandalismo',
-    'SCARICO_ILLEGALE': 'Scarico Illegale',
-    'ALTRO': 'Altro'
-  };
-  return typeLabels[type?.toUpperCase()] || type || 'Segnalazione';
-};
-
-const formatReportSubtype = (subtype) => {
-  const subtypeLabels = {
-    // Bin subtypes
-    'ROTTO': 'Rotto',
-    'PIENO': 'Pieno',
-    'MANCANTE': 'Mancante',
-    'SPORCO': 'Sporco',
-    // Waste types
-    'PLASTICA': 'Plastica',
-    'CARTA': 'Carta',
-    'VETRO': 'Vetro',
-    'ORGANICO': 'Organico',
-    'RAEE': 'RAEE',
-    'INGOMBRANTI': 'Ingombranti',
-    'INDIFFERENZIATO': 'Indifferenziato',
-    'ALTRO': 'Altro'
-  };
-  return subtypeLabels[subtype?.toUpperCase()] || subtype;
-};
-
-const formatStatus = (status) => {
-  const statusLabels = {
-    'segnalato': 'Segnalato',
-    'verificato': 'Verificato',
-    'in_corso': 'In Corso',
-    'risolto': 'Risolto',
-    'archiviato': 'Archiviato'
-  };
-  return statusLabels[status?.toLowerCase()] || status || 'Segnalato';
-};
-
-const formatAddress = (report) => {
-  if (!report) return 'Indirizzo non disponibile';
-  
-  if (report.address && typeof report.address === 'string') {
-    return report.address;
-  }
-  
-  if (report.location && report.location.address) {
-    if (typeof report.location.address === 'string') {
-      return report.location.address;
-    }
-    
-    if (typeof report.location.address === 'object') {
-      const address = report.location.address;
-      const parts = [];
-      
-      if (address.street) parts.push(address.street);
-      if (address.streetNumber) parts.push(address.streetNumber);
-      if (address.city) parts.push(address.city);
-      if (address.postalCode) parts.push(address.postalCode);
-      
-      if (parts.length > 0) {
-        return parts.join(', ');
-      }
-    }
-  }
-  
-  if (report.location?.coordinates) {
-    const [lng, lat] = report.location.coordinates;
-    return `Coordinate: ${lat?.toFixed(4)}, ${lng?.toFixed(4)}`;
-  }
-  
-  return 'Indirizzo non disponibile';
-};
-
-const formatDate = (dateString) => {
-  if (!dateString) return 'Non disponibile';
-  try {
-    return new Date(dateString).toLocaleDateString('it-IT');
-  } catch {
-    return 'Data non valida';
-  }
-};
+const { formatDate } = useBinUtils();
 
 const centerOnMap = () => {
   emit('center-on-map', props.report);
@@ -315,6 +203,9 @@ const openImageModal = (imageUrl) => {
   // Open image in a modal or new tab
   window.open(imageUrl, '_blank');
 };
+
+// Use composable functions for formatting
+const formatAddress = (report) => formatReportAddress(report);
 </script>
 
 <style scoped>

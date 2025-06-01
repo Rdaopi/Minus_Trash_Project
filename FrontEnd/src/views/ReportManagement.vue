@@ -68,9 +68,11 @@
         <div class="map-container">
           <MapComponent 
             ref="mapRef"
+            :bins="[]"
             :reports="displayedReports.length > 0 ? displayedReports : reports"
             :selected-report-id="selectedReportId"
             @report-click="handleReportClick"
+            @report-created="handleReportCreatedFromMap"
           />
         </div>
   
@@ -158,6 +160,7 @@
         <h2>Accesso Limitato</h2>
         <p>La gestione delle segnalazioni è riservata esclusivamente a:</p>
         <ul class="role-list">
+          <li><i class="fas fa-user"></i> Cittadini (solo visualizzazione)</li>
           <li><i class="fas fa-user-tie"></i> Operatori Comunali</li>
           <li><i class="fas fa-user-shield"></i> Amministratori</li>
         </ul>
@@ -184,6 +187,7 @@
   import ReportDetails from '../components/ReportDetails.vue';
   import { reportsAPI } from '../services/api';
   import { useReportDetails } from '../composables/useReportDetails';
+  import { useMessages } from '../composables/useMessages';
   
   const router = useRouter();
   
@@ -193,13 +197,12 @@
   const displayedReports = ref([]);
   const loading = ref(false);
   const error = ref(null);
-  const successMessage = ref(null);
   const mapRef = ref(null);
   const reportFormRef = ref(null);
   const reportListRef = ref(null);
   const editMode = ref(false);
   
-  // Use the report details composable
+  // Use composables
   const {
     selectedReportId,
     selectedReportDetails,
@@ -210,6 +213,8 @@
     clearSelection,
     retryLoad
   } = useReportDetails();
+  
+  const { successMessage, showSuccess } = useMessages();
   
   // User role management
   const currentUserRole = ref(localStorage.getItem('userRole'));
@@ -229,8 +234,8 @@
       return false;
     }
     
-    // Must be operator or admin
-    const authorizedRoles = ['operatore_comunale', 'amministratore'];
+    // Allow citizens to view reports (temporarily), operators and admins to manage them
+    const authorizedRoles = ['cittadino', 'operatore_comunale', 'amministratore'];
     const isAuthorized = authorizedRoles.includes(userRole);
     
     console.log('Authorized roles:', authorizedRoles);
@@ -292,7 +297,7 @@
     loadReports();
     
     // Show success message
-    showSuccessMessage(event.message);
+    showSuccess(event.message);
     
     // Clear edit mode and selection if this was an update/delete
     if (event.type === 'update') {
@@ -317,15 +322,6 @@
   function handleFormLoading(isLoading) {
     console.log('Form loading state:', isLoading);
     loading.value = isLoading;
-  }
-  
-  //Display success message with auto-hide functionality
-  function showSuccessMessage(message) {
-    successMessage.value = message;
-    //Auto-hide success message after 5 seconds
-    setTimeout(() => {
-      successMessage.value = null;
-    }, 5000);
   }
   
   //Handle form reset button click
@@ -470,7 +466,7 @@
       reportFormRef.value?.resetForm();
       
       //Show success message
-      showSuccessMessage('Segnalazione eliminata con successo!');
+      showSuccess('Segnalazione eliminata con successo!');
       
     } catch (err) {
       console.error('Errore durante l\'eliminazione della segnalazione:', err);
@@ -500,7 +496,7 @@
     if (!isAuthorized.value) {
       console.log('❌ User is not authorized for report management');
       console.log('Current role:', userRole);
-      console.log('Required roles: operatore_comunale, amministratore');
+      console.log('Required roles: cittadino, operatore_comunale, amministratore');
       return;
     }
     
@@ -530,6 +526,17 @@
     console.log('Changing status for report:', report);
     // Implement the logic to change status for the selected report
     alert(`Cambio stato per segnalazione ${report.id || report._id} - Funzionalità da implementare`);
+  }
+  
+  // Handle report created from map
+  function handleReportCreatedFromMap(report) {
+    console.log('Report created from map:', report);
+    
+    // Show success message using the existing success message system
+    showSuccess('Segnalazione creata con successo dalla mappa! Il problema segnalato verrà preso in carico dal nostro team.');
+    
+    // Reload reports to include the new one
+    loadReports();
   }
   </script>
   

@@ -71,6 +71,7 @@
           :bins="displayedBins.length > 0 ? displayedBins : bins"
           :selected-bin-id="selectedBinId"
           @bin-click="handleBinClick"
+          @report-created="handleReportCreated"
         />
       </div>
 
@@ -128,7 +129,7 @@
                   @close="clearSelectedBin"
                   @retry="retryLoad"
                   @center-on-map="centerOnSelectedBin"
-                  @report-issue="handleReportIssue"
+                  @report-created="handleReportCreatedFromBin"
                 />
               </div>
               
@@ -165,6 +166,7 @@ import MapComponent from '../components/MapComponent.vue';
 import BinDetails from '../components/BinDetails.vue';
 import { binsAPI } from '../services/api';
 import { useBinDetails } from '../composables/useBinDetails';
+import { useMessages } from '../composables/useMessages';
 
 //Component state management
 const showBinList = ref(false);
@@ -172,13 +174,12 @@ const bins = ref([]);
 const displayedBins = ref([]);
 const loading = ref(false);
 const error = ref(null);
-const successMessage = ref(null);
 const mapRef = ref(null);
 const binFormRef = ref(null);
 const binListRef = ref(null);
 const editMode = ref(false);
 
-// Use the bin details composable
+// Use composables
 const {
   selectedBinId,
   selectedBinDetails,
@@ -189,6 +190,8 @@ const {
   clearSelection,
   retryLoad
 } = useBinDetails();
+
+const { successMessage, showSuccess, handleReportSuccess } = useMessages();
 
 //Check if current user has operator or admin privileges
 const isOperator = computed(() => {
@@ -235,8 +238,8 @@ function handleFormSuccess(event) {
   // Reload bins list
   loadBins();
   
-  // Show success message
-  showSuccessMessage(event.message);
+  // Show success message using composable
+  showSuccess(event.message);
   
   // Clear edit mode and selection if this was an update/delete
   if (event.type === 'update') {
@@ -261,15 +264,6 @@ function handleFormCancel() {
 function handleFormLoading(isLoading) {
   console.log('Form loading state:', isLoading);
   loading.value = isLoading;
-}
-
-//Display success message with auto-hide functionality
-function showSuccessMessage(message) {
-  successMessage.value = message;
-  //Auto-hide success message after 5 seconds
-  setTimeout(() => {
-    successMessage.value = null;
-  }, 5000);
 }
 
 //Handle form reset button click
@@ -399,11 +393,26 @@ function centerOnSelectedBin(bin) {
   }
 }
 
-// Handle report issue
-function handleReportIssue(bin) {
-  console.log('Reporting issue for bin:', bin);
-  // Implement the logic to report an issue for the selected bin
-  alert(`Segnalazione problema per cestino ${bin.id || bin._id} - Funzionalità da implementare`);
+// Handle report created event from MapComponent
+function handleReportCreated(report) {
+  console.log('Report created successfully:', report);
+  
+  // Show success message
+  showSuccess('Segnalazione inviata con successo! Il problema segnalato verrà preso in carico dal nostro team.');
+  
+  // Optionally reload bins data to reflect any changes
+  // loadBins();
+}
+
+// Handle report created event from BinDetails component
+function handleReportCreatedFromBin(report) {
+  console.log('Report created from bin details:', report);
+  
+  // Show success message
+  showSuccess('Segnalazione inviata con successo! Il problema segnalato verrà preso in carico dal nostro team.');
+  
+  // Optionally reload bins data to reflect any changes
+  // loadBins();
 }
 
 // Handle update bin button click
@@ -464,8 +473,8 @@ async function handleDeleteBin() {
     //Reset form
     binFormRef.value?.resetForm();
     
-    //Show success message
-    showSuccessMessage('Cestino eliminato con successo!');
+    //Show success message using composable
+    showSuccess('Cestino eliminato con successo!');
     
   } catch (err) {
     console.error('Errore durante l\'eliminazione del cestino:', err);

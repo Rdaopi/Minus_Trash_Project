@@ -437,7 +437,7 @@ defineExpose({
         <label for="relatedBin">Cestino interessato:</label>
         <input 
           id="relatedBin" 
-          v-model="reportForm.relatedBin" 
+          v-model="reportForm.relatedBin.serialNumber" 
           type="text" 
           placeholder="ID o codice del cestino (se noto)"
           :disabled="loading"

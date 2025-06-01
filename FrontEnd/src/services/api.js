@@ -8,11 +8,47 @@ function logApiCall(method, url) {
 
 //Helper to handle API responses
 async function handleResponse(response) {
+  // Check content type to see if it's JSON
+  const contentType = response.headers.get('content-type');
+  console.log('Response status:', response.status);
+  console.log('Response content-type:', contentType);
+  console.log('Response URL:', response.url);
+  
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `HTTP error ${response.status}`);
+    // Try to get error details, but handle HTML responses
+    let errorMessage = `HTTP error ${response.status}`;
+    try {
+      if (contentType && contentType.includes('application/json')) {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+      } else {
+        // It's likely an HTML error page
+        const errorText = await response.text();
+        console.log('HTML error response:', errorText.substring(0, 500) + '...');
+        errorMessage = `Server returned HTML error page (${response.status})`;
+      }
+    } catch (parseError) {
+      console.error('Error parsing error response:', parseError);
+    }
+    throw new Error(errorMessage);
   }
-  return await response.json();
+  
+  // Even if response is ok, check if it's actually JSON
+  if (!contentType || !contentType.includes('application/json')) {
+    const responseText = await response.text();
+    console.error('Expected JSON but received:', contentType);
+    console.error('Response text:', responseText.substring(0, 500) + '...');
+    throw new Error(`Server returned ${contentType || 'unknown content type'} instead of JSON. This usually means the API endpoint doesn't exist or there's a server configuration issue.`);
+  }
+  
+  try {
+    return await response.json();
+  } catch (jsonError) {
+    console.error('JSON parsing error:', jsonError);
+    const responseText = await response.text();
+    console.error('Raw response that failed to parse:', responseText.substring(0, 500) + '...');
+    throw new Error('Invalid JSON response from server');
+  }
 }
 
 //Get base headers for requests
@@ -370,7 +406,7 @@ export const binsAPI = {
 export const reportsAPI = {
   //Creates a new report
   async createReport(reportData) {
-    const url = `${API_BASE_URL}/reports`;
+    const url = `${API_BASE_URL}/waste/reports`;
     logApiCall('POST', url);
     
     try {
@@ -397,7 +433,7 @@ export const reportsAPI = {
 
   //Fetches all reports
   async getAllReports() {
-    const url = `${API_BASE_URL}/reports`;
+    const url = `${API_BASE_URL}/waste/reports`;
     logApiCall('GET', url);
     
     try {
@@ -457,7 +493,7 @@ export const reportsAPI = {
 
   //Fetches a single report by ID
   async getReportById(reportId) {
-    const url = `${API_BASE_URL}/reports/${reportId}`;
+    const url = `${API_BASE_URL}/waste/reports/${reportId}`;
     logApiCall('GET', url);
     
     try {
@@ -507,7 +543,7 @@ export const reportsAPI = {
 
   //Updates an existing report
   async updateReport(reportId, reportData) {
-    const url = `${API_BASE_URL}/reports/${reportId}`;
+    const url = `${API_BASE_URL}/waste/reports/${reportId}`;
     console.log('=== API UPDATE REPORT DEBUG ===');
     console.log('URL:', url);
     console.log('Report ID:', reportId);
@@ -557,7 +593,7 @@ export const reportsAPI = {
 
   //Removes a report from the system
   async deleteReport(reportId) {
-    const url = `${API_BASE_URL}/reports/${reportId}`;
+    const url = `${API_BASE_URL}/waste/reports/${reportId}`;
     logApiCall('DELETE', url);
     
     try {
@@ -585,7 +621,7 @@ export const reportsAPI = {
     const upperType = type.toUpperCase();
     console.log('Fetching reports by type:', upperType);
     
-    const url = `${API_BASE_URL}/reports/type/${upperType}`;
+    const url = `${API_BASE_URL}/waste/reports/type/${upperType}`;
     logApiCall('GET', url);
     
     try {
@@ -612,7 +648,7 @@ export const reportsAPI = {
     const lowerStatus = status.toLowerCase();
     console.log('Fetching reports by status:', lowerStatus);
     
-    const url = `${API_BASE_URL}/reports/status/${lowerStatus}`;
+    const url = `${API_BASE_URL}/waste/reports/status/${lowerStatus}`;
     logApiCall('GET', url);
     
     try {
@@ -639,7 +675,7 @@ export const reportsAPI = {
     const upperSeverity = severity.toUpperCase();
     console.log('Fetching reports by severity:', upperSeverity);
     
-    const url = `${API_BASE_URL}/reports/severity/${upperSeverity}`;
+    const url = `${API_BASE_URL}/waste/reports/severity/${upperSeverity}`;
     logApiCall('GET', url);
     
     try {
@@ -665,7 +701,7 @@ export const reportsAPI = {
   async getNearbyReports(latitude, longitude, radius = 1000) {
     console.log(`Finding reports near [${latitude}, ${longitude}]`);
     
-    const url = `${API_BASE_URL}/reports/area?lat=${latitude}&lng=${longitude}&radius=${radius}`;
+    const url = `${API_BASE_URL}/waste/reports/area?lat=${latitude}&lng=${longitude}&radius=${radius}`;
     logApiCall('GET', url);
     
     try {
@@ -689,7 +725,7 @@ export const reportsAPI = {
 
   //Updates report status
   async updateReportStatus(reportId, status) {
-    const url = `${API_BASE_URL}/reports/${reportId}/status`;
+    const url = `${API_BASE_URL}/waste/reports/${reportId}/status`;
     console.log('Updating report status:', reportId, 'to', status);
     logApiCall('PATCH', url);
     

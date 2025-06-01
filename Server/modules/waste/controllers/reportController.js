@@ -156,22 +156,62 @@ export const updateReport = async (req, res, next) => {
 //Eliminazione segnalazione
 export const deleteReport = async (req, res, next) => {
     try {
+        console.log('=== DELETE REPORT DEBUG ===');
+        console.log('Report ID:', req.params.id);
+        console.log('User ID:', req.user._id);
+        console.log('User role:', req.user.role);
+        
         const report = await reportService.getReportById(req.params.id);
         if (!report) {
+            console.log('ERROR: Report not found');
             return res.status(404).json({ error: 'Segnalazione non trovata' });
         }
         
-        if (report.reportedBy.toString() !== req.user._id.toString() && 
-            !req.user.roles?.includes('admin')) {
+        console.log('Report found:', {
+            id: report._id,
+            reportedBy: report.reportedBy,
+            status: report.status
+        });
+        
+        // Allow deletion if:
+        // 1. User is the one who created the report
+        // 2. User is an administrator
+        // 3. User is a municipal operator (operatore_comunale)
+        const isReportOwner = report.reportedBy && report.reportedBy.toString() === req.user._id.toString();
+        const isAdmin = req.user.role === 'amministratore';
+        const isOperator = req.user.role === 'operatore_comunale';
+        
+        console.log('Authorization check:', {
+            isReportOwner,
+            isAdmin,
+            isOperator,
+            reportedByType: typeof report.reportedBy,
+            reportedByValue: report.reportedBy
+        });
+        
+        if (!isReportOwner && !isAdmin && !isOperator) {
+            console.log('ERROR: Not authorized');
             return res.status(403).json({ error: 'Non autorizzato' });
         }
         
+        console.log('Authorization passed, deleting report...');
         await reportService.deleteReport(req.params.id);
-        logger.info(`Segnalazione ${req.params.id} eliminata`);
+        console.log('Report deleted successfully');
+        
+        logger.info(`Segnalazione ${req.params.id} eliminata da utente ${req.user._id} (${req.user.role})`);
         res.json({ message: 'Segnalazione eliminata con successo' });
     } catch (error) {
+        console.error('=== DELETE REPORT ERROR ===');
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
         logger.error(`Errore nell'eliminazione della segnalazione: ${error.message}`);
-        next(error);
+        
+        // Return specific error in development, generic in production
+        if (process.env.NODE_ENV !== 'production') {
+            res.status(500).json({ error: error.message, stack: error.stack });
+        } else {
+            res.status(500).json({ error: 'Errore interno' });
+        }
     }
 };
 
