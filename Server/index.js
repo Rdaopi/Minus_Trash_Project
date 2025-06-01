@@ -8,11 +8,6 @@ import wasteRoutes from './modules/waste/routes.js';
 import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './config/swagger.js'
 import passport from 'passport'
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Inizia connessione al database
 connectDB().catch(err => {
@@ -59,25 +54,6 @@ app.use(logRequest);
 app.get('/test-next', (req, res) => {
   console.log("TEST-NEXT typeof next:", typeof undefined);
   res.json({ ok: true });
-});
-
-// Middleware per gestire il routing lato client
-// Comment out these lines if you don't want to serve the frontend
-// app.use(express.static(path.join(__dirname, '../FrontEnd/dist')));
-// app.get('*', (req, res) => {
-//   res.sendFile(path.join(__dirname, '../FrontEnd/dist', 'index.html'));
-// });
-
-// Add a simple API status route
-app.get('/', (req, res) => {
-  res.json({ 
-    status: 'API running', 
-    endpoints: {
-      auth: '/api/auth',
-      waste: '/api/waste',
-      docs: '/api-docs'
-    }
-  });
 });
 
 //Error Handling

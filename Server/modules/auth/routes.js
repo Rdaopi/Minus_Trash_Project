@@ -1,25 +1,11 @@
 import express from 'express';
 import { basicAuth } from "./middlewares/basicAuth.js";
-import { 
-  login, 
-  register, 
-  changePassword, 
-  profile_update, 
-  refreshTokenHandler, 
-  logout,
-  getAllUsers,
-  deleteUserById,
-  updateUserById
-} from './controllers/userController.js';
-
+import { login, register, changePassword, profile_update, user_delete } from './controllers/userController.js';
 import { auditOnSuccess } from "./middlewares/withAudit.js";
 import { googleAuth, googleAuthCallback } from "./middlewares/googleAuth.js";
-import { jwtAuth } from "./middlewares/jwtAuth.js";
 import User from "./models/User.js";
-import Token from "./models/Token.js";
 import bcrypt from "bcryptjs";
-import { logger } from '../../core/utils/logger.js';
-import { forgotPassword, resetPassword } from './controllers/passwordController.js';
+//import { jwtAuth } from "./middlewares/jwtAuth.js";
 
 const router = express.Router()
 
@@ -244,7 +230,7 @@ router.get('/googleOAuth/callback', googleAuthCallback);
 
 //Route Protette da JWT
 //Da implementare con il JWT, attualmente richiede autenticazione base
-router.post('/profile_update', jwtAuth, profile_update);
+router.post('/profile_update', basicAuth, login /*jwtAuth*/, profile_update);
 /**
  * @swagger
  * /api/auth/profile_update:
@@ -274,7 +260,7 @@ router.post('/profile_update', jwtAuth, profile_update);
  *         description: Profilo aggiornato con successo
  */
 
-router.post('/change_password', jwtAuth, changePassword);
+router.post('/change_password', basicAuth, login /*jwtAuth*/, changePassword);
 /**
  * @swagger
  * /api/auth/change_password:
@@ -304,128 +290,20 @@ router.post('/change_password', jwtAuth, changePassword);
  *         description: Errore nel cambio password
  */
 
-
+router.delete('/user_delete', basicAuth, login /*jwtAuth*/, user_delete);
 /**
  * @swagger
- * /api/auth/users:
- *   get:
- *     summary: Ottieni tutti gli utenti (Solo amministratore)
- *     tags: [Auth]
- *     security:
- *       - BearerAuth: []
- *     responses:
- *       200:
- *         description: Lista di tutti gli utenti recuperata con successo
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/User'
- *       401:
- *         description: Non autorizzato - Token mancante o non valido
- *       403:
- *         description: Vietato - L'utente non ha privilegi di amministratore
- * 
- *   post:
- *     summary: Crea un nuovo utente (Solo amministratore)
- *     tags: [Auth]
- *     security:
- *       - BearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/User'
- *     responses:
- *       201:
- *         description: Utente creato con successo
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/User'
- *       400:
- *         description: Dati non validi
- *       401:
- *         description: Non autorizzato - Token mancante o non valido
- *       403:
- *         description: Vietato - L'utente non ha privilegi di amministratore
- */
-
-// Route per il refresh token
-router.post('/refresh-token', refreshTokenHandler);
-
-// Add logout handler to the router
-router.post('/logout', jwtAuth, logout);
-
-// Password Reset Routes
-router.post('/forgot-password', forgotPassword);
-router.post('/reset-password', resetPassword);
-/**
- * @swagger
- * /api/auth/users/{userId}:
- *   put:
- *     summary: Aggiorna un utente tramite ID (Solo amministratore)
- *     tags: [Auth]
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *         description: L'ID dell'utente da aggiornare
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/User'
- *     responses:
- *       200:
- *         description: Utente aggiornato con successo
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/User'
- *       400:
- *         description: Dati non validi
- *       401:
- *         description: Non autorizzato - Token mancante o non valido
- *       403:
- *         description: Vietato - L'utente non ha privilegi di amministratore
- *       404:
- *         description: Utente non trovato
- * 
+ * /api/auth/user_delete:
  *   delete:
- *     summary: Elimina un utente tramite ID (Solo amministratore)
+ *     summary: Elimina account utente
  *     tags: [Auth]
  *     security:
  *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *         description: L'ID dell'utente da eliminare
  *     responses:
  *       200:
- *         description: Utente eliminato con successo
- *       401:
- *         description: Non autorizzato - Token mancante o non valido
- *       403:
- *         description: Vietato - L'utente non ha privilegi di amministratore
- *       404:
- *         description: Utente non trovato
+ *         description: Account eliminato con successo
+ *       400:
+ *         description: Errore nell'eliminazione dell'account
  */
-
-// Admin routes for user management
-router.get('/users', jwtAuth, getAllUsers);
-router.post('/users', jwtAuth, register);
-router.put('/users/:userId', jwtAuth, updateUserById);
-router.delete('/users/:userId', jwtAuth, deleteUserById);
 
 export default router;

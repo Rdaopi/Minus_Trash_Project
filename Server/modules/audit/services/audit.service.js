@@ -2,37 +2,6 @@
 import AuditLog from '../models/AuditLog.js';
 import { logger } from '../../../core/utils/logger.js';
 
-// Utility function to create standardized audit log data
-const createAuditLogData = ({
-  action,
-  user,
-  method,
-  ip,
-  device,
-  email,
-  status = 'success',
-  metadata = {},
-  initiator = null
-}) => {
-  const logData = {
-    action,
-    status,
-    ip: ip || 'unknown',
-    device: device || 'unknown',
-    method,
-    email,
-    metadata: {
-      ...metadata,
-      timestamp: new Date()
-    }
-  };
-
-  if (user) logData.user = user;
-  if (initiator) logData.initiator = initiator;
-
-  return logData;
-};
-
 const auditService = {
   /**
    * Registra un evento di audit completo
@@ -45,7 +14,6 @@ const auditService = {
    * @param {Object} [params.metadata] - Dettagli aggiuntivi
    * @param {Boolean} [params.success=true] - Esito dell'operazione
    * @param {String} [params.method] - Metodo utilizzato per l'operazione
-   * @param {String} [params.email] - Email dell'utente coinvolto nell'azione
    */
   logEvent: async ({
     action,
@@ -55,21 +23,24 @@ const auditService = {
     device,
     metadata = {},
     success = true,
-    method,
-    email
+    method
   }) => {
     try {
-      const logData = createAuditLogData({
+      const logData = {
         action,
-        user,
-        initiator,
+        status: success ? 'success' : 'failed',
         ip,
         device,
         method,
-        email,
-        status: success ? 'success' : 'failed',
-        metadata
-      });
+        metadata: {
+          ...metadata,
+          timestamp: new Date() // Data dell'evento
+        }
+      };
+
+      // Assegnazione condizionale dei campi
+      if (user) logData.user = user;
+      if (initiator) logData.initiator = initiator;
 
       // Controllo consistenza per azioni amministrative
       if (action === 'user_delete' && !initiator) {
@@ -81,8 +52,7 @@ const auditService = {
       logger.info(`[AUDIT] Evento registrato: ${action}`, {
         logId: logEntry._id,
         user: user?.toString(),
-        initiator: initiator?.toString(),
-        email: email
+        initiator: initiator?.toString()
       });
 
       return logEntry;
@@ -91,8 +61,7 @@ const auditService = {
         errorStack: error.stack,
         action,
         user,
-        initiator,
-        email
+        initiator
       });
       throw new Error(`Errore registrazione audit: ${error.message}`);
     }
@@ -105,37 +74,32 @@ const auditService = {
    * @param {Object} context - Contesto della richiesta
    * @param {String} context.ip - Indirizzo IP
    * @param {String} context.device - Dispositivo/User Agent
-   * @param {String} context.identifier - Email o username dell'utente
    */
   logFailedAttempt: async (action, error, context) => {
     try {
         const method = context.identifier.includes('@') ? 'email' : 'username';
   
-        const logEntry = await AuditLog.create({
+        await AuditLog.create({
             action: `failed_${action}`,
             method,
             status: 'failed',
-            email: context.identifier,
             metadata: {
                 identifier: context.identifier,
-                error: error.message,
-                timestamp: new Date()
+                error: error.message
             },
             ip: context.ip,
             device: context.device
-        });
+      });
 
       logger.warn(`[AUDIT] Tentativo fallito registrato: ${action}`, {
-        email: context.identifier,
-        error: error.message,
         logId: logEntry._id,
+        user: context.user?.toString()
       });
 
     } catch (loggingError) {
       logger.error(`[AUDIT] Fallito log tentativo fallito: ${loggingError.message}`, {
         originalError: error.message,
-        action,
-        email: context.identifier
+        action
       });
     }
   },

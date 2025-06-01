@@ -280,7 +280,8 @@ router.get('/reports/urgent', jwtAuth, reportController.getUrgentReports);//GET 
  */
 router.route('/bins')
     .get(binController.getAllBins)//GET /bins - Lista tutti i cestini
-    .post(jwtAuth, validateBin, binController.createBin);//POST /bins - Crea nuovo cestino
+    .post(/*jwtAuth, */validateBin, binController.createBin);//POST /bins - Crea nuovo cestino
+    // TODO: Add jwtAuth to the post route
 
 //Bin Filters
 router.get('/bins/area', binController.getBinsInArea);//GET /bins/area?lat=x&lng=y - Cestini in area
