@@ -37,6 +37,14 @@ const routes = [
     component: () => import('../views/Map.vue') // Pagina della mappa interattiva
   },
   {
+    path: '/messaggi',
+    name: 'Messaggi',
+    component: () => import('../views/Messaggi.vue'),
+    meta: {
+      requiresAuth: true
+    }
+  },
+  {
     path: '/auth',
     name: 'Auth',
     component: () => import('../views/Auth.vue') // Pagina login/registrazione

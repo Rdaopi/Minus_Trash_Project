@@ -3,9 +3,14 @@
     <div v-if="isAdmin" class="container">
       <div class="header">
         <h1>Gestione Account</h1>
-        <button class="add-user-btn" @click="showAddUserModal = true">
-          <i class="fas fa-plus"></i> Nuovo Account
-        </button>
+        <div class="header-buttons">
+          <button class="send-message-btn" @click="showMessageModal = true">
+            <i class="fas fa-envelope"></i> Invia Messaggio
+          </button>
+          <button class="add-user-btn" @click="showAddUserModal = true">
+            <i class="fas fa-plus"></i> Nuovo Account
+          </button>
+        </div>
       </div>
 
       <!-- Success/Error Messages -->
@@ -163,6 +168,59 @@
           </div>
         </div>
       </div>
+
+      <!-- Send Message Modal -->
+      <div v-if="showMessageModal" class="modal">
+        <div class="modal-content message-modal">
+          <h2>Invia Messaggio</h2>
+          <form @submit.prevent="handleMessageSubmit">
+            <div class="form-group">
+              <label for="message">Messaggio</label>
+              <textarea
+                id="message"
+                v-model="messageForm.content"
+                required
+                rows="4"
+                placeholder="Scrivi il tuo messaggio..."
+                class="message-textarea"
+              ></textarea>
+            </div>
+            
+            <div class="users-list">
+              <h3>Seleziona i destinatari</h3>
+              <div class="select-all">
+                <label>
+                  <input
+                    type="checkbox"
+                    v-model="messageForm.selectAll"
+                    @change="toggleAllUsers"
+                  >
+                  Seleziona tutti
+                </label>
+              </div>
+              <div class="users-scroll">
+                <div v-for="user in users" :key="user._id" class="user-checkbox">
+                  <label>
+                    <input
+                      type="checkbox"
+                      v-model="messageForm.selectedUsers"
+                      :value="user._id"
+                    >
+                    {{ user.email }} ({{ translateRole(user.role) }})
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div class="modal-actions">
+              <button type="button" class="cancel-btn" @click="closeMessageModal">Annulla</button>
+              <button type="submit" class="submit-btn" :disabled="!messageForm.selectedUsers.length">
+                Invia Messaggio
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
     <div v-else class="unauthorized">
       <i class="fas fa-lock"></i>
@@ -182,6 +240,7 @@ const users = ref([]);
 const showAddUserModal = ref(false);
 const showEditUserModal = ref(false);
 const showDeleteModal = ref(false);
+const showMessageModal = ref(false);
 const userToDelete = ref(null);
 const successMessage = ref('');
 const errorMessage = ref('');
@@ -196,6 +255,12 @@ const userForm = ref({
     name: '',
     surname: ''
   }
+});
+
+const messageForm = ref({
+  content: '',
+  selectAll: false,
+  selectedUsers: []
 });
 
 // Check if user is admin
@@ -401,6 +466,53 @@ const getCurrentUserId = computed(() => {
 function isCurrentUser(user) {
   return user._id === getCurrentUserId.value;
 }
+
+// Handle message submission
+async function handleMessageSubmit() {
+  try {
+    const response = await fetch('/api/auth/messages/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({
+        content: messageForm.value.content,
+        recipients: messageForm.value.selectedUsers
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to send message');
+    }
+
+    successMessage.value = 'Messaggio inviato con successo';
+    closeMessageModal();
+  } catch (error) {
+    console.error('Error sending message:', error);
+    errorMessage.value = error.message || 'Errore nell\'invio del messaggio';
+  }
+}
+
+// Close message modal
+function closeMessageModal() {
+  showMessageModal.value = false;
+  messageForm.value = {
+    content: '',
+    selectAll: false,
+    selectedUsers: []
+  };
+}
+
+// Toggle all users
+function toggleAllUsers() {
+  if (messageForm.value.selectAll) {
+    messageForm.value.selectedUsers = users.value.map(user => user._id);
+  } else {
+    messageForm.value.selectedUsers = [];
+  }
+}
 </script>
 
 <style scoped>
@@ -422,7 +534,12 @@ function isCurrentUser(user) {
   margin-bottom: 2rem;
 }
 
-.add-user-btn {
+.header-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.send-message-btn, .add-user-btn {
   background-color: #4CAF50;
   color: white;
   border: none;
@@ -435,7 +552,7 @@ function isCurrentUser(user) {
   transition: background-color 0.2s;
 }
 
-.add-user-btn:hover {
+.send-message-btn:hover, .add-user-btn:hover {
   background-color: #45a049;
 }
 
@@ -762,5 +879,47 @@ input:focus, select:focus {
   font-size: 12px;
   white-space: nowrap;
   z-index: 10;
+}
+
+.message-modal {
+  max-width: 800px;
+}
+
+.message-textarea {
+  width: 100%;
+  padding: 0.8rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background-color: #fff;
+  margin-bottom: 1rem;
+}
+
+.users-list {
+  margin-bottom: 1rem;
+}
+
+.select-all {
+  margin-bottom: 0.5rem;
+}
+
+.users-scroll {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.user-checkbox {
+  margin-bottom: 0.5rem;
+}
+
+.user-checkbox label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.user-checkbox input[type="checkbox"] {
+  width: auto;
+  margin-right: 0.5rem;
 }
 </style> 
