@@ -68,7 +68,7 @@ const handleResponse = async (response, originalRequest, isPublic = false) => {
         statusText: response.statusText,
         data
       });
-      throw new Error(data.error || 'Something went wrong');
+      throw new Error(data.error || data.message || 'Something went wrong');
     }
     return data;
   } catch (error) {

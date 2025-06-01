@@ -18,6 +18,14 @@ export const forgotPassword = async (req, res) => {
             });
         }
 
+        // Block Google-only users from requesting password reset
+        if (user.authMethods?.google?.enabled && !user.authMethods?.local) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Questo account utilizza l’accesso con Google. Per modificare la password, usa le impostazioni del tuo account Google.'
+            });
+        }
+
         // Generate reset token
         const resetToken = user.createPasswordResetToken();
         await user.save({ validateBeforeSave: false });
@@ -68,6 +76,14 @@ export const resetPassword = async (req, res) => {
             return res.status(400).json({
                 status: 'error',
                 message: 'Token non valido o scaduto'
+            });
+        }
+
+        // Block Google-only users from resetting password
+        if (user.authMethods?.google?.enabled && !user.authMethods?.local) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Questo account utilizza l’accesso con Google. Per modificare la password, usa le impostazioni del tuo account Google.'
             });
         }
 
