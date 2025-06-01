@@ -5,6 +5,7 @@ import cors from 'cors';
 import { logger, logRequest } from './core/utils/logger.js';
 import authRoutes from './modules/auth/routes.js';
 import wasteRoutes from './modules/waste/routes.js';
+import messageRoutes from './modules/message/message.routes.js';
 import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './config/swagger.js'
 import passport from 'passport'
@@ -46,6 +47,8 @@ app.use("/api/auth", authRoutes);//Routes per l'autenticazione
 console.log('Auth routes registered at /api/auth');
 app.use("/api/waste", wasteRoutes);//Routes per waste (parte principale)
 console.log('Waste routes registered at /api/waste');
+app.use("/api/auth/messages", messageRoutes);//Routes per i messaggi
+console.log('Message routes registered at /api/auth/messages');
 
 //Documentazione Swagge
 app.use('/api-docs', 
@@ -62,9 +65,22 @@ app.get('/test-next', (req, res) => {
 });
 
 // Middleware per gestire il routing lato client
-app.use(express.static(path.join(__dirname, '../FrontEnd/dist')));
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../FrontEnd/dist', 'index.html'));
+// Comment out these lines if you don't want to serve the frontend
+// app.use(express.static(path.join(__dirname, '../FrontEnd/dist')));
+// app.get('*', (req, res) => {
+//   res.sendFile(path.join(__dirname, '../FrontEnd/dist', 'index.html'));
+// });
+
+// Add a simple API status route
+app.get('/', (req, res) => {
+  res.json({ 
+    status: 'API running', 
+    endpoints: {
+      auth: '/api/auth',
+      waste: '/api/waste',
+      docs: '/api-docs'
+    }
+  });
 });
 
 //Error Handling

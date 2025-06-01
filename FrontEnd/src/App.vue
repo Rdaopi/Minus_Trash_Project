@@ -8,6 +8,10 @@
         <router-link to="/" class="nav-link">
           <i class="fas fa-home"></i> Home
         </router-link>
+        <router-link to="/messaggi" class="nav-link" v-if="isLoggedIn">
+          <i class="fas fa-envelope"></i> Messaggi
+          <span v-if="unreadCount > 0" class="notification-badge">{{ unreadCount }}</span>
+        </router-link>
         <router-link to="/map" class="nav-link">
           <i class="fas fa-map-marker-alt"></i> Mappa
         </router-link>
@@ -42,34 +46,127 @@
 
 <script setup>
 import { RouterView } from 'vue-router'
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
-const isLoggedIn = ref(!!localStorage.getItem('token'))
+const isLoggedIn = ref(false)
+const unreadCount = ref(0)
 
-// Update isLoggedIn when localStorage changes (e.g., after login/logout)
+// Function to check token validity and update login state
+const checkTokenValidity = () => {
+  const token = localStorage.getItem('token');
+  const refreshToken = localStorage.getItem('refreshToken');
+  
+  if (!token) {
+    isLoggedIn.value = false;
+    return;
+  }
+
+  try {
+    const tokenData = JSON.parse(atob(token.split('.')[1]));
+    const expirationTime = tokenData.exp * 1000;
+    const currentTime = Date.now();
+    
+    if (currentTime >= expirationTime) {
+      // Token is expired, check refresh token
+      if (refreshToken) {
+        isLoggedIn.value = true; // Keep logged in while we have refresh token
+      } else {
+        clearAuthData();
+        isLoggedIn.value = false;
+      }
+    } else {
+      // Token is still valid
+      isLoggedIn.value = true;
+    }
+  } catch (error) {
+    console.error('Error checking token validity:', error);
+    if (refreshToken) {
+      isLoggedIn.value = true; // Keep logged in if we have refresh token
+    } else {
+      // Check if token is still valid despite parse error
+      isLoggedIn.value = !!token;
+    }
+  }
+}
+
+// Clear auth data helper
+const clearAuthData = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('userEmail');
+  localStorage.removeItem('authMethod');
+  isLoggedIn.value = false;
+}
+
+// Update isLoggedIn when localStorage changes
 window.addEventListener('storage', () => {
-  isLoggedIn.value = !!localStorage.getItem('token')
+  checkTokenValidity();
 })
 
 // Function to update auth state
 const updateAuthState = () => {
-  isLoggedIn.value = !!localStorage.getItem('token')
+  checkTokenValidity();
+  if (isLoggedIn.value) {
+    fetchUnreadCount();
+  }
 }
 
 // Watch for route changes
 watch(route, () => {
-  updateAuthState()
+  updateAuthState();
+  if (route.path === '/messaggi') {
+    fetchUnreadCount();
+  }
 })
 
 // Check on mount
 onMounted(() => {
-  updateAuthState()
+  updateAuthState();
+  if (isLoggedIn.value) {
+    fetchUnreadCount();
+  }
 })
 
-// Check periodically for token
-setInterval(updateAuthState, 1000)
+// Check periodically for token expiration
+let pollInterval;
+onMounted(() => {
+  pollInterval = setInterval(() => {
+    if (isLoggedIn.value) {
+      fetchUnreadCount();
+    }
+  }, 30000); // Check every 30 seconds
+})
+
+onUnmounted(() => {
+  if (pollInterval) {
+    clearInterval(pollInterval);
+  }
+})
+
+// Function to fetch unread message count
+const fetchUnreadCount = async () => {
+  if (!isLoggedIn.value) {
+    unreadCount.value = 0;
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/auth/messages/unread/count', {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      unreadCount.value = data.count;
+    }
+  } catch (error) {
+    console.error('Error fetching unread count:', error);
+  }
+};
 </script>
 
 <style>
@@ -218,5 +315,30 @@ body {
   max-width: 1280px;
   margin: 2rem auto;
   box-shadow: 0 5px 20px rgba(0, 212, 255, 0.08);
+}
+
+/* Notification badge */
+.notification-badge {
+  position: absolute;
+  top: 0px;
+  
+  right: 8px;
+  background-color: #ff4444;
+  color: white;
+  border-radius: 50%;
+  padding: 2px 6px;
+  font-size: 10px;
+  min-width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  transform: translate(-10%, 50%);
+}
+
+.nav-link {
+  position: relative;
 }
 </style>

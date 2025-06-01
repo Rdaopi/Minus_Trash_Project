@@ -92,6 +92,12 @@
           "passwordChangedAt": {
             "type": "string"
           },
+          "passwordResetToken": {
+            "type": "string"
+          },
+          "passwordResetExpires": {
+            "type": "string"
+          },
           "_id": {
             "type": "string"
           },

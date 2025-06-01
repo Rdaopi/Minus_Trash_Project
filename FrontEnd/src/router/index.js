@@ -37,6 +37,14 @@ const routes = [
     component: () => import('../views/Map.vue') // Pagina della mappa interattiva
   },
   {
+    path: '/messaggi',
+    name: 'Messaggi',
+    component: () => import('../views/Messaggi.vue'),
+    meta: {
+      requiresAuth: true
+    }
+  },
+  {
     path: '/auth',
     name: 'Auth',
     component: () => import('../views/Auth.vue') // Pagina login/registrazione
@@ -78,6 +86,24 @@ const routes = [
       requiresAdmin: true
     },
     beforeEnter: requireAdmin
+  },
+  {
+    path: '/forgot-password',
+    name: 'ForgotPassword',
+    component: () => import('../views/ForgotPassword.vue')
+  },
+  {
+    path: '/reset-password',
+    name: 'ResetPassword',
+    component: () => import('../views/ResetPassword.vue')
+  },
+  {
+    path: '/change-password',
+    name: 'ChangePassword',
+    component: () => import('../views/ChangePassword.vue'),
+    meta: {
+      requiresAuth: true
+    }
   },
   // TODO: Aggiungere pagina contatti
 ]
