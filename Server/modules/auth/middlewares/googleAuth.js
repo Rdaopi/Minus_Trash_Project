@@ -80,7 +80,7 @@ export const googleAuthCallback = (req, res, next) => {
                   role: user.role
                 },
                 process.env.JWT_ACCESS_SECRET,
-                { expiresIn: '24h' }
+                { expiresIn: '1m' }
               );
               const refreshToken = await generateAndStoreRefreshToken(user, req.ip, req.headers['user-agent']);
               

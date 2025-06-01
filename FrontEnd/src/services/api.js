@@ -6,7 +6,7 @@ function logApiCall(method, url) {
   console.log(`API ${method} call to: ${url}`);
 }
 // Funzioni helper
-const handleResponse = async (response) => {
+const handleResponse = async (response, originalRequest, isPublic = false) => {
   try {
     const contentType = response.headers.get('content-type');
     let data;
@@ -25,12 +25,42 @@ const handleResponse = async (response) => {
     }
     
     if (!response.ok) {
-      if (response.status === 401) {
+      if (response.status === 401 && !isPublic) {
         // Token expired or invalid
         const refreshToken = localStorage.getItem('refreshToken');
         if (!refreshToken) {
           clearAuthData();
           window.location.href = '/auth';
+        } else {
+          // Try to refresh the token ONCE and retry the original request
+          try {
+            const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh-token`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ refreshToken })
+            });
+            if (!refreshResponse.ok) throw new Error('Refresh token invalid');
+            const newTokens = await refreshResponse.json();
+            localStorage.setItem('token', newTokens.accessToken);
+            localStorage.setItem('refreshToken', newTokens.refreshToken);
+            // Retry the original request with the new token
+            if (originalRequest) {
+              // Update Authorization header
+              if (originalRequest.headers) {
+                originalRequest.headers['Authorization'] = `Bearer ${newTokens.accessToken}`;
+              } else {
+                originalRequest.headers = { 'Authorization': `Bearer ${newTokens.accessToken}` };
+              }
+              const retryResponse = await fetch(originalRequest.url, originalRequest);
+              return await handleResponse(retryResponse, { url: originalRequest.url, ...originalRequest });
+            }
+          } catch (refreshError) {
+            clearAuthData();
+            window.location.href = '/auth';
+            throw new Error('Sessione scaduta. Effettua nuovamente il login.');
+          }
         }
       }
       console.error('API error:', {
@@ -45,7 +75,7 @@ const handleResponse = async (response) => {
     console.error('Response handling error:', error);
     throw error
   }
-  return await response.json();
+  // unreachable
 }
 
 //Get base headers for requests
@@ -87,7 +117,7 @@ const isTokenExpired = (token) => {
 };
 
 // Add automatic token check on interval
-setInterval(() => {
+setInterval(async () => {
   const token = localStorage.getItem('token');
   if (token && isTokenExpired(token)) {
     const refreshToken = localStorage.getItem('refreshToken');
@@ -95,6 +125,26 @@ setInterval(() => {
       console.log('%cNo refresh token available - Logging out', 'background: #f44336; color: white; padding: 2px 5px; border-radius: 3px');
       clearAuthData();
       window.location.href = '/auth';
+    } else {
+      // Attempt to refresh the token
+      try {
+        console.log('%cToken expired - Attempting refresh', 'background: #ff9800; color: white; padding: 2px 5px; border-radius: 3px');
+        const response = await fetch(`${API_BASE_URL}/auth/refresh-token`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ refreshToken })
+        });
+        const newTokens = await handleResponse(response, null, true);
+        localStorage.setItem('token', newTokens.accessToken);
+        localStorage.setItem('refreshToken', newTokens.refreshToken);
+        console.log('%cToken refreshed successfully', 'background: #4caf50; color: white; padding: 2px 5px; border-radius: 3px');
+      } catch (error) {
+        console.error('Failed to refresh token in interval check:', error);
+        clearAuthData();
+        window.location.href = '/auth';
+      }
     }
   }
 }, 30000); // Check every 30 seconds
@@ -119,7 +169,7 @@ const getAuthHeaders = async () => {
         },
         body: JSON.stringify({ refreshToken })
       });
-      const newTokens = await handleResponse(response);
+      const newTokens = await handleResponse(response, null, true);
       localStorage.setItem('token', newTokens.accessToken);
       localStorage.setItem('refreshToken', newTokens.refreshToken);
       return {
@@ -155,7 +205,7 @@ const getAuthHeaders = async () => {
           },
           body: JSON.stringify({ refreshToken })
         });
-        const newTokens = await handleResponse(response);
+        const newTokens = await handleResponse(response, null, true);
         localStorage.setItem('token', newTokens.accessToken);
         localStorage.setItem('refreshToken', newTokens.refreshToken);
         return {
@@ -226,7 +276,7 @@ export const authAPI = {
           throw new Error('Errore durante il login');
         }
 
-        const data = await handleResponse(response);
+        const data = await handleResponse(response, null, true);
         console.log('Login response data:', data);
         if (data.user && data.user.role) {
           console.log('User role from response:', data.user.role);
@@ -253,15 +303,9 @@ export const authAPI = {
     logApiCall('POST', url);
     
     try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(userData)
-      });
-
-      return await handleResponse(response);
+      const requestOptions = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(userData) };
+      const response = await fetch(url, requestOptions);
+      return await handleResponse(response, { url, ...requestOptions });
     } catch (error) {
       console.error('Registration error:', error);
       throw error;
@@ -273,15 +317,9 @@ export const authAPI = {
       const url = `${API_BASE_URL}/auth/logout`;
       logApiCall('POST', url);
       try {
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
-          body: JSON.stringify({ refreshToken })
-        });
-        return await handleResponse(response);
+        const requestOptions = { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` }, body: JSON.stringify({ refreshToken }) };
+        const response = await fetch(url, requestOptions);
+        return await handleResponse(response, requestOptions);
       } catch (error) {
         console.error('Logout error:', error);
         throw error;
@@ -294,15 +332,9 @@ export const authAPI = {
     logApiCall('POST', url);
     try {
       const headers = await getAuthHeaders();
-      const response = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          currentPassword: passwordData.currentPassword,
-          newPassword: passwordData.newPassword
-        })
-      });
-      const data = await handleResponse(response);
+      const requestOptions = { method: 'POST', headers, body: JSON.stringify({ currentPassword: passwordData.currentPassword, newPassword: passwordData.newPassword }) };
+      const response = await fetch(url, requestOptions);
+      const data = await handleResponse(response, requestOptions);
       
       // Clear tokens but let the component handle redirect
       localStorage.removeItem('token');
@@ -321,14 +353,9 @@ export const authAPI = {
     const url = `${API_BASE_URL}/auth/refresh-token`;
     logApiCall('POST', url);
     try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ refreshToken })
-      });
-      return await handleResponse(response);
+      const requestOptions = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refreshToken }) };
+      const response = await fetch(url, requestOptions);
+      return await handleResponse(response, requestOptions);
     } catch (error) {
       console.error('Refresh token error:', error);
       throw error;
@@ -340,13 +367,16 @@ export const authAPI = {
     const url = `${API_BASE_URL}/auth/forgot-password`;
     logApiCall('POST', url);
     
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: getBaseHeaders(),
-      body: JSON.stringify({ email })
-    });
-    
-    return handleResponse(response);
+    try {
+      const headers = { 'Content-Type': 'application/json' };
+      const requestOptions = { method: 'POST', headers, body: JSON.stringify({ email }) };
+      const response = await fetch(url, requestOptions);
+      
+      return handleResponse(response, requestOptions, true);
+    } catch (error) {
+      console.error('Password reset request error:', error);
+      throw error;
+    }
   },
 
   // Reset password with token
@@ -354,13 +384,16 @@ export const authAPI = {
     const url = `${API_BASE_URL}/auth/reset-password`;
     logApiCall('POST', url);
     
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: getBaseHeaders(),
-      body: JSON.stringify({ token, password })
-    });
-    
-    return handleResponse(response);
+    try {
+      const headers = { 'Content-Type': 'application/json' };
+      const requestOptions = { method: 'POST', headers, body: JSON.stringify({ token, password }) };
+      const response = await fetch(url, requestOptions);
+      
+      return handleResponse(response, requestOptions, true);
+    } catch (error) {
+      console.error('Password reset error:', error);
+      throw error;
+    }
   }
 };
 
@@ -372,21 +405,10 @@ export const binsAPI = {
     logApiCall('POST', url);
     
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No auth token found');
-      }
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(binData)
-      });
-
-      return await handleResponse(response);
+      const headers = await getAuthHeaders();
+      const requestOptions = { method: 'POST', headers, body: JSON.stringify(binData) };
+      const response = await fetch(url, requestOptions);
+      return await handleResponse(response, { url, ...requestOptions });
     } catch (error) {
       console.error('Error creating bin:', error);
       throw new Error('Failed to create waste bin');
@@ -399,11 +421,18 @@ export const binsAPI = {
     logApiCall('GET', url);
     
     try {
-      const response = await fetch(url, {
-        headers: getBaseHeaders()
-      });
+      let headers;
+      let isPublic = false;
+      if (localStorage.getItem('token')) {
+        headers = await getAuthHeaders();
+      } else {
+        headers = { 'Content-Type': 'application/json' };
+        isPublic = true;
+      }
+      const requestOptions = { headers };
+      const response = await fetch(url, requestOptions);
       
-      const data = await handleResponse(response);
+      const data = await handleResponse(response, requestOptions, isPublic);
       console.log('Raw bins data from server:', data);
       
       // Ensure we have an array of bins with proper coordinates
@@ -460,11 +489,18 @@ export const binsAPI = {
     logApiCall('GET', url);
     
     try {
-      const response = await fetch(url, {
-        headers: getBaseHeaders()
-      });
+      let headers;
+      let isPublic = false;
+      if (localStorage.getItem('token')) {
+        headers = await getAuthHeaders();
+      } else {
+        headers = { 'Content-Type': 'application/json' };
+        isPublic = true;
+      }
+      const requestOptions = { headers };
+      const response = await fetch(url, requestOptions);
       
-      const data = await handleResponse(response);
+      const data = await handleResponse(response, requestOptions, isPublic);
       console.log('Raw bin data from server:', data);
       
       // Transform location data to lat/lng format if needed
@@ -514,24 +550,13 @@ export const binsAPI = {
     logApiCall('PUT', url);
     
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.error('ERROR: No auth token found');
-        throw new Error('No auth token found');
-      }
-      console.log('Token found:', token.substring(0, 20) + '...');
+      const headers = await getAuthHeaders();
+      console.log('Headers prepared for request');
 
-      const requestBody = JSON.stringify(binData);
-      console.log('Request body:', requestBody);
+      const requestOptions = { method: 'PUT', headers, body: JSON.stringify(binData) };
+      console.log('Request body:', requestOptions.body);
 
-      const response = await fetch(url, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: requestBody
-      });
+      const response = await fetch(url, requestOptions);
 
       console.log('Response status:', response.status);
       console.log('Response ok:', response.ok);
@@ -542,7 +567,7 @@ export const binsAPI = {
         throw new Error(`Server responded with ${response.status}: ${errorText}`);
       }
 
-      const result = await handleResponse(response);
+      const result = await handleResponse(response, requestOptions);
       console.log('=== UPDATE SUCCESS ===');
       console.log('Update result:', result);
       return result;
@@ -560,19 +585,11 @@ export const binsAPI = {
     logApiCall('DELETE', url);
     
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No auth token found');
-      }
+      const headers = await getAuthHeaders();
+      const requestOptions = { method: 'DELETE', headers };
+      const response = await fetch(url, requestOptions);
 
-      const response = await fetch(url, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      return await handleResponse(response);
+      return await handleResponse(response, requestOptions);
     } catch (error) {
       console.error('Error deleting bin:', error);
       throw new Error('Failed to delete waste bin');
@@ -585,38 +602,58 @@ export const binsAPI = {
     const upperType = type.toUpperCase();
     console.log('Fetching bins by type:', upperType);
     
-    //Prepare and send request
-    const response = await fetch(`${API_BASE_URL}/waste/bins/type/${upperType}`, {
-      method: 'GET',
-      headers: getBaseHeaders()
-    });
-    
-    //Check for errors
-    if (!response.ok) {
-      throw new Error(`HTTP error ${response.status}`);
+    try {
+      let headers;
+      let isPublic = false;
+      if (localStorage.getItem('token')) {
+        headers = await getAuthHeaders();
+      } else {
+        headers = { 'Content-Type': 'application/json' };
+        isPublic = true;
+      }
+      const requestOptions = { method: 'GET', headers };
+      const response = await fetch(`${API_BASE_URL}/waste/bins/type/${upperType}`, requestOptions);
+      
+      //Check for errors
+      if (!response.ok) {
+        throw new Error(`HTTP error ${response.status}`);
+      }
+      
+      const data = await handleResponse(response, requestOptions, isPublic);
+      console.log('Successfully fetched filtered bins');
+      return data;
+    } catch (error) {
+      console.error('Error fetching bins by type:', error);
+      throw error;
     }
-    
-    const data = await response.json();
-    console.log('Successfully fetched filtered bins');
-    return data;
   },
 
   //Finds bins near a geographic location
   async getNearbyBins(latitude, longitude, radius = 1000) {
     console.log(`Finding bins near [${latitude}, ${longitude}]`);
     
-    //Default radius is 1km
-    const response = await fetch(`${API_BASE_URL}/waste/bins/area?lat=${latitude}&lng=${longitude}&radius=${radius}`, {
-      method: 'GET',
-      headers: getBaseHeaders()
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error ${response.status}`);
+    try {
+      let headers;
+      let isPublic = false;
+      if (localStorage.getItem('token')) {
+        headers = await getAuthHeaders();
+      } else {
+        headers = { 'Content-Type': 'application/json' };
+        isPublic = true;
+      }
+      const requestOptions = { method: 'GET', headers };
+      const response = await fetch(`${API_BASE_URL}/waste/bins/area?lat=${latitude}&lng=${longitude}&radius=${radius}`, requestOptions);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error ${response.status}`);
+      }
+      
+      const data = await handleResponse(response, requestOptions, isPublic);
+      console.log('Successfully fetched nearby bins');
+      return data;
+    } catch (error) {
+      console.error('Error fetching nearby bins:', error);
+      throw error;
     }
-    
-    const data = await response.json();
-    console.log('Successfully fetched nearby bins');
-    return data;
   }
 };
