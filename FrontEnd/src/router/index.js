@@ -1,27 +1,4 @@
 import { createRouter, createWebHistory, createWebHashHistory } from 'vue-router'
-import { requireOperator } from './guards'
-import { jwtDecode } from 'jwt-decode';
-
-// Function to check if user is admin
-const requireAdmin = (to, from, next) => {
-  const token = localStorage.getItem('token');
-  if (!token) {
-    next('/auth');
-    return;
-  }
-
-  try {
-    const decoded = jwtDecode(token);
-    if (decoded && decoded.role === 'amministratore') {
-      next();
-    } else {
-      next('/profile');
-    }
-  } catch (error) {
-    console.error('Error verifying admin status:', error);
-    next('/auth');
-  }
-};
 
 // Definisco le rotte dell'applicazione
 // Utilizzo il lazy-loading per caricare le pagine solo quando servono
@@ -44,48 +21,7 @@ const routes = [
   {
     path: '/profile',
     name: 'Profile',
-    component: () => import('../views/Profile.vue'), // Pagina area personale
-    meta: {
-      requiresAuth: true
-    }
-  },
-  {
-    path: '/bin-management',
-    name: 'BinManagement',
-    component: () => import('../views/BinManagement.vue'),
-    meta: {
-      requiresAuth: true,
-      requiresOperator: true
-    },
-    beforeEnter: requireOperator
-  },
-  {
-    path: '/account-management',
-    name: 'AccountManagement',
-    component: () => import('../views/AccountManagement.vue'),
-    meta: {
-      requiresAuth: true,
-      requiresAdmin: true
-    },
-    beforeEnter: requireAdmin
-  },
-  {
-    path: '/forgot-password',
-    name: 'ForgotPassword',
-    component: () => import('../views/ForgotPassword.vue')
-  },
-  {
-    path: '/reset-password',
-    name: 'ResetPassword',
-    component: () => import('../views/ResetPassword.vue')
-  },
-  {
-    path: '/change-password',
-    name: 'ChangePassword',
-    component: () => import('../views/ChangePassword.vue'),
-    meta: {
-      requiresAuth: true
-    }
+    component: () => import('../views/Profile.vue') // Pagina area personale
   },
   // TODO: Aggiungere pagina contatti
 ]
@@ -99,45 +35,16 @@ const router = createRouter({
   routes
 })
 
-// Route guard: protect routes and check roles
+// In futuro qui potrei aggiungere controlli di accesso (guards)
+
+// Route guard: protect /profile from unauthenticated access
 router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('token');
-
-  // Se la rotta richiede autenticazione
-  if (to.meta.requiresAuth && !token) {
+  const isAuthenticated = !!localStorage.getItem('token');
+  if (to.path === '/profile' && !isAuthenticated) {
     next('/auth');
-    return;
+  } else {
+    next();
   }
-
-  // Se c'è un token, verifichiamo che sia valido
-  if (token) {
-    try {
-      const decoded = jwtDecode(token);
-      const currentTime = Date.now() / 1000;
-      
-      // Se il token è scaduto, rimuoviamo tutto e reindirizziamo al login
-      if (decoded.exp < currentTime) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('userRole');
-        localStorage.removeItem('userEmail');
-        if (to.meta.requiresAuth) {
-          next('/auth');
-          return;
-        }
-      }
-    } catch (error) {
-      console.error('Error decoding token:', error);
-      localStorage.removeItem('token');
-      localStorage.removeItem('userRole');
-      localStorage.removeItem('userEmail');
-      if (to.meta.requiresAuth) {
-        next('/auth');
-        return;
-      }
-    }
-  }
-
-  next();
 });
 
 export default router 

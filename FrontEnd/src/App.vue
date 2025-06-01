@@ -46,77 +46,30 @@ import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
-const isLoggedIn = ref(false)
+const isLoggedIn = ref(!!localStorage.getItem('token'))
 
-// Function to check token validity and update login state
-const checkTokenValidity = () => {
-  const token = localStorage.getItem('token');
-  const refreshToken = localStorage.getItem('refreshToken');
-  
-  if (!token) {
-    isLoggedIn.value = false;
-    return;
-  }
-
-  try {
-    const tokenData = JSON.parse(atob(token.split('.')[1]));
-    const expirationTime = tokenData.exp * 1000;
-    const currentTime = Date.now();
-    
-    if (currentTime >= expirationTime) {
-      // Token is expired, check refresh token
-      if (refreshToken) {
-        isLoggedIn.value = true; // Keep logged in while we have refresh token
-      } else {
-        clearAuthData();
-        isLoggedIn.value = false;
-      }
-    } else {
-      // Token is still valid
-      isLoggedIn.value = true;
-    }
-  } catch (error) {
-    console.error('Error checking token validity:', error);
-    if (refreshToken) {
-      isLoggedIn.value = true; // Keep logged in if we have refresh token
-    } else {
-      // Check if token is still valid despite parse error
-      isLoggedIn.value = !!token;
-    }
-  }
-}
-
-// Clear auth data helper
-const clearAuthData = () => {
-  localStorage.removeItem('token');
-  localStorage.removeItem('refreshToken');
-  localStorage.removeItem('userEmail');
-  localStorage.removeItem('authMethod');
-  isLoggedIn.value = false;
-}
-
-// Update isLoggedIn when localStorage changes
+// Update isLoggedIn when localStorage changes (e.g., after login/logout)
 window.addEventListener('storage', () => {
-  checkTokenValidity();
+  isLoggedIn.value = !!localStorage.getItem('token')
 })
 
 // Function to update auth state
 const updateAuthState = () => {
-  checkTokenValidity();
+  isLoggedIn.value = !!localStorage.getItem('token')
 }
 
 // Watch for route changes
 watch(route, () => {
-  updateAuthState();
+  updateAuthState()
 })
 
 // Check on mount
 onMounted(() => {
-  updateAuthState();
+  updateAuthState()
 })
 
-// Check periodically for token expiration
-setInterval(updateAuthState, 30000); // Check every 30 seconds
+// Check periodically for token
+setInterval(updateAuthState, 1000)
 </script>
 
 <style>
