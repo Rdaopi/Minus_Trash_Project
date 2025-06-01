@@ -79,6 +79,14 @@ const routes = [
     name: 'ResetPassword',
     component: () => import('../views/ResetPassword.vue')
   },
+  {
+    path: '/change-password',
+    name: 'ChangePassword',
+    component: () => import('../views/ChangePassword.vue'),
+    meta: {
+      requiresAuth: true
+    }
+  },
   // TODO: Aggiungere pagina contatti
 ]
 

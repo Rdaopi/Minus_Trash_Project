@@ -10,7 +10,9 @@
       </div>
       
       <div v-else>
-        <ChangePassword @password-changed="handlePasswordChange" />
+        <button class="change-password-button" @click="goToChangePassword">
+          Cambia Password
+        </button>
       </div>
       <div class="buttons-container">
         <button v-if="isOperator || isAdmin" class="manage-bins-button" @click="goToBinManagement">
@@ -34,11 +36,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import ChangePassword from '../components/ChangePassword.vue';
 import Notification from '../components/Notification.vue';
 import { authAPI } from '../services/api.js';
 import { jwtDecode } from 'jwt-decode';
-
 
 const router = useRouter();
 const userEmail = ref(localStorage.getItem('userEmail') || 'utente');
@@ -137,9 +137,6 @@ window.addEventListener('storage', () => {
   userEmail.value = localStorage.getItem('userEmail') || 'utente';
 });
 
-
-
-
 async function logout() {
   try {
     const refreshToken = localStorage.getItem('refreshToken');
@@ -162,31 +159,16 @@ async function logout() {
   }
 }
 
-function handlePasswordChange({ type, message }) {
-  notificationType.value = type;
-  notificationMessage.value = message;
-  showNotification.value = true;
-  
-  if (type === 'success') {
-    // For success, show message for 2.5 seconds then redirect
-    setTimeout(() => {
-      showNotification.value = false;
-      logout(); // This will clean up localStorage and redirect
-    }, 2500);
-  } else {
-    // For errors, just hide after 2.5 seconds
-    setTimeout(() => {
-      showNotification.value = false;
-    }, 2500);
-  }
-}
-
 function goToBinManagement() {
   router.push('/bin-management');
 }
 
 function goToAccountManagement() {
   router.push('/account-management');
+}
+
+function goToChangePassword() {
+  router.push('/change-password');
 }
 </script>
 
@@ -214,6 +196,28 @@ function goToAccountManagement() {
   gap: 1rem;
   margin-top: 2rem;
 }
+.change-password-button {
+  padding: 0.8rem 2rem;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 8rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease-in-out;
+  box-shadow: 0 2px 5px rgba(76, 175, 80, 0.2);
+  margin: 0.2rem auto;
+  display: block;
+  width: 100%;
+  max-width: 300px;
+}
+.change-password-button:hover {
+  background-color: var(--background-hover-color);
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+  animation: pulseGlow 1.5s infinite;
+  outline: none;
+}
 .logout-button {
   padding: 0.8rem 2rem;
   background-color: #e53935;
@@ -221,14 +225,14 @@ function goToAccountManagement() {
   border: none;
   border-radius: 8rem;
   font-size: 1rem;
+  margin: 1rem auto;
   cursor: pointer;
+  width: 100%;
   transition: background 0.2s;
 }
-
 .logout-button:hover {
   background-color: #b71c1c;
 }
-
 .google-user-message {
   background-color: #e3f2fd;
   border: 1px solid #90caf9;
@@ -239,29 +243,49 @@ function goToAccountManagement() {
   align-items: center;
   gap: 1rem;
 }
-
 .google-user-message i {
   color: #1976d2;
   font-size: 1.5rem;
 }
-
 .google-user-message p {
   margin: 0;
   color: #1565c0;
   text-align: left;
 }
+
+@keyframes pulseGlow {
+  0% {
+    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+  }
+  50% {
+    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.6);
+  }
+  100% {
+    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+  }
+}
 .manage-bins-button {
   padding: 0.8rem 2rem;
-  background-color: #13d523;
+  background-color: var(--primary-color);
   color: white;
   border: none;
   border-radius: 8rem;
   font-size: 1rem;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.3s ease-in-out;
+  box-shadow: 0 2px 5px rgba(76, 175, 80, 0.2);
+  margin: 0.2rem auto;
+  display: block;
+  width: 100%;
+  max-width: 300px;
+
 }
 .manage-bins-button:hover {
-  background-color: #13d523;
+  background-color: var(--background-hover-color);
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+  animation: pulseGlow 1.5s infinite;
+  outline: none;
 }
 .manage-account-button {
   padding: 0.8rem 2rem;
@@ -271,9 +295,18 @@ function goToAccountManagement() {
   border-radius: 8rem;
   font-size: 1rem;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.3s ease-in-out;
+  box-shadow: 0 2px 5px rgba(76, 175, 80, 0.2);
+  margin: 0.2rem auto;
+  display: block;
+  width: 100%;
+  max-width: 300px;
 }
 .manage-account-button:hover {
   background-color: #1976D2;
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+  animation: pulseGlow 1.5s infinite;
+  outline: none;
 }
 </style>
