@@ -648,7 +648,7 @@
         }
       }
     },
-    "/api/waste/reports": {
+    "/api/reports": {
       "get": {
         "summary": "Recupera tutte le segnalazioni",
         "security": [
@@ -695,7 +695,7 @@
         }
       }
     },
-    "/api/waste/reports/{id}": {
+    "/api/reports/{id}": {
       "get": {
         "summary": "Recupera una segnalazione per ID",
         "security": [
@@ -778,7 +778,7 @@
         }
       }
     },
-    "/api/waste/reports/{id}/status": {
+    "/api/reports/{id}/status": {
       "patch": {
         "summary": "Aggiorna lo stato di una segnalazione",
         "security": [
@@ -824,7 +824,7 @@
         }
       }
     },
-    "/api/waste/bins": {
+    "/api/bins": {
       "get": {
         "summary": "Recupera tutti i cestini",
         "responses": {
@@ -866,7 +866,7 @@
         }
       }
     },
-    "/api/waste/bins/{id}": {
+    "/api/bins/{id}": {
       "get": {
         "summary": "Recupera un cestino per ID",
         "parameters": [
@@ -944,7 +944,7 @@
         }
       }
     },
-    "/api/waste/bins/{id}/status": {
+    "/api/bins/{id}/status": {
       "patch": {
         "summary": "Aggiorna lo stato di un cestino",
         "security": [

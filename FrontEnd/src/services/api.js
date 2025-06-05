@@ -399,9 +399,9 @@ export const authAPI = {
 
 //Waste bin management API endpoints
 export const binsAPI = {
-  //Creates a new waste bin
+  //Creates a new bin
   async createBin(binData) {
-    const url = `${API_BASE_URL}/waste/bins`;
+    const url = `${API_BASE_URL}/bins`;
     logApiCall('POST', url);
     
     try {
@@ -417,7 +417,7 @@ export const binsAPI = {
 
   //Fetches all waste bins
   async getAllBins() {
-    const url = `${API_BASE_URL}/waste/bins`;
+    const url = `${API_BASE_URL}/bins`;
     logApiCall('GET', url);
     
     try {
@@ -485,7 +485,7 @@ export const binsAPI = {
 
   //Fetches a single waste bin by ID
   async getBinById(binId) {
-    const url = `${API_BASE_URL}/waste/bins/${binId}`;
+    const url = `${API_BASE_URL}/bins/${binId}`;
     logApiCall('GET', url);
     
     try {
@@ -542,7 +542,7 @@ export const binsAPI = {
 
   //Updates an existing waste bin
   async updateBin(binId, binData) {
-    const url = `${API_BASE_URL}/waste/bins/${binId}`;
+    const url = `${API_BASE_URL}/bins/${binId}`;
     console.log('=== API UPDATE BIN DEBUG ===');
     console.log('URL:', url);
     console.log('Bin ID:', binId);
@@ -587,7 +587,7 @@ export const binsAPI = {
 
   //Removes a waste bin from the system
   async deleteBin(binId) {
-    const url = `${API_BASE_URL}/waste/bins/${binId}`;
+    const url = `${API_BASE_URL}/bins/${binId}`;
     logApiCall('DELETE', url);
     
     try {
@@ -618,7 +618,7 @@ export const binsAPI = {
         isPublic = true;
       }
       const requestOptions = { method: 'GET', headers };
-      const response = await fetch(`${API_BASE_URL}/waste/bins/type/${upperType}`, requestOptions);
+      const response = await fetch(`${API_BASE_URL}/bins/type/${upperType}`, requestOptions);
       
       //Check for errors
       if (!response.ok) {
@@ -648,7 +648,7 @@ export const binsAPI = {
         isPublic = true;
       }
       const requestOptions = { method: 'GET', headers };
-      const response = await fetch(`${API_BASE_URL}/waste/bins/area?lat=${latitude}&lng=${longitude}&radius=${radius}`, requestOptions);
+      const response = await fetch(`${API_BASE_URL}/bins/area?lat=${latitude}&lng=${longitude}&radius=${radius}`, requestOptions);
       
       if (!response.ok) {
         throw new Error(`HTTP error ${response.status}`);
@@ -668,7 +668,7 @@ export const binsAPI = {
 
   //Updates bin status
   async updateBinStatus(binId, status) {
-    const url = `${API_BASE_URL}/waste/bins/${binId}/status`;
+    const url = `${API_BASE_URL}/bins/${binId}/status`;
     console.log('Updating bin status:', binId, 'to', status);
     logApiCall('PATCH', url);
     
@@ -699,7 +699,7 @@ export const binsAPI = {
 export const reportsAPI = {
   //Creates a new report
   async createReport(reportData) {
-    const url = `${API_BASE_URL}/waste/reports`;
+    const url = `${API_BASE_URL}/reports`;
     logApiCall('POST', url);
     
     try {
@@ -726,7 +726,7 @@ export const reportsAPI = {
 
   //Fetches all reports
   async getAllReports() {
-    const url = `${API_BASE_URL}/waste/reports`;
+    const url = `${API_BASE_URL}/reports`;
     logApiCall('GET', url);
     
     try {
@@ -786,7 +786,7 @@ export const reportsAPI = {
 
   //Fetches a single report by ID
   async getReportById(reportId) {
-    const url = `${API_BASE_URL}/waste/reports/${reportId}`;
+    const url = `${API_BASE_URL}/reports/${reportId}`;
     logApiCall('GET', url);
     
     try {
@@ -836,7 +836,7 @@ export const reportsAPI = {
 
   //Updates an existing report
   async updateReport(reportId, reportData) {
-    const url = `${API_BASE_URL}/waste/reports/${reportId}`;
+    const url = `${API_BASE_URL}/reports/${reportId}`;
     console.log('=== API UPDATE REPORT DEBUG ===');
     console.log('URL:', url);
     console.log('Report ID:', reportId);
@@ -886,7 +886,7 @@ export const reportsAPI = {
 
   //Removes a report from the system
   async deleteReport(reportId) {
-    const url = `${API_BASE_URL}/waste/reports/${reportId}`;
+    const url = `${API_BASE_URL}/reports/${reportId}`;
     logApiCall('DELETE', url);
     
     try {
@@ -914,7 +914,7 @@ export const reportsAPI = {
     const upperType = type.toUpperCase();
     console.log('Fetching reports by type:', upperType);
     
-    const url = `${API_BASE_URL}/waste/reports/type/${upperType}`;
+    const url = `${API_BASE_URL}/reports/type/${upperType}`;
     logApiCall('GET', url);
     
     try {
@@ -941,7 +941,7 @@ export const reportsAPI = {
     const lowerStatus = status.toLowerCase();
     console.log('Fetching reports by status:', lowerStatus);
     
-    const url = `${API_BASE_URL}/waste/reports/status/${lowerStatus}`;
+    const url = `${API_BASE_URL}/reports/status/${lowerStatus}`;
     logApiCall('GET', url);
     
     try {
@@ -968,7 +968,7 @@ export const reportsAPI = {
     const upperSeverity = severity.toUpperCase();
     console.log('Fetching reports by severity:', upperSeverity);
     
-    const url = `${API_BASE_URL}/waste/reports/severity/${upperSeverity}`;
+    const url = `${API_BASE_URL}/reports/severity/${upperSeverity}`;
     logApiCall('GET', url);
     
     try {
@@ -994,7 +994,7 @@ export const reportsAPI = {
   async getNearbyReports(latitude, longitude, radius = 1000) {
     console.log(`Finding reports near [${latitude}, ${longitude}]`);
     
-    const url = `${API_BASE_URL}/waste/reports/area?lat=${latitude}&lng=${longitude}&radius=${radius}`;
+    const url = `${API_BASE_URL}/reports/area?lat=${latitude}&lng=${longitude}&radius=${radius}`;
     logApiCall('GET', url);
     
     try {
@@ -1018,7 +1018,7 @@ export const reportsAPI = {
 
   //Updates report status
   async updateReportStatus(reportId, status) {
-    const url = `${API_BASE_URL}/waste/reports/${reportId}/status`;
+    const url = `${API_BASE_URL}/reports/${reportId}/status`;
     console.log('Updating report status:', reportId, 'to', status);
     logApiCall('PATCH', url);
     

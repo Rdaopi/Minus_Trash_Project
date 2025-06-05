@@ -45,8 +45,8 @@ app.use(passport.initialize());
 //routes
 app.use("/api/auth", authRoutes);//Routes per l'autenticazione
 console.log('Auth routes registered at /api/auth');
-app.use("/api/waste", wasteRoutes);//Routes per waste (parte principale)
-console.log('Waste routes registered at /api/waste');
+app.use("/api/", wasteRoutes);//Routes per waste (parte principale)
+console.log('Waste routes registered at /api/');
 app.use("/api/auth/messages", messageRoutes);//Routes per i messaggi
 console.log('Message routes registered at /api/auth/messages');
 
@@ -77,7 +77,7 @@ app.get('/', (req, res) => {
     status: 'API running', 
     endpoints: {
       auth: '/api/auth',
-      waste: '/api/waste',
+      waste: '/api/',
       docs: '/api-docs'
     }
   });
