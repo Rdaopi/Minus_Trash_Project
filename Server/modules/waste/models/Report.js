@@ -35,8 +35,7 @@ const reportSchema = new mongoose.Schema({
                 'CARTA',              
                 'VETRO',              
                 'ORGANICO',           
-                'RAEE',               
-                'INGOMBRANTI',        
+                'RAEE',   
                 'INDIFFERENZIATO',    
                 'ALTRO'               
             ],

@@ -37,8 +37,8 @@ const binSchema = new Schema({
     },
     status: {
         type: String,
-        enum: ['attivo', 'manutenzione', 'inattivo'],
-        default: 'attivo',
+        enum: ['ATTIVO', 'MANUTENZIONE', 'INATTIVO'],
+        default: 'ATTIVO',
     },
     lastEmptied: {
         type: Date,
