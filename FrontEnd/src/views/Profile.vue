@@ -9,12 +9,10 @@
         <p>Hai effettuato l'accesso con Google. Per modificare la password, utilizza le impostazioni del tuo account Google.</p>
       </div>
       
-      <div v-else>
-        <button class="change-password-button" @click="goToChangePassword">
+      <div class="buttons-container">
+        <button v-if="!isGoogleUser" class="change-password-button" @click="goToChangePassword">
           Cambia Password
         </button>
-      </div>
-      <div class="buttons-container">
         <button v-if="isOperator || isAdmin" class="manage-bins-button" @click="goToBinManagement">
           Gestione Cestini
         </button>
@@ -24,14 +22,13 @@
         <button v-if="isAdmin" class="manage-account-button" @click="goToAccountManagement">
           Gestione Account
         </button>
+        <button class="logout-button" @click="logout">Logout</button>
       </div>
       <Notification
         :show="showNotification"
         :message="notificationMessage"
         :type="notificationType"
       />
-      
-      <button class="logout-button" @click="logout">Logout</button>
     </div>
   </div>
 </template>
@@ -197,6 +194,7 @@ function goToChangePassword() {
   width: 100%;
   max-width: 600px;
 }
+
 .buttons-container {
   display: flex;
   flex-direction: column;
@@ -204,43 +202,84 @@ function goToChangePassword() {
   margin-top: 2rem;
 }
 
-.change-password-button {
+/* Stili base per tutti i bottoni */
+.change-password-button,
+.manage-bins-button,
+.manage-reports-button,
+.manage-account-button,
+.logout-button {
   padding: 0.8rem 2rem;
-  background-color: var(--primary-color);
   color: white;
   border: none;
   border-radius: 8rem;
   font-size: 1rem;
   cursor: pointer;
   transition: all 0.3s ease-in-out;
-  box-shadow: 0 2px 5px rgba(76, 175, 80, 0.2);
-  margin: 0.2rem auto;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  margin: 0;
   display: block;
   width: 100%;
   max-width: 300px;
+  align-self: center;
 }
-.change-password-button:hover {
-  background-color: var(--background-hover-color);
-  transform: translateY(-3px);
-  box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
-  animation: pulseGlow 1.5s infinite;
-  outline: none;
+
+/* Colori specifici per ogni bottone */
+.change-password-button {
+  background-color: #7925ba;
 }
+
+.manage-bins-button {
+  background-color: #13d523;
+}
+
+.manage-reports-button {
+  background-color: #288da1;
+}
+
+.manage-account-button {
+  background-color: #2196F3;
+}
+
 .logout-button {
-  padding: 0.8rem 2rem;
   background-color: #e53935;
-  color: white;
-  border: none;
-  border-radius: 8rem;
-  font-size: 1rem;
-  margin: 1rem auto;
-  cursor: pointer;
-  width: 100%;
-  transition: background 0.2s;
 }
+
+/* Effetti hover per ogni bottone */
+.change-password-button:hover {
+  background-color: #5a1d87;
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(121, 37, 186, 0.4);
+  animation: pulseGlow 1.5s infinite;
+}
+
+.manage-bins-button:hover {
+  background-color: #0fa01d;
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(19, 213, 35, 0.4);
+  animation: pulseGlow 1.5s infinite;
+}
+
+.manage-reports-button:hover {
+  background-color: #1f6b7a;
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(40, 141, 161, 0.4);
+  animation: pulseGlow 1.5s infinite;
+}
+
+.manage-account-button:hover {
+  background-color: #1976D2;
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(33, 150, 243, 0.4);
+  animation: pulseGlow 1.5s infinite;
+}
+
 .logout-button:hover {
   background-color: #b71c1c;
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(229, 57, 53, 0.4);
+  animation: pulseGlow 1.5s infinite;
 }
+
 .google-user-message {
   background-color: #e3f2fd;
   border: 1px solid #90caf9;
@@ -251,10 +290,12 @@ function goToChangePassword() {
   align-items: center;
   gap: 1rem;
 }
+
 .google-user-message i {
   color: #1976d2;
   font-size: 1.5rem;
 }
+
 .google-user-message p {
   margin: 0;
   color: #1565c0;
@@ -263,56 +304,13 @@ function goToChangePassword() {
 
 @keyframes pulseGlow {
   0% {
-    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+    transform: translateY(-3px);
   }
   50% {
-    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.6);
+    transform: translateY(-5px);
   }
   100% {
-    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+    transform: translateY(-3px);
   }
-}
-.manage-bins-button {
-  padding: 0.8rem 2rem;
-  background-color: var(--primary-color);
-  color: white;
-  border: none;
-  border-radius: 8rem;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: all 0.3s ease-in-out;
-  box-shadow: 0 2px 5px rgba(76, 175, 80, 0.2);
-  margin: 0.2rem auto;
-  display: block;
-  width: 100%;
-  max-width: 300px;
-
-
-.manage-bins-button:hover, .manage-reports-button:hover, .manage-account-button:hover {
-  background-color: #13d523;
-}
-.manage-account-button {
-  background-color: #2196F3;;
-}
-.manage-account-button:hover {
-  background-color: #1976D2;
-  transform: translateY(-3px);
-  box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
-  animation: pulseGlow 1.5s infinite;
-  outline: none;
-}manage-bins-button{
-  background-color: #13d523;
-  color: white;
-}
-
-.manage-reports-button{
-  background-color: #288da1;
-}
-
-.logout-button {
-  background-color: #e53935;
-}
-.logout-button:hover {
-  background-color: #b71c1c;
 }
 </style> 
