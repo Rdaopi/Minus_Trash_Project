@@ -9,7 +9,8 @@ import {
   logout,
   getAllUsers,
   deleteUserById,
-  updateUserById
+  updateUserById,
+  user_delete
 } from './controllers/userController.js';
 
 import { auditOnSuccess } from "./middlewares/withAudit.js";
@@ -640,7 +641,7 @@ router.get('/googleOAuth/callback', googleAuthCallback);
 
 //Route Protette da JWT
 //Da implementare con il JWT, attualmente richiede autenticazione base
-router.post('/profile_update', jwtAuth, profile_update);
+router.post('/profile_update', jwtAuth, auditOnSuccess('profile_update', ['userId']), profile_update);
 /**
  * @swagger
  * /api/auth/profile_update:
@@ -778,7 +779,7 @@ router.post('/profile_update', jwtAuth, profile_update);
  *                   message: "L'username scelto è già utilizzato da un altro utente"
  */
 
-router.post('/change_password', jwtAuth, changePassword);
+router.post('/change_password', jwtAuth, auditOnSuccess('password_change'), changePassword);
 /**
  * @swagger
  * /api/auth/change_password:
@@ -1207,7 +1208,10 @@ router.post('/change_password', jwtAuth, changePassword);
 router.post('/refresh-token', refreshTokenHandler);
 
 // Add logout handler to the router
-router.post('/logout', jwtAuth, logout);
+router.post('/logout', jwtAuth, auditOnSuccess('user_logout'), logout);
+
+// User self-delete route
+router.delete('/profile', jwtAuth, auditOnSuccess('user_delete'), user_delete);
 
 // Password Reset Routes
 router.post('/forgot-password', forgotPassword);
@@ -1274,8 +1278,8 @@ router.post('/reset-password', resetPassword);
 
 // Admin routes for user management
 router.get('/users', jwtAuth, getAllUsers);
-router.post('/users', jwtAuth, register);
-router.put('/users/:userId', jwtAuth, updateUserById);
-router.delete('/users/:userId', jwtAuth, deleteUserById);
+router.post('/users', jwtAuth, auditOnSuccess('admin_user_creation', ['email', 'role']), register);
+router.put('/users/:userId', jwtAuth, auditOnSuccess('admin_user_update', ['userId']), updateUserById);
+router.delete('/users/:userId', jwtAuth, auditOnSuccess('admin_user_delete', ['userId']), deleteUserById);
 
 export default router;

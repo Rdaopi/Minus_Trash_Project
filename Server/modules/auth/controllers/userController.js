@@ -1,6 +1,5 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs"; //Password Hash
-import { auditOnSuccess } from "../middlewares/withAudit.js"; //per generare gli audit di registrazione
 import { logger } from '../../../core/utils/logger.js';
 import jwt from 'jsonwebtoken';
 import Token from "../models/Token.js";
@@ -308,93 +307,138 @@ export const register = async (req, res) => {
 
 
 //Aggiornamento profilo con audit
-export const profile_update = [
-    auditOnSuccess('profile_update', ['userId']),
-    async(req, res) => {
-        try{
-            const user = await User.findByIdAndUpdate(
-                req.user._id,
-                { $set: req.body },
-                { new: true, runValidators: true}
-            ).select('-password');
-
-            res.json(user);
-        } catch(error){
-            error.statusCode = 500;
-            throw error;
+export const profile_update = async (req, res) => {
+    try {
+        // Validazione dati di input
+        const { fullName, username } = req.body;
+        
+        if (fullName && (!fullName.name || !fullName.surname)) {
+            return res.status(400).json({
+                error: 'Nome e cognome sono obbligatori'
+            });
         }
+
+        if (username && username.length < 3) {
+            return res.status(400).json({
+                error: 'Username deve avere almeno 3 caratteri'
+            });
+        }
+
+        const user = await User.findByIdAndUpdate(
+            req.user._id,
+            { $set: req.body },
+            { new: true, runValidators: true }
+        ).select('-password');
+
+        if (!user) {
+            return res.status(404).json({ error: 'Utente non trovato' });
+        }
+
+        logger.info(`Profilo aggiornato per utente: ${user._id}`);
+        res.json({
+            message: 'Profilo aggiornato con successo',
+            user: {
+                id: user._id,
+                username: user.username,
+                email: user.email,
+                fullName: user.fullName,
+                role: user.role
+            }
+        });
+    } catch (error) {
+        logger.error('Errore durante l\'aggiornamento del profilo:', error);
+        res.status(500).json({ error: 'Errore durante l\'aggiornamento del profilo' });
     }
-];
+};
 
 //Cambio password con audit
-export const changePassword = [
-    auditOnSuccess('password_change'),
-    async(req, res) => {
-        try {
-            const {currentPassword, newPassword} = req.body;
-            
-            // Add logging to debug
-            console.log('User from request:', req.user);
-            
-            // Make sure we're getting the user ID correctly
-            const userId = req.user?._id;
-            if (!userId) {
-                throw new Error('User ID not found in request');
-            }
-
-            // Find user and explicitly select password field
-            const user = await User.findById(userId).select('+password');
-            if (!user) {
-                throw new Error('User not found');
-            }
-
-            // Check if user can change password
-            if (!user.canChangePassword()) {
-                throw new Error('Non puoi cambiare la password se hai effettuato l\'accesso con Google');
-            }
-
-            //Validazione complessità password
-            if(!REGEX_PASSWORD.test(newPassword)) {
-                const error = new Error("Password deve contenere 8+ caratteri, 1 maiuscola e 1 simbolo [!@#$%^&*]");
-                error.statusCode = 400;
-                throw error;
-            }
-            
-            if(!await bcrypt.compare(currentPassword, user.password)) {
-                const error = new Error("Password corrente non valida");
-                error.statusCode = 401;
-                throw error;
-            }
-
-            // Revoke all existing refresh tokens
-            await Token.revokeAllUserTokens(userId);
-
-            user.password = await bcrypt.hash(newPassword, 12);
-            user.passwordChangedAt = Date.now();
-            await user.save();
-
-            res.json({ message: "Password aggiornata con successo" });
-        } catch (error) {
-            console.error('Password change error:', error);
-            error.statusCode = error.statusCode || 500;
-            res.status(error.statusCode).json({ error: error.message });
+export const changePassword = async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        
+        // Validazione input
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({
+                error: 'Password attuale e nuova password sono obbligatorie'
+            });
         }
+        
+        // Validazione complessità password
+        if (!REGEX_PASSWORD.test(newPassword)) {
+            return res.status(400).json({
+                error: 'La password deve contenere almeno 8 caratteri, una lettera maiuscola e un carattere speciale'
+            });
+        }
+        
+        // Get user ID from request
+        const userId = req.user?._id;
+        if (!userId) {
+            return res.status(401).json({ error: 'Utente non autenticato' });
+        }
+
+        // Find user and explicitly select password field
+        const user = await User.findById(userId).select('+password');
+        if (!user) {
+            return res.status(404).json({ error: 'Utente non trovato' });
+        }
+
+        // Check if user can change password
+        if (!user.canChangePassword()) {
+            return res.status(400).json({
+                error: 'Non puoi cambiare la password se hai effettuato l\'accesso con Google'
+            });
+        }
+        
+        // Verify current password
+        const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+        if (!isCurrentPasswordValid) {
+            return res.status(400).json({ error: 'Password attuale non corretta' });
+        }
+
+        // Revoke all existing refresh tokens
+        await Token.revokeAllUserTokens(userId);
+
+        // Hash new password and save
+        const salt = await bcrypt.genSalt(12);
+        user.password = await bcrypt.hash(newPassword, salt);
+        user.passwordChangedAt = Date.now();
+        await user.save();
+
+        logger.info(`Password cambiata per utente: ${userId}`);
+        res.json({ message: 'Password cambiata con successo' });
+    } catch (error) {
+        logger.error('Errore durante il cambio password:', error);
+        res.status(500).json({ error: 'Errore durante il cambio password' });
     }
-];
+};
 
 //Eliminazione utente
-export const user_delete = [
-    auditOnSuccess('user_delete'),
-    async(req,res) => {
-        try {
-            await User.findByIdAndDelete(req.user._id);
-            res.json( {message: "Utente eliminato con successo"});
-        }catch(error) {
-            error.statusCode = 500;
-            throw error;
+export const user_delete = async (req, res) => {
+    try {
+        const userId = req.user?._id;
+        if (!userId) {
+            return res.status(401).json({ error: 'Utente non autenticato' });
         }
+
+        // Find user to verify existence
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ error: 'Utente non trovato' });
+        }
+
+        // Revoke all tokens before deleting user
+        await Token.revokeAllUserTokens(userId);
+
+        // Delete user
+        await User.findByIdAndDelete(userId);
+        
+        logger.info(`Utente eliminato: ${userId}`);
+        res.json({ message: 'Utente eliminato con successo' });
+    } catch (error) {
+        logger.error('Errore durante l\'eliminazione dell\'utente:', error);
+        res.status(500).json({ error: 'Errore durante l\'eliminazione dell\'utente' });
     }
-];
+};
 
 //Logout endpoint
 export const logout = async (req, res) => {
