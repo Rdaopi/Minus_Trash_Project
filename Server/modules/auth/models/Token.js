@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 import crypto from 'crypto';
-import User from "./User.js"
 import bcrypt from "bcryptjs";
 
 const { Schema } = mongoose;

@@ -4,6 +4,7 @@ import { auditOnSuccess } from "../middlewares/withAudit.js"; //per generare gli
 import { logger } from '../../../core/utils/logger.js';
 import jwt from 'jsonwebtoken';
 import Token from "../models/Token.js";
+import AuthService from "../services/AuthService.js";
 
 //Regex per  validità password
 const REGEX_PASSWORD = /^(?=.*[A-Z])(?=.*[!@#$%^&*])(?=.{8,})/;
@@ -129,9 +130,9 @@ export const login = async(req, res) => {
             return res.status(401).json({ error: 'Credenziali non valide' });
         }
 
-        //Genera il JWT via metodo sullo schema
+        //Generate the tokens via AuthService
         try {
-            const { accessToken, refreshToken } = await user.generateTokens(req.ip, req.headers['user-agent']);
+            const { accessToken, refreshToken } = await AuthService.generateTokens(user, req.ip, req.headers['user-agent']);
             logger.info('Generated tokens for user:', { userId: user._id });
 
             //Aggiorna lastLogin
@@ -211,7 +212,8 @@ export const refreshTokenHandler = async (req, res) => {
                 */
         }            
         // Generate new tokens
-        const { accessToken: newAccessToken, refreshToken: newRefreshToken } = await validToken.user.generateTokens(
+        const { accessToken: newAccessToken, refreshToken: newRefreshToken } = await AuthService.generateTokens(
+            validToken.user,
             validToken.ipAddress,
             validToken.userAgent
         );

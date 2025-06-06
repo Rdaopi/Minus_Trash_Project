@@ -2,11 +2,12 @@ import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import AuthService from '../services/AuthService.js';
 import auditService from '../../audit/services/audit.service.js';
 
 // Helper function to generate and store refresh token
 const generateAndStoreRefreshToken = async (user, ip, userAgent) => {
-  const { refreshToken } = await user.generateTokens(ip, userAgent);
+  const { refreshToken } = await AuthService.generateTokens(user, ip, userAgent);
   return refreshToken;
 };
 

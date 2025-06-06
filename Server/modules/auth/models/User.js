@@ -1,6 +1,4 @@
 import mongoose from 'mongoose';
-import jwt from 'jsonwebtoken';
-import Token from './Token.js';
 import crypto from 'crypto';
 
 const { Schema } = mongoose;
@@ -107,35 +105,7 @@ userSchema.methods.generateAuthToken = function() {
     return token;
 };*/
 
-// Method to generate both access and refresh tokens
-userSchema.methods.generateTokens = async function(ip, userAgent) {
-    const accessToken = jwt.sign(
-        { 
-            id: this._id,
-            role: this.role 
-        },
-        process.env.JWT_ACCESS_SECRET,
-        { expiresIn: '1m' }
-        //1m for testing
-    );
-
-    const refreshToken = jwt.sign(
-        { id: this._id },
-        process.env.JWT_REFRESH_SECRET,
-        { expiresIn: '7d' }
-    );
-
-    // Save refresh token in database
-    await Token.create({
-        user: this._id,
-        refreshToken, // Will be automatically hashed by the pre-save middleware
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-        ipAddress: ip,
-        userAgent
-    });
-
-    return { accessToken, refreshToken };
-};
+// Note: Token generation is now handled by AuthService to avoid circular dependencies
 
 // Method to check if user can change password
 userSchema.methods.canChangePassword = function() {

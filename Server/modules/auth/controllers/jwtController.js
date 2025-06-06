@@ -1,15 +1,17 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import Token from '../models/Token.js';
+import AuthService from '../services/AuthService.js';
 import { logger } from '../../../core/utils/logger.js';
-import { authenticateBasic } from '../services/authService.js';
+import { authenticateBasic } from '../services/AuthService.js';
 
 // 2. Modifica la funzione login
 export const login = async (req, res) => {
   try {
     const user = await authenticateBasic(req.body.identifier, req.body.password);
     
-    const { accessToken, refreshToken } = await user.generateTokens(
+    const { accessToken, refreshToken } = await AuthService.generateTokens(
+      user,
       req.ip,
       req.headers['user-agent']
     );
