@@ -19,7 +19,10 @@ const auditLogSchema = new Schema({
       'password_change', 
       'user_registration',
       'user_delete',
-      'failed_login'
+      'failed_login',
+      'admin_user_creation',
+      'admin_user_update',
+      'admin_user_delete'
     ]
   },
   method: {

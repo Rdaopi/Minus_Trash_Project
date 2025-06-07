@@ -116,19 +116,43 @@ const isTokenExpired = (token) => {
   }
 };
 
-// Add automatic token check on interval
+let hasLoggedNoToken = false;
 setInterval(async () => {
   const token = localStorage.getItem('token');
-  if (token && isTokenExpired(token)) {
-    const refreshToken = localStorage.getItem('refreshToken');
+  const refreshToken = localStorage.getItem('refreshToken');
+  if (!token) {
+    if (!hasLoggedNoToken) {
+      console.log('%c[Interval] No access token found', 'background: #f44336; color: white; padding: 2px 5px; border-radius: 3px');
+      hasLoggedNoToken = true;
+    }
+    return;
+  }
+  hasLoggedNoToken = false;
+  let timeLeft = null;
+  try {
+    const tokenData = JSON.parse(atob(token.split('.')[1]));
+    const expirationTime = tokenData.exp * 1000;
+    const currentTime = Date.now();
+    timeLeft = expirationTime - currentTime;
+    console.log(`%c[Interval] Token check at ${new Date(currentTime).toLocaleTimeString()} | Expires in: ${Math.round(timeLeft/1000)}s`, 'background: #2196f3; color: white; padding: 2px 5px; border-radius: 3px');
+  } catch (e) {
+    console.error('[Interval] Error parsing token:', e);
+    timeLeft = null;
+  }
+  // Proactive refresh: if less than 10 seconds left, refresh
+  if (token && (isTokenExpired(token) || (timeLeft !== null && timeLeft < 10000))) {
+    if (timeLeft !== null && timeLeft > 0) {
+      console.log('%c[Interval] Token about to expire, refreshing early', 'background: #ffeb3b; color: black; padding: 2px 5px; border-radius: 3px');
+    }
+    console.log('%c[Interval] Token expired or about to expire, attempting refresh', 'background: #ff9800; color: white; padding: 2px 5px; border-radius: 3px');
+
     if (!refreshToken) {
-      console.log('%cNo refresh token available - Logging out', 'background: #f44336; color: white; padding: 2px 5px; border-radius: 3px');
+      console.log('%c[Interval] No refresh token available - Logging out', 'background: #f44336; color: white; padding: 2px 5px; border-radius: 3px');
       clearAuthData();
       window.location.href = '/auth';
     } else {
       // Attempt to refresh the token
       try {
-        console.log('%cToken expired - Attempting refresh', 'background: #ff9800; color: white; padding: 2px 5px; border-radius: 3px');
         const response = await fetch(`${API_BASE_URL}/auth/refresh-token`, {
           method: 'POST',
           headers: {
@@ -136,18 +160,21 @@ setInterval(async () => {
           },
           body: JSON.stringify({ refreshToken })
         });
+        if (!response.ok) {
+          console.error('[Interval] Refresh token request failed:', response.status, response.statusText);
+        }
         const newTokens = await handleResponse(response, null, true);
         localStorage.setItem('token', newTokens.accessToken);
         localStorage.setItem('refreshToken', newTokens.refreshToken);
-        console.log('%cToken refreshed successfully', 'background: #4caf50; color: white; padding: 2px 5px; border-radius: 3px');
+        console.log('%c[Interval] Token refreshed successfully', 'background: #4caf50; color: white; padding: 2px 5px; border-radius: 3px');
       } catch (error) {
-        console.error('Failed to refresh token in interval check:', error);
+        console.error('[Interval] Failed to refresh token in interval check:', error);
         clearAuthData();
         window.location.href = '/auth';
       }
     }
   }
-}, 30000); // Check every 30 seconds
+}, 10000); // Check every 10 seconds
 
 // Prelevo i token per le richieste autenticate
 const getAuthHeaders = async () => {
@@ -235,6 +262,10 @@ const clearAuthData = () => {
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('userEmail');
   localStorage.removeItem('authMethod');
+  localStorage.removeItem('userName');
+  localStorage.removeItem('userSurname');
+  localStorage.removeItem('userUsername');
+  localStorage.removeItem('userRole');
 };
 
 //Authentication related API endpoints
@@ -328,11 +359,11 @@ export const authAPI = {
 
   // Change password with refresh token support
   async changePassword(passwordData) {
-    const url = `${API_BASE_URL}/auth/change_password`;
-    logApiCall('POST', url);
+    const url = `${API_BASE_URL}/auth/users/me/password`;
+    logApiCall('PATCH', url);
     try {
       const headers = await getAuthHeaders();
-      const requestOptions = { method: 'POST', headers, body: JSON.stringify({ currentPassword: passwordData.currentPassword, newPassword: passwordData.newPassword }) };
+      const requestOptions = { method: 'PATCH', headers, body: JSON.stringify({ currentPassword: passwordData.currentPassword, newPassword: passwordData.newPassword }) };
       const response = await fetch(url, requestOptions);
       const data = await handleResponse(response, requestOptions);
       
@@ -392,6 +423,36 @@ export const authAPI = {
       return handleResponse(response, requestOptions, true);
     } catch (error) {
       console.error('Password reset error:', error);
+      throw error;
+    }
+  },
+
+  // Update user profile (PATCH /api/auth/users/me)
+  async updateProfile(profileData) {
+    const url = `${API_BASE_URL}/auth/users/me`;
+    logApiCall('PATCH', url);
+    try {
+      const headers = await getAuthHeaders();
+      const requestOptions = { method: 'PATCH', headers, body: JSON.stringify(profileData) };
+      const response = await fetch(url, requestOptions);
+      return await handleResponse(response, requestOptions);
+    } catch (error) {
+      console.error('Update profile error:', error);
+      throw error;
+    }
+  },
+
+  // Get current user profile
+  async getProfile() {
+    const url = `${API_BASE_URL}/auth/users/me`;
+    logApiCall('GET', url);
+    try {
+      const headers = await getAuthHeaders();
+      const requestOptions = { method: 'GET', headers };
+      const response = await fetch(url, requestOptions);
+      return await handleResponse(response, requestOptions);
+    } catch (error) {
+      console.error('Get profile error:', error);
       throw error;
     }
   }

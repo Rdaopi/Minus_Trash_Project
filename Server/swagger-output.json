@@ -995,11 +995,11 @@
         }
       }
     },
-    "/api/auth/profile_update": {
-      "post": {
-        "summary": "Aggiorna profilo utente",
-        "description": "Permette all'utente autenticato di aggiornare le informazioni del proprio profilo.\n\n**Campi modificabili:**\n- Nome e cognome\n- Username (deve essere unico nel sistema)\n\n**Campi NON modificabili:**\n- Email (richiede processo di verifica separato)\n- Ruolo (solo gli amministratori possono modificarlo)\n- Password (usa endpoint dedicato `/change_password`)\n\n**Validazioni:**\n- L'username deve essere unico\n- Nome e cognome devono avere almeno 2 caratteri\n- Massimo 50 caratteri per nome e cognome\n- Username tra 3 e 30 caratteri\n",
-        "operationId": "updateProfile",
+    "/api/users/me": {
+      "patch": {
+        "summary": "Aggiorna il profilo dell'utente autenticato",
+        "description": "Permette all'utente autenticato di aggiornare le proprie informazioni di profilo (nome, cognome, username).\n\n**Campi modificabili:**\n- Nome e cognome\n- Username (deve essere unico nel sistema)\n\n**Campi NON modificabili:**\n- Email (richiede processo di verifica separato)\n- Ruolo (solo gli amministratori possono modificarlo)\n- Password (usa endpoint dedicato)\n",
+        "operationId": "updateOwnProfile",
         "security": [
           {
             "BearerAuth": []
@@ -1020,14 +1020,12 @@
                         "type": "string",
                         "minLength": 2,
                         "maxLength": 50,
-                        "description": "Nome dell'utente",
                         "example": "Mario"
                       },
                       "surname": {
                         "type": "string",
                         "minLength": 2,
                         "maxLength": 50,
-                        "description": "Cognome dell'utente",
                         "example": "Rossi"
                       }
                     }
@@ -1037,7 +1035,6 @@
                     "minLength": 3,
                     "maxLength": 30,
                     "pattern": "^[a-zA-Z0-9_]+$",
-                    "description": "Nome utente (solo lettere, numeri e underscore)",
                     "example": "mario_rossi_2024"
                   }
                 }
@@ -1170,8 +1167,8 @@
         }
       }
     },
-    "/api/auth/change_password": {
-      "post": {
+    "/api/auth/users/me/password": {
+      "patch": {
         "summary": "Cambia password utente",
         "description": "Permette all'utente autenticato di modificare la propria password.\n\n**Requisiti di sicurezza:**\n- Deve fornire la password attuale corretta\n- La nuova password deve rispettare i criteri di sicurezza\n- Dopo il cambio, tutte le sessioni attive vengono invalidate (tranne quella corrente)\n\n**Criteri password:**\n- Minimo 8 caratteri\n- Almeno una lettera maiuscola\n- Almeno una lettera minuscola  \n- Almeno un numero\n- Almeno un carattere speciale\n- Non deve essere uguale alla password precedente\n\n**Sicurezza:**\n- La password viene hashata con bcrypt\n- Viene registrato l'evento nei log di sicurezza\n- Viene aggiornata la data di cambio password\n",
         "operationId": "changePassword",

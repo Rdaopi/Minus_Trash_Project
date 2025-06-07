@@ -105,6 +105,11 @@ const routes = [
       requiresAuth: true
     }
   },
+  {
+    path: '/edit-profile',
+    name: 'EditProfile',
+    component: () => import('../views/EditProfile.vue')
+  },
   // TODO: Aggiungere pagina contatti
 ]
 

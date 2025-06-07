@@ -10,7 +10,8 @@ import {
   getAllUsers,
   deleteUserById,
   updateUserById,
-  user_delete
+  user_delete,
+  getOwnProfile
 } from './controllers/userController.js';
 
 import { auditOnSuccess } from "./middlewares/withAudit.js";
@@ -640,15 +641,16 @@ router.get('/googleOAuth/callback', googleAuthCallback);
  */
 
 //Route Protette da JWT
-//Da implementare con il JWT, attualmente richiede autenticazione base
-router.post('/profile_update', jwtAuth, auditOnSuccess('profile_update', ['userId']), profile_update);
+
+router.get('/users/me', jwtAuth, getOwnProfile);
+router.patch('/users/me', jwtAuth, auditOnSuccess('profile_update', ['userId']), profile_update);
 /**
  * @swagger
- * /api/auth/profile_update:
- *   post:
- *     summary: Aggiorna profilo utente
+ * /api/users/me:
+ *   patch:
+ *     summary: Aggiorna il profilo dell'utente autenticato
  *     description: |
- *       Permette all'utente autenticato di aggiornare le informazioni del proprio profilo.
+ *       Permette all'utente autenticato di aggiornare le proprie informazioni di profilo (nome, cognome, username).
  *       
  *       **Campi modificabili:**
  *       - Nome e cognome
@@ -657,15 +659,9 @@ router.post('/profile_update', jwtAuth, auditOnSuccess('profile_update', ['userI
  *       **Campi NON modificabili:**
  *       - Email (richiede processo di verifica separato)
  *       - Ruolo (solo gli amministratori possono modificarlo)
- *       - Password (usa endpoint dedicato `/change_password`)
- *       
- *       **Validazioni:**
- *       - L'username deve essere unico
- *       - Nome e cognome devono avere almeno 2 caratteri
- *       - Massimo 50 caratteri per nome e cognome
- *       - Username tra 3 e 30 caratteri
- *     tags: [Autenticazione]
- *     operationId: updateProfile
+ *       - Password (usa endpoint dedicato)
+ *     tags: [Utente]
+ *     operationId: updateOwnProfile
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -684,20 +680,17 @@ router.post('/profile_update', jwtAuth, auditOnSuccess('profile_update', ['userI
  *                     type: string
  *                     minLength: 2
  *                     maxLength: 50
- *                     description: Nome dell'utente
  *                     example: "Mario"
  *                   surname:
  *                     type: string
  *                     minLength: 2
  *                     maxLength: 50
- *                     description: Cognome dell'utente
  *                     example: "Rossi"
  *               username:
  *                 type: string
  *                 minLength: 3
  *                 maxLength: 30
  *                 pattern: "^[a-zA-Z0-9_]+$"
- *                 description: Nome utente (solo lettere, numeri e underscore)
  *                 example: "mario_rossi_2024"
  *           examples:
  *             update_name:
@@ -779,11 +772,11 @@ router.post('/profile_update', jwtAuth, auditOnSuccess('profile_update', ['userI
  *                   message: "L'username scelto è già utilizzato da un altro utente"
  */
 
-router.post('/change_password', jwtAuth, auditOnSuccess('password_change'), changePassword);
+router.patch('/users/me/password', jwtAuth, auditOnSuccess('password_change'), changePassword);
 /**
  * @swagger
- * /api/auth/change_password:
- *   post:
+ * /api/auth/users/me/password:
+ *   patch:
  *     summary: Cambia password utente
  *     description: |
  *       Permette all'utente autenticato di modificare la propria password.
@@ -1208,7 +1201,7 @@ router.post('/change_password', jwtAuth, auditOnSuccess('password_change'), chan
 router.post('/refresh-token', refreshTokenHandler);
 
 // Add logout handler to the router
-router.post('/logout', jwtAuth, auditOnSuccess('user_logout'), logout);
+router.post('/logout', jwtAuth, auditOnSuccess('logout'), logout);
 
 // User self-delete route
 router.delete('/profile', jwtAuth, auditOnSuccess('user_delete'), user_delete);

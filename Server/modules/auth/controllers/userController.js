@@ -474,3 +474,22 @@ export const logout = async (req, res) => {
         res.status(500).json({ error: 'Errore durante il logout' });
     }
 };
+
+// Get own profile
+export const getOwnProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('-password');
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json({
+      id: user._id,
+      username: user.username,
+      email: user.email,
+      fullName: user.fullName,
+      role: user.role
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Error fetching profile' });
+  }
+};

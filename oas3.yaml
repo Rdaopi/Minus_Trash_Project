@@ -883,154 +883,8 @@ paths:
                 example: >-
                   <html><body><h1>Errore del server</h1><p>Si è verificato un
                   errore tecnico</p></body></html>
-  /api/auth/profile_update:
-    post:
-      summary: Aggiorna profilo utente
-      description: >
-        Permette all'utente autenticato di aggiornare le informazioni del
-        proprio profilo.
-
-
-        **Campi modificabili:**
-
-        - Nome e cognome
-
-        - Username (deve essere unico nel sistema)
-
-
-        **Campi NON modificabili:**
-
-        - Email (richiede processo di verifica separato)
-
-        - Ruolo (solo gli amministratori possono modificarlo)
-
-        - Password (usa endpoint dedicato `/change_password`)
-
-
-        **Validazioni:**
-
-        - L'username deve essere unico
-
-        - Nome e cognome devono avere almeno 2 caratteri
-
-        - Massimo 50 caratteri per nome e cognome
-
-        - Username tra 3 e 30 caratteri
-      operationId: updateProfile
-      security:
-        - BearerAuth: []
-      requestBody:
-        description: Dati del profilo da aggiornare
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                fullName:
-                  type: object
-                  description: Nome completo dell'utente
-                  properties:
-                    name:
-                      type: string
-                      minLength: 2
-                      maxLength: 50
-                      description: Nome dell'utente
-                      example: Mario
-                    surname:
-                      type: string
-                      minLength: 2
-                      maxLength: 50
-                      description: Cognome dell'utente
-                      example: Rossi
-                username:
-                  type: string
-                  minLength: 3
-                  maxLength: 30
-                  pattern: '^[a-zA-Z0-9_]+$'
-                  description: 'Nome utente (solo lettere, numeri e underscore)'
-                  example: mario_rossi_2024
-            examples:
-              update_name:
-                summary: Aggiorna solo il nome
-                value:
-                  fullName:
-                    name: Mario Giuseppe
-                    surname: Rossi
-              update_username:
-                summary: Aggiorna solo username
-                value:
-                  username: mario_rossi_new
-              update_all:
-                summary: Aggiorna tutto
-                value:
-                  fullName:
-                    name: Mario Giuseppe
-                    surname: Verdi
-                  username: mario_verdi
-      responses:
-        '200':
-          description: Profilo aggiornato con successo
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: Profilo aggiornato con successo
-                  user:
-                    $ref: '#/components/schemas/User'
-              examples:
-                success:
-                  summary: Aggiornamento riuscito
-                  value:
-                    message: Profilo aggiornato con successo
-                    user:
-                      _id: 507f1f77bcf86cd799439011
-                      username: mario_verdi
-                      email: mario.rossi@email.com
-                      fullName:
-                        name: Mario Giuseppe
-                        surname: Verdi
-                      role: cittadino
-                      updatedAt: '2023-12-01T16:30:00Z'
-        '400':
-          description: Dati non validi
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                validation_error:
-                  summary: Errore di validazione
-                  value:
-                    error: Dati non validi
-                    message: I dati forniti non rispettano i requisiti
-                    errors:
-                      username:
-                        - Username già in uso da un altro utente
-                      fullName.name:
-                        - Il nome deve avere almeno 2 caratteri
-        '401':
-          description: Token di autenticazione mancante o non valido
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '409':
-          description: Conflitto - Username già esistente
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                username_taken:
-                  summary: Username non disponibile
-                  value:
-                    error: Username non disponibile
-                    message: L'username scelto è già utilizzato da un altro utente
   /api/auth/change_password:
-    post:
+    patch:
       summary: Cambia password utente
       description: >
         Permette all'utente autenticato di modificare la propria password.
@@ -1464,9 +1318,9 @@ paths:
         - in: path
           name: userId
           required: true
+          description: L'ID dell'utente da aggiornare
           schema:
             type: string
-          description: L'ID dell'utente da aggiornare
       requestBody:
         content:
           application/json:
@@ -1495,9 +1349,9 @@ paths:
         - in: path
           name: userId
           required: true
+          description: L'ID dell'utente da eliminare
           schema:
             type: string
-          description: L'ID dell'utente da eliminare
       responses:
         '200':
           description: Utente eliminato con successo
@@ -2622,3 +2476,129 @@ paths:
                     example: Solo gli amministratori possono eliminare i cestini
         '404':
           description: Cestino non trovato
+  /api/users/me:
+    patch:
+      summary: Aggiorna il profilo dell'utente autenticato
+      description: |
+        Permette all'utente autenticato di aggiornare le proprie informazioni di profilo (nome, cognome, username).
+        
+        **Campi modificabili:**
+        - Nome e cognome
+        - Username (deve essere unico nel sistema)
+        
+        **Campi NON modificabili:**
+        - Email (richiede processo di verifica separato)
+        - Ruolo (solo gli amministratori possono modificarlo)
+        - Password (usa endpoint dedicato)
+      tags: [Utente]
+      operationId: updateOwnProfile
+      security:
+        - BearerAuth: []
+      requestBody:
+        description: Dati del profilo da aggiornare
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fullName:
+                  type: object
+                  description: Nome completo dell'utente
+                  properties:
+                    name:
+                      type: string
+                      minLength: 2
+                      maxLength: 50
+                      example: "Mario"
+                    surname:
+                      type: string
+                      minLength: 2
+                      maxLength: 50
+                      example: "Rossi"
+                username:
+                  type: string
+                  minLength: 3
+                  maxLength: 30
+                  pattern: "^[a-zA-Z0-9_]+$"
+                  example: "mario_rossi_2024"
+            examples:
+              update_name:
+                summary: Aggiorna solo il nome
+                value:
+                  fullName:
+                    name: "Mario Giuseppe"
+                    surname: "Rossi"
+              update_username:
+                summary: Aggiorna solo username
+                value:
+                  username: "mario_rossi_new"
+              update_all:
+                summary: Aggiorna tutto
+                value:
+                  fullName:
+                    name: "Mario Giuseppe"
+                    surname: "Verdi"
+                  username: "mario_verdi"
+      responses:
+        '200':
+          description: Profilo aggiornato con successo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Profilo aggiornato con successo
+                  user:
+                    $ref: '#/components/schemas/User'
+              examples:
+                success:
+                  summary: Aggiornamento riuscito
+                  value:
+                    message: Profilo aggiornato con successo
+                    user:
+                      _id: 507f1f77bcf86cd799439011
+                      username: mario_verdi
+                      email: mario.rossi@email.com
+                      fullName:
+                        name: Mario Giuseppe
+                        surname: Verdi
+                      role: cittadino
+                      updatedAt: '2023-12-01T16:30:00Z'
+        '400':
+          description: Dati non validi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                validation_error:
+                  summary: Errore di validazione
+                  value:
+                    error: Dati non validi
+                    message: I dati forniti non rispettano i requisiti
+                    errors:
+                      username:
+                        - Username già in uso da un altro utente
+                      fullName.name:
+                        - Il nome deve avere almeno 2 caratteri
+        '401':
+          description: Token di autenticazione mancante o non valido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflitto - Username già esistente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                username_taken:
+                  summary: Username non disponibile
+                  value:
+                    error: Username non disponibile
+                    message: L'username scelto è già utilizzato da un altro utente

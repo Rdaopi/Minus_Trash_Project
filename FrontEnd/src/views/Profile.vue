@@ -9,9 +9,24 @@
         <p>Hai effettuato l'accesso con Google. Per modificare la password, utilizza le impostazioni del tuo account Google.</p>
       </div>
       
+      <!-- Show user info -->
+      <div class="user-info">
+        <template v-if="loadingProfile">
+          <p>Loading profile...</p>
+        </template>
+        <template v-else>
+          <p><strong>Name:</strong> {{ profileForm.fullName.name }}</p>
+          <p><strong>Surname:</strong> {{ profileForm.fullName.surname }}</p>
+          <p><strong>Username:</strong> {{ profileForm.username }}</p>
+        </template>
+      </div>
+      
       <div class="buttons-container">
         <button v-if="!isGoogleUser" class="change-password-button" @click="goToChangePassword">
           Cambia Password
+        </button>
+        <button v-if="!isGoogleUser" class="edit-profile-button" @click="goToEditProfile">
+          Modifica Profilo
         </button>
         <button v-if="isOperator || isAdmin" class="manage-bins-button" @click="goToBinManagement">
           Gestione Cestini
@@ -45,6 +60,16 @@ const userEmail = ref(localStorage.getItem('userEmail') || 'utente');
 const showNotification = ref(false);
 const notificationMessage = ref('');
 const notificationType = ref('success');
+
+const profileForm = ref({
+  fullName: {
+    name: localStorage.getItem('userName') || '',
+    surname: localStorage.getItem('userSurname') || ''
+  },
+  username: localStorage.getItem('userUsername') || ''
+});
+
+const loadingProfile = ref(true);
 
 // Check if user is a Google user by looking at the auth method and email domain
 const isGoogleUser = computed(() => {
@@ -102,7 +127,7 @@ const isAdmin = computed(() => {
 });
 
 // Check auth method on component mount
-onMounted(() => {
+onMounted(async () => {
   const authMethod = localStorage.getItem('authMethod');
   const email = localStorage.getItem('userEmail');
   console.log('On mount - Auth method:', authMethod, 'Email:', email);
@@ -123,11 +148,27 @@ onMounted(() => {
     localStorage.removeItem('userEmail');
     localStorage.removeItem('userRole');
     router.push('/auth');
+    return;
   }
   // Set auth method if not already set
   if (!authMethod && email) {
     const isGoogle = email.endsWith('@gmail.com');
     localStorage.setItem('authMethod', isGoogle ? 'google' : 'regular');
+  }
+  // Fetch current profile data from backend
+  try {
+    const profile = await authAPI.getProfile();
+    profileForm.value.fullName.name = profile.fullName?.name || '';
+    profileForm.value.fullName.surname = profile.fullName?.surname || '';
+    profileForm.value.username = profile.username || '';
+    // Update localStorage for consistency
+    localStorage.setItem('userName', profile.fullName?.name || '');
+    localStorage.setItem('userSurname', profile.fullName?.surname || '');
+    localStorage.setItem('userUsername', profile.username || '');
+  } catch (e) {
+    console.error('Failed to fetch profile:', e);
+  } finally {
+    loadingProfile.value = false;
   }
 });
 
@@ -155,6 +196,9 @@ async function logout() {
     localStorage.removeItem('userEmail');
     localStorage.removeItem('authMethod');
     localStorage.removeItem('userRole');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userSurname');
+    localStorage.removeItem('userUsername');
     router.push('/auth');
   }
 }
@@ -173,6 +217,10 @@ function goToAccountManagement() {
 
 function goToChangePassword() {
   router.push('/change-password');
+}
+
+function goToEditProfile() {
+  router.push('/edit-profile');
 }
 </script>
 
@@ -207,6 +255,7 @@ function goToChangePassword() {
 .manage-bins-button,
 .manage-reports-button,
 .manage-account-button,
+.edit-profile-button,
 .logout-button {
   padding: 0.8rem 2rem;
   color: white;
@@ -244,6 +293,10 @@ function goToChangePassword() {
   background-color: #e53935;
 }
 
+.edit-profile-button {
+  background-color: var(--primary-color);
+}
+
 /* Effetti hover per ogni bottone */
 .change-password-button:hover {
   background-color: #5a1d87;
@@ -275,6 +328,12 @@ function goToChangePassword() {
 
 .logout-button:hover {
   background-color: #b71c1c;
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(229, 57, 53, 0.4);
+  animation: pulseGlow 1.5s infinite;
+}
+.edit-profile-button:hover {
+  background-color: var(--background-hover-color);
   transform: translateY(-3px);
   box-shadow: 0 5px 15px rgba(229, 57, 53, 0.4);
   animation: pulseGlow 1.5s infinite;
@@ -313,4 +372,14 @@ function goToChangePassword() {
     transform: translateY(-3px);
   }
 }
+
+.user-info {
+  margin-bottom: 2rem;
+}
+
+.user-info p {
+  margin: 0.5rem 0;
+  text-align: left;
+}
+
 </style> 
