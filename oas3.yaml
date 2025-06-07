@@ -2,7 +2,31 @@ openapi: 3.0.0
 info:
   title: Minus Trash API
   version: 1.0.0
-  description: Documentazione API per Minus Trash
+  description: |
+    # API Minus Trash - Gestione Segnalazioni Rifiuti
+    
+    Benvenuto nell'API di **Minus Trash**, la piattaforma per la gestione intelligente delle segnalazioni sui rifiuti urbani.
+    
+    ## Cosa puoi fare con questa API:
+    - **Gestire utenti** con diversi ruoli (cittadino, operatore comunale, amministratore)
+    - **Creare e gestire segnalazioni** di abbandoni e problemi con i cestini
+    - **Monitorare cestini** e il loro stato in tempo reale
+    - **Tracciare lo stato** delle segnalazioni dal report alla risoluzione
+    
+    ## Autenticazione
+    L'API utilizza **Bearer Token** per la maggior parte degli endpoint. 
+    Alcuni endpoint di login utilizzano **Basic Authentication**.
+    
+    ## Tipi di utente
+    - **Cittadino**: Può creare segnalazioni e visualizzare i propri report
+    - **Operatore Comunale**: Può gestire segnalazioni e cestini
+    - **Amministratore**: Ha accesso completo a tutte le funzionalità
+  contact:
+    name: Supporto Minus Trash
+    email: support@minustrash.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
 servers:
   - url: undefined
     description: Development server
