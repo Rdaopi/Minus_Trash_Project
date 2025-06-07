@@ -1408,7 +1408,7 @@ router.route('/bins/:id')
  *               estimatedDuration:
  *                 type: string
  *                 description: Durata stimata per MANUTENZIONE (formato ISO 8601 duration)
- *                 pattern: "^P(?!$)(\d+Y)?(\d+M)?(\d+W)?(\d+D)?(T(?=\d)(\d+H)?(\d+M)?(\d+S)?)?$"
+ *                 pattern: "^P(?!$)(\\d+Y)?(\\d+M)?(\\d+W)?(\\d+D)?(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?$"
  *                 example: "P2D"
  *               scheduledReactivation:
  *                 type: string
