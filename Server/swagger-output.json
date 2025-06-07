@@ -3154,6 +3154,278 @@
           }
         }
       }
+    },
+    "/api/bins/{id}/status": {
+      "patch": {
+        "summary": "Aggiorna stato cestino",
+        "description": "Modifica lo stato operativo di un cestino pubblico.\n\n**Richiede privilegi di operatore comunale o amministratore**\n\n**Stati disponibili:**\n- **ATTIVO**: Cestino funzionante e utilizzabile dal pubblico\n- **MANUTENZIONE**: Cestino temporaneamente fuori servizio per manutenzione\n- **INATTIVO**: Cestino definitivamente disattivato o rimosso\n\n**Workflow tipico:**\nATTIVO ↔ MANUTENZIONE (per interventi temporanei)\nATTIVO → INATTIVO (per disattivazione definitiva)\n\n**Effetti del cambio stato:**\n- **MANUTENZIONE**: Il cestino non appare nelle ricerche pubbliche\n- **INATTIVO**: Le notifiche di riempimento vengono disabilitate\n- **ATTIVO**: Riprende il monitoraggio e la visibilità pubblica\n\n**Use Cases:**\n- Manutenzione programmata o straordinaria\n- Guasto temporaneo o danneggiamento\n- Disattivazione per rimozione definitiva\n- Riattivazione dopo riparazione/sostituzione\n",
+        "operationId": "updateBinStatus",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "ID univoco del cestino",
+            "schema": {
+              "type": "string",
+              "example": "507f1f77bcf86cd799439014"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Nuovo stato del cestino e informazioni aggiuntive",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "description": "Nuovo stato operativo del cestino",
+                    "enum": [
+                      "ATTIVO",
+                      "MANUTENZIONE",
+                      "INATTIVO"
+                    ],
+                    "example": "MANUTENZIONE"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "description": "Motivo del cambio di stato (opzionale ma consigliato)",
+                    "maxLength": 200,
+                    "example": "Cestino danneggiato da atti vandalici, necessaria sostituzione"
+                  },
+                  "estimatedDuration": {
+                    "type": "string",
+                    "description": "Durata stimata per MANUTENZIONE (formato ISO 8601 duration)",
+                    "pattern": "^P(?!$)(\\d+Y)?(\\d+M)?(\\d+W)?(\\d+D)?(T(?=\\d)(\\d+H)?(\\d+M)?(\\d+S)?)?$",
+                    "example": "P2D"
+                  },
+                  "scheduledReactivation": {
+                    "type": "string",
+                    "description": "Data programmata per riattivazione (per stato MANUTENZIONE)",
+                    "example": "2023-12-05T08:00:00Z"
+                  },
+                  "maintenanceType": {
+                    "type": "string",
+                    "description": "Tipo di manutenzione (se status = MANUTENZIONE)",
+                    "enum": [
+                      "PROGRAMMATA",
+                      "STRAORDINARIA",
+                      "GUASTO",
+                      "VANDALISMO",
+                      "SOSTITUZIONE"
+                    ],
+                    "example": "STRAORDINARIA"
+                  }
+                }
+              },
+              "examples": {
+                "maintenance_scheduled": {
+                  "summary": "Manutenzione programmata",
+                  "value": {
+                    "status": "MANUTENZIONE",
+                    "reason": "Manutenzione programmata settimanale",
+                    "maintenanceType": "PROGRAMMATA",
+                    "estimatedDuration": "P1D",
+                    "scheduledReactivation": "2023-12-03T08:00:00Z"
+                  }
+                },
+                "emergency_repair": {
+                  "summary": "Riparazione urgente",
+                  "value": {
+                    "status": "MANUTENZIONE",
+                    "reason": "Cestino danneggiato da atti vandalici",
+                    "maintenanceType": "STRAORDINARIA",
+                    "estimatedDuration": "P3D"
+                  }
+                },
+                "deactivate_permanently": {
+                  "summary": "Disattivazione definitiva",
+                  "value": {
+                    "status": "INATTIVO",
+                    "reason": "Cestino rimosso per ristrutturazione area"
+                  }
+                },
+                "reactivate_after_repair": {
+                  "summary": "Riattivazione dopo riparazione",
+                  "value": {
+                    "status": "ATTIVO",
+                    "reason": "Riparazione completata, cestino nuovamente operativo"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stato del cestino aggiornato con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Stato cestino aggiornato con successo"
+                    },
+                    "bin": {
+                      "$ref": "#/components/schemas/Bin"
+                    },
+                    "statusHistory": {
+                      "type": "array",
+                      "description": "Cronologia dei cambi di stato",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "status": {
+                            "type": "string",
+                            "example": "MANUTENZIONE"
+                          },
+                          "changedBy": {
+                            "type": "string",
+                            "description": "ID dell'operatore che ha effettuato il cambio",
+                            "example": "507f1f77bcf86cd799439013"
+                          },
+                          "changedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "example": "2023-12-01T18:00:00Z"
+                          },
+                          "reason": {
+                            "type": "string",
+                            "example": "Manutenzione programmata settimanale"
+                          },
+                          "maintenanceType": {
+                            "type": "string",
+                            "example": "PROGRAMMATA"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "success": {
+                    "summary": "Stato aggiornato",
+                    "value": {
+                      "message": "Stato cestino aggiornato con successo",
+                      "bin": {
+                        "_id": "507f1f77bcf86cd799439014",
+                        "status": "MANUTENZIONE",
+                        "location": {
+                          "type": "Point",
+                          "coordinates": [
+                            12.4964,
+                            41.9028
+                          ]
+                        },
+                        "address": "Via Roma 45, 00100 Roma RM",
+                        "type": "INDIFFERENZIATO",
+                        "updatedAt": "2023-12-01T18:00:00Z"
+                      },
+                      "statusHistory": [
+                        {
+                          "status": "ATTIVO",
+                          "changedBy": "system",
+                          "changedAt": "2023-01-15T10:00:00Z",
+                          "reason": "Installazione iniziale"
+                        },
+                        {
+                          "status": "MANUTENZIONE",
+                          "changedBy": "507f1f77bcf86cd799439013",
+                          "changedAt": "2023-12-01T18:00:00Z",
+                          "reason": "Manutenzione programmata settimanale",
+                          "maintenanceType": "PROGRAMMATA"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dati non validi o transizione di stato non permessa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Transizione non valida"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Non è possibile passare da INATTIVO a MANUTENZIONE"
+                    },
+                    "allowedTransitions": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "example": [
+                        "ATTIVO",
+                        "INATTIVO"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token di autenticazione richiesto"
+          },
+          "403": {
+            "description": "Privilegi insufficienti per modificare lo stato del cestino",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Accesso negato"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Solo operatori comunali e amministratori possono modificare lo stato dei cestini"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Cestino non trovato",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Cestino non trovato"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Nessun cestino trovato con l'ID specificato"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }
