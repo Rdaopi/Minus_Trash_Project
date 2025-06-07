@@ -2,6 +2,15 @@ import reportService from '../services/reportService.js';
 import { logger } from '../../../core/utils/logger.js';
 import rateLimit from 'express-rate-limit';
 
+// Allow service injection for testing
+let currentReportService = reportService;
+
+export const setReportService = (service) => {
+    currentReportService = service;
+};
+
+export const getReportService = () => currentReportService;
+
 // Filtri validi per i report
 export const VALID_REPORT_FILTERS = ['reportType', 'status', 'severity'];
 
@@ -21,7 +30,7 @@ export const createReport = async (req, res, next) => {
             ...req.body,
             reportedBy: req.user._id
         };
-        const report = await reportService.createReport(reportData);
+        const report = await currentReportService.createReport(reportData);
         logger.info(`Nuova segnalazione creata: ${report._id}`);
         res.status(201).json(report);
     } catch (error) {
@@ -53,7 +62,7 @@ export const getAllReports = async (req, res, next) => {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 20;
         const skip = (page - 1) * limit;
-        const reports = await reportService.getReports(filters, { skip, limit });
+        const reports = await currentReportService.getReports(filters, { skip, limit });
         logger.info(`Recuperati ${reports.length} report (pagina ${page}, limite ${limit})`);
         res.json(reports);
     } catch (error) {
@@ -69,7 +78,7 @@ export const getAllReports = async (req, res, next) => {
 //Recupero segnalazione per ID
 export const getReportById = async (req, res, next) => {
     try {
-        const report = await reportService.getReportById(req.params.id);
+        const report = await currentReportService.getReportById(req.params.id);
         if (!report) {
             return res.status(404).json({ error: 'Segnalazione non trovata' });
         }
@@ -88,7 +97,7 @@ export const getReportById = async (req, res, next) => {
 export const getReportsInArea = async (req, res, next) => {
     try {
         const { longitude, latitude, radius = 1000 } = req.query;
-        const reports = await reportService.getNearbyReports(
+        const reports = await currentReportService.getNearbyReports(
             [parseFloat(longitude), parseFloat(latitude)],
             parseFloat(radius)
         );
@@ -106,18 +115,22 @@ export const getReportsInArea = async (req, res, next) => {
 //Recupero segnalazioni per tipo
 export const getReportsByType = async (req, res, next) => {
     try {
-        const reports = await reportService.getReportsByType(req.params.type);
+        const reports = await currentReportService.getReportsByType(req.params.type);
         res.json(reports);
     } catch (error) {
         logger.error(`Errore nel recupero delle segnalazioni per tipo: ${error.message}`);
-        next(error);
+        if (process.env.NODE_ENV !== 'production') {
+            res.status(500).json({ error: error.message, stack: error.stack });
+        } else {
+            res.status(500).json({ error: 'Errore interno' });
+        }
     }
 };
 
 //Recupero segnalazioni per stato
 export const getReportsByStatus = async (req, res, next) => {
     try {
-        const reports = await reportService.getReportsByStatus(req.params.status);
+        const reports = await currentReportService.getReportsByStatus(req.params.status);
         res.json(reports);
     } catch (error) {
         if (process.env.NODE_ENV !== 'production') {
@@ -131,25 +144,33 @@ export const getReportsByStatus = async (req, res, next) => {
 //Recupero segnalazioni urgenti
 export const getUrgentReports = async (req, res, next) => {
     try {
-        const reports = await reportService.getUrgentReports();
+        const reports = await currentReportService.getUrgentReports();
         res.json(reports);
     } catch (error) {
         logger.error(`Errore nel recupero delle segnalazioni urgenti: ${error.message}`);
-        next(error);
+        if (process.env.NODE_ENV !== 'production') {
+            res.status(500).json({ error: error.message, stack: error.stack });
+        } else {
+            res.status(500).json({ error: 'Errore interno' });
+        }
     }
 };
 
 //Aggiornamento segnalazione
 export const updateReport = async (req, res, next) => {
     try {
-        const report = await reportService.updateReport(req.params.id, req.body);
+        const report = await currentReportService.updateReport(req.params.id, req.body);
         if (!report) {
             return res.status(404).json({ error: 'Segnalazione non trovata' });
         }
         res.json(report);
     } catch (error) {
         logger.error(`Errore nell'aggiornamento della segnalazione: ${error.message}`);
-        next(error);
+        if (process.env.NODE_ENV !== 'production') {
+            res.status(500).json({ error: error.message, stack: error.stack });
+        } else {
+            res.status(500).json({ error: 'Errore interno' });
+        }
     }
 };
 
@@ -161,7 +182,7 @@ export const deleteReport = async (req, res, next) => {
         console.log('User ID:', req.user._id);
         console.log('User role:', req.user.role);
         
-        const report = await reportService.getReportById(req.params.id);
+        const report = await currentReportService.getReportById(req.params.id);
         if (!report) {
             console.log('ERROR: Report not found');
             return res.status(404).json({ error: 'Segnalazione non trovata' });
@@ -195,18 +216,13 @@ export const deleteReport = async (req, res, next) => {
         }
         
         console.log('Authorization passed, deleting report...');
-        await reportService.deleteReport(req.params.id);
+        await currentReportService.deleteReport(req.params.id);
         console.log('Report deleted successfully');
         
-        logger.info(`Segnalazione ${req.params.id} eliminata da utente ${req.user._id} (${req.user.role})`);
+        logger.info(`Segnalazione ${req.params.id} eliminata`);
         res.json({ message: 'Segnalazione eliminata con successo' });
     } catch (error) {
-        console.error('=== DELETE REPORT ERROR ===');
-        console.error('Error message:', error.message);
-        console.error('Error stack:', error.stack);
         logger.error(`Errore nell'eliminazione della segnalazione: ${error.message}`);
-        
-        // Return specific error in development, generic in production
         if (process.env.NODE_ENV !== 'production') {
             res.status(500).json({ error: error.message, stack: error.stack });
         } else {
@@ -219,7 +235,7 @@ export const deleteReport = async (req, res, next) => {
 export const verifyReport = async (req, res, next) => {
     try {
         const { notes, estimatedResolutionTime } = req.body;
-        const report = await reportService.verifyReport(
+        const report = await currentReportService.verifyReport(
             req.params.id,
             req.user._id,
             notes,
@@ -236,7 +252,7 @@ export const verifyReport = async (req, res, next) => {
 export const resolveReport = async (req, res, next) => {
     try {
         const { actionTaken, followUpRequired, followUpNotes } = req.body;
-        const report = await reportService.resolveReport(
+        const report = await currentReportService.resolveReport(
             req.params.id,
             req.user._id,
             actionTaken,
@@ -253,18 +269,22 @@ export const resolveReport = async (req, res, next) => {
 //Statistiche segnalazioni
 export const getReportStats = async (req, res, next) => {
     try {
-        const stats = await reportService.getStats();
+        const stats = await currentReportService.getReportStats();
         res.json(stats);
     } catch (error) {
         logger.error(`Errore nel recupero delle statistiche: ${error.message}`);
-        next(error);
+        if (process.env.NODE_ENV !== 'production') {
+            res.status(500).json({ error: error.message, stack: error.stack });
+        } else {
+            res.status(500).json({ error: 'Errore interno' });
+        }
     }
 };
 
 export const scheduleIntervention = async (req, res, next) => {
     try {
         const { date } = req.body;
-        const report = await reportService.scheduleIntervention(req.params.id, date);
+        const report = await currentReportService.scheduleIntervention(req.params.id, date);
         res.json(report);
     } catch (error) {
         logger.error(`Errore nella programmazione dell'intervento: ${error.message}`);
@@ -275,7 +295,7 @@ export const scheduleIntervention = async (req, res, next) => {
 export const assignReport = async (req, res, next) => {
     try {
         const { assignedTo } = req.body;
-        const report = await reportService.assignReport(req.params.id, assignedTo);
+        const report = await currentReportService.assignReport(req.params.id, assignedTo);
         res.json(report);
     } catch (error) {
         logger.error(`Errore nell'assegnazione della segnalazione: ${error.message}`);
@@ -286,7 +306,7 @@ export const assignReport = async (req, res, next) => {
 //Recupero commenti di una segnalazione
 export const getReportComments = async (req, res, next) => {
     try {
-        const report = await reportService.getReportById(req.params.id);
+        const report = await currentReportService.getReportById(req.params.id);
         if (!report) {
             return res.status(404).json({ error: 'Segnalazione non trovata' });
         }
@@ -311,7 +331,7 @@ export const addReportComment = async (req, res, next) => {
             author: req.user._id,
             createdAt: new Date()
         };
-        const report = await reportService.addComment(req.params.id, comment);
+        const report = await currentReportService.addComment(req.params.id, comment);
         if (!report) {
             return res.status(404).json({ error: 'Segnalazione non trovata' });
         }
@@ -330,7 +350,7 @@ export const updateReportStatus = async (req, res, next) => {
         if (!status) {
             return res.status(400).json({ error: 'Stato non specificato' });
         }
-        const report = await reportService.updateReportStatus(req.params.id, status, req.user._id);
+        const report = await currentReportService.updateReportStatus(req.params.id, status, req.user._id);
         if (!report) {
             return res.status(404).json({ error: 'Segnalazione non trovata' });
         }
