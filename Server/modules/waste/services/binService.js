@@ -1,32 +1,37 @@
 import Bin from '../models/Bin.js';
 
 class BinService {
+    constructor(binModel = null) {
+        // Allow model injection for testing
+        this.Bin = binModel || Bin;
+    }
+
     async createBin(binData) {
-        const bin = new Bin(binData);
+        const bin = new this.Bin(binData);
         return await bin.save();
     }
 
     async getBins(filters = {}) {
-        return await Bin.find(filters).sort({ createdAt: -1 });
+        return await this.Bin.find(filters).sort({ createdAt: -1 });
     }
 
     async getBinById(id) {
-        return await Bin.findById(id);
+        return await this.Bin.findById(id);
     }
 
     async updateBin(id, updateData) {
-        return await Bin.findByIdAndUpdate(id, updateData, { 
+        return await this.Bin.findByIdAndUpdate(id, updateData, { 
             new: true, 
             runValidators: true 
         });
     }
 
     async deleteBin(id) {
-        return await Bin.findByIdAndDelete(id);
+        return await this.Bin.findByIdAndDelete(id);
     }
 
     async getNearbyBins(coordinates, maxDistance = 1000) {
-        return await Bin.find({
+        return await this.Bin.find({
             location: {
                 $near: {
                     $geometry: {
@@ -40,7 +45,7 @@ class BinService {
     }
 
     async updateBinStatus(id, status) {
-        return await Bin.findByIdAndUpdate(
+        return await this.Bin.findByIdAndUpdate(
             id,
             { 
                 status,
@@ -51,18 +56,18 @@ class BinService {
     }
 
     async getBinsByType(type) {
-        return await Bin.find({ type });
+        return await this.Bin.find({ type });
     }
 
     async getFullBins() {
-        return await Bin.find({ 
+        return await this.Bin.find({ 
             currentFillLevel: { $gte: 80 } 
         });
     }
 
     async getBinsNeedingMaintenance() {
         const now = new Date();
-        return await Bin.find({
+        return await this.Bin.find({
             $or: [
                 { status: 'manutenzione' },
                 { 'maintenanceSchedule.nextMaintenance': { $lte: now } }
@@ -71,4 +76,6 @@ class BinService {
     }
 }
 
+// Export both the class and a default instance
+export { BinService };
 export default new BinService();

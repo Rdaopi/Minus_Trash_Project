@@ -21,6 +21,17 @@ const clientOptions = {
  * @returns {Promise<mongoose.Connection>} La connessione mongoose
  */
 async function connectDB() {
+  // Skip database connection in test mode
+  if (process.env.DISABLE_DB_FOR_TESTS === 'true' || process.env.NODE_ENV === 'test') {
+    console.log('Database connection disabled for tests');
+    return Promise.resolve({
+      connection: {
+        host: 'mock-test-db',
+        readyState: 1
+      }
+    });
+  }
+
   try {
     const conn = await mongoose.connect(uri, clientOptions);
     console.log(`MongoDB connesso: ${conn.connection.host}`);
