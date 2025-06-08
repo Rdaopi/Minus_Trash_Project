@@ -962,7 +962,6 @@ router.patch('/users/me/password', jwtAuth, auditOnSuccess('password_change'), c
  *       **Differenze dalla registrazione pubblica:**
  *       - L'amministratore può assegnare qualsiasi ruolo
  *       - Può creare account direttamente attivi
- *       - Può impostare password temporanee
  *       - Bypass di alcune validazioni standard
  *       
  *       **Use Cases:**
