@@ -75,6 +75,9 @@
             class="form-control"
             placeholder="Descrivi dettagliatamente il problema riscontrato..."
           ></textarea>
+          <div v-if="formData.description && formData.description.length < 10" class="text-danger" style="margin-top: 0.5rem;">
+            almeno 10 caratteri
+          </div>
           <small class="char-counter">{{ formData.description.length }}/1000 caratteri</small>
         </div>
 
