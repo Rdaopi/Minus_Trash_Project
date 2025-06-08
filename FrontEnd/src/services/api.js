@@ -413,6 +413,7 @@ export const authAPI = {
   // Reset password with token
   async resetPassword(token, password) {
     const url = `${API_BASE_URL}/reset-password`;
+    console.log('Reset password URL:', url);
     logApiCall('POST', url);
     
     try {
