@@ -28,8 +28,7 @@ const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
     ? [
         process.env.FRONTEND_URL,
-        process.env.BACKEND_URL,
-        'https://*.onrender.com'  // Allow all subdomains on render.com
+        process.env.BACKEND_URL
       ].filter(Boolean)  // Remove any undefined values
     : '*',  // Allow all origins in development
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],

@@ -7,7 +7,7 @@
   },
   "servers": [
     {
-      "url": "undefined",
+      "url": "http://localhost:5000",
       "description": "Development server"
     }
   ],
@@ -1412,7 +1412,7 @@
       },
       "post": {
         "summary": "Crea nuovo utente (Admin)",
-        "description": "Crea un nuovo account utente con privilegi amministrativi.\n\n**RICHIEDE PRIVILEGI DI AMMINISTRATORE**\n\n**Differenze dalla registrazione pubblica:**\n- L'amministratore può assegnare qualsiasi ruolo\n- Può creare account direttamente attivi\n- Può impostare password temporanee\n- Bypass di alcune validazioni standard\n\n**Use Cases:**\n- Creazione account operatori comunali\n- Setup account amministratori\n- Migrazione utenti da altri sistemi\n- Account di servizio/test\n",
+        "description": "Crea un nuovo account utente con privilegi amministrativi.\n\n**RICHIEDE PRIVILEGI DI AMMINISTRATORE**\n\n**Differenze dalla registrazione pubblica:**\n- L'amministratore può assegnare qualsiasi ruolo\n- Può creare account direttamente attivi\n- Bypass di alcune validazioni standard\n\n**Use Cases:**\n- Creazione account operatori comunali\n- Setup account amministratori\n- Migrazione utenti da altri sistemi\n- Account di servizio/test\n",
         "operationId": "createUserByAdmin",
         "security": [
           {
