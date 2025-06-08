@@ -234,6 +234,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { jwtDecode } from 'jwt-decode';
+const API_BASE_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api';
 
 const router = useRouter();
 const users = ref([]);
@@ -289,7 +290,7 @@ onMounted(async () => {
 // Load users from API
 async function loadUsers() {
   try {
-    const response = await fetch('/api/users', {
+    const response = await fetch(`${API_BASE_URL}/users`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
@@ -309,8 +310,8 @@ async function loadUsers() {
 async function handleSubmit() {
   try {
     const url = showEditUserModal.value 
-      ? `/api/users/${userForm.value._id}`
-      : '/api/users';
+      ? `${API_BASE_URL}/users/${userForm.value._id}`
+      : `${API_BASE_URL}/users`;
     
     const method = showEditUserModal.value ? 'PUT' : 'POST';
     
@@ -372,7 +373,7 @@ async function deleteUser() {
   if (!userToDelete.value) return;
 
   try {
-    const response = await fetch(`/api/users/${userToDelete.value._id}`, {
+    const response = await fetch(`${API_BASE_URL}/users/${userToDelete.value._id}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -470,7 +471,7 @@ function isCurrentUser(user) {
 // Handle message submission
 async function handleMessageSubmit() {
   try {
-    const response = await fetch('/api/messages/send', {
+    const response = await fetch(`${API_BASE_URL}/messages/send`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

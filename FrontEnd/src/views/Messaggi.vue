@@ -49,6 +49,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+const API_BASE_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api';
 
 const loading = ref(true);
 const error = ref('');
@@ -91,7 +92,7 @@ const markAsRead = async (message) => {
   if (isMessageRead(message)) return;
 
   try {
-    const response = await fetch(`/api/messages/${message._id}/read`, {
+    const response = await fetch(`${API_BASE_URL}/messages/${message._id}/read`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -122,7 +123,7 @@ async function loadMessages() {
   error.value = '';
 
   try {
-    const response = await fetch('/api/messages', {
+    const response = await fetch(`${API_BASE_URL}/messages`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
