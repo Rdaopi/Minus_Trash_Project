@@ -1091,77 +1091,116 @@ router.patch('/users/me/password', jwtAuth, auditOnSuccess('password_change'), c
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 
-// Route per il refresh token
-router.post('/auth/refresh-token', refreshTokenHandler);
-
-// Add logout handler to the router
-router.post('/logout', jwtAuth, auditOnSuccess('logout'), logout);
-
-// User self-delete route
-router.delete('/profile', jwtAuth, auditOnSuccess('user_delete'), user_delete);
-
-// Password Reset Routes
-router.post('/forgot-password', forgotPassword);
-router.post('/reset-password', resetPassword);
 /**
  * @swagger
- * /api/users/{userId}:
- *   put:
- *     summary: Aggiorna un utente tramite ID (Solo amministratore)
- *     tags: [Auth]
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *         description: L'ID dell'utente da aggiornare
+ * /api/forgot-password:
+ *   post:
+ *     summary: Request password reset
+ *     description: Send a password reset email to the user.
+ *     tags: [Authentication]
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/User'
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: user@example.com
  *     responses:
  *       200:
- *         description: Utente aggiornato con successo
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/User'
+ *         description: Password reset email sent
  *       400:
- *         description: Dati non validi
- *       401:
- *         description: Non autorizzato - Token mancante o non valido
- *       403:
- *         description: Vietato - L'utente non ha privilegi di amministratore
- *       404:
- *         description: Utente non trovato
- * 
- *   delete:
- *     summary: Elimina un utente tramite ID (Solo amministratore)
- *     tags: [Auth]
+ *         description: Invalid email
+ */
+router.post('/forgot-password', forgotPassword);
+
+/**
+ * @swagger
+ * /api/reset-password:
+ *   post:
+ *     summary: Reimposta la password dell'utente
+ *     description: Reimposta la password dell'utente utilizzando un token di reset valido.
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               token:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *                 minLength: 8
+ *     responses:
+ *       200:
+ *         description: Password reset successful
+ *       400:
+ *         description: Invalid token or password
+ */
+router.post('/reset-password', resetPassword);
+
+/**
+ * @swagger
+ * /api/logout:
+ *   post:
+ *     summary: Logout utente
+ *     description: Invalida la sessione o il token dell'utente corrente.
+ *     tags: [Authentication]
  *     security:
  *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *         description: L'ID dell'utente da eliminare
  *     responses:
  *       200:
- *         description: Utente eliminato con successo
+ *         description: Logout successful
  *       401:
- *         description: Non autorizzato - Token mancante o non valido
- *       403:
- *         description: Vietato - L'utente non ha privilegi di amministratore
- *       404:
- *         description: Utente non trovato
+ *         description: Unauthorized
  */
+router.post('/logout', jwtAuth, auditOnSuccess('logout'), logout);
+
+/**
+ * @swagger
+ * /api/profile:
+ *   delete:
+ *     summary: Elimina il proprio profilo utente
+ *     description: Elimina l'account dell'utente autenticato.
+ *     tags: [User]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Profile deleted
+ *       401:
+ *         description: Unauthorized
+ */
+router.delete('/profile', jwtAuth, auditOnSuccess('user_delete'), user_delete);
+
+/**
+ * @swagger
+ * /api/auth/refresh-token:
+ *   post:
+ *     summary: Rigenera il token JWT
+ *     description: Ottieni un nuovo access token utilizzando un refresh token valido.
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Token refreshed
+ *       400:
+ *         description: Invalid refresh token
+ */
+router.post('/auth/refresh-token', refreshTokenHandler);
 
 // Admin routes for user management
 router.get('/users', jwtAuth, getAllUsers);
