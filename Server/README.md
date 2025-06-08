@@ -164,3 +164,8 @@ npm run test:coverage       # Run tests with coverage report
 npm install swagger-autogen --save-dev
 remember to ignore this command at the start of server otherwise the server will restart constantly
  modify package.json ->> "dev": "nodemon --ignore swagger-output.json index.js",
+
+
+ # Generate or Update oas3.yaml
+ 
+   npm install js-yaml

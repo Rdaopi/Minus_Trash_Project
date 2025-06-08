@@ -761,102 +761,6 @@
         }
       }
     },
-    "/api/auth/login-test": {
-      "post": {
-        "summary": "Login di test (senza Basic Auth)",
-        "description": "**ENDPOINT DI TEST - Non usare in produzione!**\n\nEndpoint temporaneo per testare il login senza l'autenticazione Basic.\nAccetta direttamente email e password nel body della richiesta.\n\n**Nota:** Questo endpoint dovrebbe essere rimosso in produzione\ne sostituito con il login standard che usa Basic Authentication.\n",
-        "operationId": "loginTest",
-        "requestBody": {
-          "description": "Credenziali di login",
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "email": {
-                    "type": "string",
-                    "description": "Email dell'utente registrato",
-                    "example": "mario.rossi@email.com"
-                  },
-                  "password": {
-                    "type": "string",
-                    "minLength": 8,
-                    "description": "Password dell'utente",
-                    "example": "SecurePass123!"
-                  }
-                }
-              },
-              "examples": {
-                "test_login": {
-                  "summary": "Login di test",
-                  "value": {
-                    "email": "mario.rossi@email.com",
-                    "password": "SecurePass123!"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Login effettuato con successo",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LoginResponse"
-                },
-                "examples": {
-                  "success": {
-                    "summary": "Login riuscito",
-                    "value": {
-                      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-                      "user": {
-                        "_id": "507f1f77bcf86cd799439011",
-                        "username": "mario_rossi",
-                        "email": "mario.rossi@email.com",
-                        "role": "cittadino",
-                        "isActive": true
-                      },
-                      "expiresIn": "24h"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Credenziali non valide",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                },
-                "examples": {
-                  "invalid_credentials": {
-                    "summary": "Login fallito",
-                    "value": {
-                      "error": "Credenziali non valide",
-                      "message": "Email o password non corretti"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Errore interno del server",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/auth/googleOAuth/login": {
       "get": {
         "summary": "Inizia autenticazione Google OAuth",
@@ -1167,7 +1071,7 @@
         }
       }
     },
-    "/api/auth/users/me/password": {
+    "/api/users/me/password": {
       "patch": {
         "summary": "Cambia password utente",
         "description": "Permette all'utente autenticato di modificare la propria password.\n\n**Requisiti di sicurezza:**\n- Deve fornire la password attuale corretta\n- La nuova password deve rispettare i criteri di sicurezza\n- Dopo il cambio, tutte le sessioni attive vengono invalidate (tranne quella corrente)\n\n**Criteri password:**\n- Minimo 8 caratteri\n- Almeno una lettera maiuscola\n- Almeno una lettera minuscola  \n- Almeno un numero\n- Almeno un carattere speciale\n- Non deve essere uguale alla password precedente\n\n**Sicurezza:**\n- La password viene hashata con bcrypt\n- Viene registrato l'evento nei log di sicurezza\n- Viene aggiornata la data di cambio password\n",
@@ -1334,7 +1238,7 @@
         }
       }
     },
-    "/api/auth/users": {
+    "/api/users": {
       "get": {
         "summary": "Lista tutti gli utenti (Admin)",
         "description": "Recupera l'elenco completo di tutti gli utenti registrati nel sistema.\n\n**RICHIEDE PRIVILEGI DI AMMINISTRATORE**\n\n**Funzionalità:**\n- Visualizza tutti gli utenti del sistema\n- Include informazioni sensibili (email, ruoli, stato account)\n- Supporta filtri e paginazione tramite query parameters\n- Esclude automaticamente le password per sicurezza\n\n**Filtri disponibili:**\n- `role`: Filtra per ruolo utente\n- `isActive`: Filtra per stato account (attivo/inattivo)\n- `search`: Ricerca per username, email o nome\n\n**Use Cases:**\n- Dashboard amministrativa\n- Gestione utenti\n- Audit e monitoring\n- Statistiche sistema\n",
@@ -1670,7 +1574,7 @@
         }
       }
     },
-    "/api/auth/users/{userId}": {
+    "/api/users/{userId}": {
       "put": {
         "summary": "Aggiorna un utente tramite ID (Solo amministratore)",
         "security": [

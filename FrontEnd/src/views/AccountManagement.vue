@@ -289,7 +289,7 @@ onMounted(async () => {
 // Load users from API
 async function loadUsers() {
   try {
-    const response = await fetch('/api/auth/users', {
+    const response = await fetch('/api/users', {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
@@ -309,8 +309,8 @@ async function loadUsers() {
 async function handleSubmit() {
   try {
     const url = showEditUserModal.value 
-      ? `/api/auth/users/${userForm.value._id}`
-      : '/api/auth/users';
+      ? `/api/users/${userForm.value._id}`
+      : '/api/users';
     
     const method = showEditUserModal.value ? 'PUT' : 'POST';
     
@@ -372,7 +372,7 @@ async function deleteUser() {
   if (!userToDelete.value) return;
 
   try {
-    const response = await fetch(`/api/auth/users/${userToDelete.value._id}`, {
+    const response = await fetch(`/api/users/${userToDelete.value._id}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -470,7 +470,7 @@ function isCurrentUser(user) {
 // Handle message submission
 async function handleMessageSubmit() {
   try {
-    const response = await fetch('/api/auth/messages/send', {
+    const response = await fetch('/api/messages/send', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

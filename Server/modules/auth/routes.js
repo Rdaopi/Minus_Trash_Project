@@ -173,7 +173,7 @@ const router = express.Router()
  */
 
 //Registrazione classica
-router.post('/register', auditOnSuccess('user_registration', ['email']), register);
+router.post('/auth/register', auditOnSuccess('user_registration', ['email']), register);
 
 //request url: http://localhost:5000/api/auth/register
 /**
@@ -393,117 +393,11 @@ router.post('/register', auditOnSuccess('user_registration', ['email']), registe
  */
 
 //Login classico
-router.post('/login', basicAuth, login);
-//router.post('/login-test', login);
-//Temporary testing route that handles authentication directly
-router.post('/login-test', async (req, res, next) => {
-  try {
-    const { email, password } = req.body;
-    
-    // Find the user
-    const user = await User.findOne({
-      $or: [
-        { email: email },
-        { username: email }
-      ]
-    }).select('+password');
-    
-    // Verify user and password match
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).json({ error: "Credenziali non valide" });
-    }
-    
-    // Add the user to req and proceed to login controller
-    req.user = user;
-    next();
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Errore interno del server" });
-  }
-}, login);
-/**
- * @swagger
- * /api/auth/login-test:
- *   post:
- *     summary: Login di test (senza Basic Auth)
- *     description: |
- *       **ENDPOINT DI TEST - Non usare in produzione!**
- *       
- *       Endpoint temporaneo per testare il login senza l'autenticazione Basic.
- *       Accetta direttamente email e password nel body della richiesta.
- *       
- *       **Nota:** Questo endpoint dovrebbe essere rimosso in produzione
- *       e sostituito con il login standard che usa Basic Authentication.
- *     tags: [Autenticazione]
- *     operationId: loginTest
- *     requestBody:
- *       description: Credenziali di login
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - email
- *               - password
- *             properties:
- *               email:
- *                 type: string
- *                 format: email
- *                 description: Email dell'utente registrato
- *                 example: "mario.rossi@email.com"
- *               password:
- *                 type: string
- *                 minLength: 8
- *                 description: Password dell'utente
- *                 example: "SecurePass123!"
- *           examples:
- *             test_login:
- *               summary: Login di test
- *               value:
- *                 email: "mario.rossi@email.com"
- *                 password: "SecurePass123!"
- *     responses:
- *       200:
- *         description: Login effettuato con successo
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/LoginResponse'
- *             examples:
- *               success:
- *                 summary: Login riuscito
- *                 value:
- *                   token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
- *                   user:
- *                     _id: "507f1f77bcf86cd799439011"
- *                     username: "mario_rossi"
- *                     email: "mario.rossi@email.com"
- *                     role: "cittadino"
- *                     isActive: true
- *                   expiresIn: "24h"
- *       401:
- *         description: Credenziali non valide
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *             examples:
- *               invalid_credentials:
- *                 summary: Login fallito
- *                 value:
- *                   error: "Credenziali non valide"
- *                   message: "Email o password non corretti"
- *       500:
- *         description: Errore interno del server
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- */
+router.post('/auth/login', basicAuth, login);
 
+ 
 //Registrazione/Login via google
-router.get('/googleOAuth/login', googleAuth);
+router.get('/auth/googleOAuth/login', googleAuth);
 /**
  * @swagger
  * /api/auth/googleOAuth/login:
@@ -554,7 +448,7 @@ router.get('/googleOAuth/login', googleAuth);
  */
 
 // Callback Google (GET)
-router.get('/googleOAuth/callback', googleAuthCallback);
+router.get('/auth/googleOAuth/callback', googleAuthCallback);
 /**
  * @swagger
  * /api/auth/googleOAuth/callback:
@@ -775,7 +669,7 @@ router.patch('/users/me', jwtAuth, auditOnSuccess('profile_update', ['userId']),
 router.patch('/users/me/password', jwtAuth, auditOnSuccess('password_change'), changePassword);
 /**
  * @swagger
- * /api/auth/users/me/password:
+ * /api/users/me/password:
  *   patch:
  *     summary: Cambia password utente
  *     description: |
@@ -923,7 +817,7 @@ router.patch('/users/me/password', jwtAuth, auditOnSuccess('password_change'), c
 
 /**
  * @swagger
- * /api/auth/users:
+ * /api/users:
  *   get:
  *     summary: Lista tutti gli utenti (Admin)
  *     description: |
@@ -1198,7 +1092,7 @@ router.patch('/users/me/password', jwtAuth, auditOnSuccess('password_change'), c
  */
 
 // Route per il refresh token
-router.post('/refresh-token', refreshTokenHandler);
+router.post('/auth/refresh-token', refreshTokenHandler);
 
 // Add logout handler to the router
 router.post('/logout', jwtAuth, auditOnSuccess('logout'), logout);
@@ -1211,7 +1105,7 @@ router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
 /**
  * @swagger
- * /api/auth/users/{userId}:
+ * /api/users/{userId}:
  *   put:
  *     summary: Aggiorna un utente tramite ID (Solo amministratore)
  *     tags: [Auth]

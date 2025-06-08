@@ -4,6 +4,7 @@ import User from '../modules/auth/models/User.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs/promises'; //Importa la libreria per gestire i file.
+import yaml from 'js-yaml'
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -184,4 +185,17 @@ await fs.writeFile(outputPath, JSON.stringify(swaggerSpec, null, 2), 'utf8')
   .then(() => console.log('Swagger documentation updated successfully'))
   .catch(err => console.error('Failed to update swagger documentation:', err));
 
+
+//file yaml
+const outputPath2 = path.resolve(__dirname, '../oas3.yaml'); 
+
+try {
+  const yamlContent = yaml.dump(swaggerSpec, { noRefs: true });
+  await fs.writeFile(outputPath2, yamlContent, 'utf8');
+  console.log('Swagger YAML documentation updated successfully');
+} catch (err) {
+  console.error('Failed to update Swagger YAML documentation:', err);
+}
+
 export default swaggerSpec;   
+

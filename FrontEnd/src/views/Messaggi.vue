@@ -91,7 +91,7 @@ const markAsRead = async (message) => {
   if (isMessageRead(message)) return;
 
   try {
-    const response = await fetch(`/api/auth/messages/${message._id}/read`, {
+    const response = await fetch(`/api/messages/${message._id}/read`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -122,7 +122,7 @@ async function loadMessages() {
   error.value = '';
 
   try {
-    const response = await fetch('/api/auth/messages', {
+    const response = await fetch('/api/messages', {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }

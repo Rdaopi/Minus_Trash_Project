@@ -345,7 +345,7 @@ export const authAPI = {
 
   // Logout (rimuove il token)
   async logout(refreshToken) {
-      const url = `${API_BASE_URL}/auth/logout`;
+      const url = `${API_BASE_URL}/logout`;
       logApiCall('POST', url);
       try {
         const requestOptions = { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` }, body: JSON.stringify({ refreshToken }) };
@@ -359,7 +359,7 @@ export const authAPI = {
 
   // Change password with refresh token support
   async changePassword(passwordData) {
-    const url = `${API_BASE_URL}/auth/users/me/password`;
+    const url = `${API_BASE_URL}/users/me/password`;
     logApiCall('PATCH', url);
     try {
       const headers = await getAuthHeaders();
@@ -395,7 +395,7 @@ export const authAPI = {
 
   // Request password reset
   async requestPasswordReset(email) {
-    const url = `${API_BASE_URL}/auth/forgot-password`;
+    const url = `${API_BASE_URL}/forgot-password`;
     logApiCall('POST', url);
     
     try {
@@ -412,7 +412,7 @@ export const authAPI = {
 
   // Reset password with token
   async resetPassword(token, password) {
-    const url = `${API_BASE_URL}/auth/reset-password`;
+    const url = `${API_BASE_URL}/reset-password`;
     logApiCall('POST', url);
     
     try {
@@ -427,9 +427,9 @@ export const authAPI = {
     }
   },
 
-  // Update user profile (PATCH /api/auth/users/me)
+  // Update user profile (PATCH /api/users/me)
   async updateProfile(profileData) {
-    const url = `${API_BASE_URL}/auth/users/me`;
+    const url = `${API_BASE_URL}/users/me`;
     logApiCall('PATCH', url);
     try {
       const headers = await getAuthHeaders();
@@ -444,7 +444,7 @@ export const authAPI = {
 
   // Get current user profile
   async getProfile() {
-    const url = `${API_BASE_URL}/auth/users/me`;
+    const url = `${API_BASE_URL}/users/me`;
     logApiCall('GET', url);
     try {
       const headers = await getAuthHeaders();

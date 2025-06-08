@@ -43,12 +43,12 @@ app.use(express.json());
 app.use(passport.initialize());
 
 //routes
-app.use("/api/auth", authRoutes);//Routes per l'autenticazione
-console.log('Auth routes registered at /api/auth');
+app.use("/api", authRoutes);//Routes per l'autenticazione
+console.log('Auth routes registered at /api');
 app.use("/api/", wasteRoutes);//Routes per waste (parte principale)
 console.log('Waste routes registered at /api/');
-app.use("/api/auth/messages", messageRoutes);//Routes per i messaggi
-console.log('Message routes registered at /api/auth/messages');
+app.use("/api/messages", messageRoutes);//Routes per i messaggi
+console.log('Message routes registered at /api/messages');
 
 //Documentazione Swagge
 app.use('/api-docs', 
