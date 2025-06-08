@@ -614,17 +614,21 @@ export const binsAPI = {
       const headers = await getAuthHeaders();
       console.log('Headers prepared for request');
 
-      const requestOptions = { method: 'PUT', headers, body: JSON.stringify(binData) };
+      //const requestOptions = { method: 'PUT', headers, body: JSON.stringify(binData) };   //this will raise token error
+      const requestOptions = { method: 'PATCH', headers, body: JSON.stringify(binData) };
       console.log('Request body:', requestOptions.body);
-
+      /*
       const response = await fetch(url, {
         method: 'PATCH',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json', 
           'Authorization': `Bearer ${token}`
         },
         body: requestBody
       });
+      */
+      const response = await fetch(url, requestOptions);
+
       console.log('Response status:', response.status);
       console.log('Response ok:', response.ok);
       
