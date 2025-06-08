@@ -79,19 +79,38 @@ Accesso personalizzato per cittadini e operatori, con funzionalità dedicate:
 1. Update OAuth credentials in Google Cloud Console:
    - Add Authorized JavaScript origins: `https://your-frontend-url.onrender.com`
    - Add Authorized redirect URIs: `https://your-backend-url.onrender.com/api/auth/googleOAuth/callback`
-2. Set environment variables in Render backend service:
+
+2. backend setting configuration (https://minus-trash-project-webservice.onrender.com)
+   Repository=https://github.com/Rdaopi/Minus_Trash_Project
+   Branch= your branch
+   Root Directory=Server
+   Build Command= npm install
+   Start Command=npm start
+3. Set environment variables in Render backend service:
    ```
    GOOGLE_CLIENT_ID=your-client-id
    GOOGLE_CLIENT_SECRET=your-client-secret
-   FRONTEND_URL=https://your-frontend-url.onrender.com
-   BACKEND_URL=https://your-backend-url.onrender.com
+   FRONTEND_URL=https://minus-trash-project-staticsite.onrender.com
+   BACKEND_URL=https://minus-trash-project-webservice.onrender.com
+   JWT_ACCESS_SECRET=...
+   JWT_REFRESH_SECRET=...
+   MAIL_API_KEY=...
+   MAIL_API_SECRET=...
+   MONGODB_URI_LOCAL=...
    NODE_ENV=production
+   PORT=5000
    ```
-3. Set environment variables in Render frontend service:
+4. frontend setting configuration
+   Root Directory=FrontEnd
+   Build Command=npm install && npm run build
+   Publish Directory=dist
+4. Set environment variables in Render frontend service:
    ```
    VITE_API_URL=https://your-backend-url.onrender.com
+   VITE_GOOGLE_CLIENT_ID=...
    ```
-
+5. set rewrite role 
+   Source= /.*    Destination=  /index.html  Action=Rewrite
 ## Troubleshooting OAuth Problems
 - If Google login works locally but not in production, check the environment variables
 - If you get a 404 error after login, check the SPA routing configuration
@@ -169,3 +188,5 @@ remember to ignore this command at the start of server otherwise the server will
  # Generate or Update oas3.yaml
  
    npm install js-yaml
+
+

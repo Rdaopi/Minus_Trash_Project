@@ -7,6 +7,7 @@ const mailjet = new Mailjet({
 
 export const sendPasswordResetEmail = async (email, resetToken, username) => {
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+    console.log('Generated password reset URL:', resetUrl); // Debug log for backend
 
     try {
         const result = await mailjet.post('send', { version: 'v3.1' }).request({

@@ -413,14 +413,13 @@ export const authAPI = {
   // Reset password with token
   async resetPassword(token, password) {
     const url = `${API_BASE_URL}/reset-password`;
-    console.log('Reset password URL:', url);
+    
     logApiCall('POST', url);
     
     try {
       const headers = { 'Content-Type': 'application/json' };
       const requestOptions = { method: 'POST', headers, body: JSON.stringify({ token, password }) };
       const response = await fetch(url, requestOptions);
-      
       return handleResponse(response, requestOptions, true);
     } catch (error) {
       console.error('Password reset error:', error);
