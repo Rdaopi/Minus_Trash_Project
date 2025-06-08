@@ -53,6 +53,8 @@ const route = useRoute()
 const isLoggedIn = ref(false)
 const unreadCount = ref(0)
 
+const API_BASE_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api'
+
 // Function to check token validity and update login state
 const checkTokenValidity = () => {
   const token = localStorage.getItem('token');
@@ -153,7 +155,7 @@ const fetchUnreadCount = async () => {
   }
 
   try {
-    const response = await fetch('/api/messages/unread/count', {
+    const response = await fetch(`${API_BASE_URL}/messages/unread/count`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }

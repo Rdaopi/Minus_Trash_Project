@@ -50,7 +50,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 const API_BASE_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api';
-
+console.log(API_BASE_URL);
 const loading = ref(true);
 const error = ref('');
 const messages = ref([]);
