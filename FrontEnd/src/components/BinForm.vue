@@ -48,6 +48,13 @@ const binTypes = [
   { value: 'RAEE', label: 'RAEE' }
 ];
 
+// Prevent 'e' and 'E' in number input
+function preventInvalidChars(e) {
+  if (e.key === 'e' || e.key === 'E'|| e.key === '+' || e.key === '-') {
+    e.preventDefault();
+  }
+}
+
 //Handle form submission with API calls
 async function handleSubmit() {
   console.log('=== BIN FORM HANDLE SUBMIT ===');
@@ -79,8 +86,8 @@ async function handleSubmit() {
       throw new Error('Il numero seriale deve essere lungo almeno 6 caratteri.');
     }
     
-    if (!Number.isInteger(parseInt(binForm.value.capacity)) || parseInt(binForm.value.capacity) <= 0) {
-      throw new Error('La capacità deve essere un numero intero positivo.');
+    if (!Number.isInteger(parseInt(binForm.value.capacity)) || parseInt(binForm.value.capacity) < 1 || parseInt(binForm.value.capacity) > 5000) {
+      throw new Error('La capacità deve essere un numero intero tra 1 e 5000.');
     }
     
     // Build API payload
@@ -294,8 +301,10 @@ defineExpose({
           v-model.number="binForm.capacity" 
           type="number" 
           min="1" 
+          max="5000"
           required 
           :disabled="loading"
+          @keydown="preventInvalidChars"  
         />
       </div>
       
