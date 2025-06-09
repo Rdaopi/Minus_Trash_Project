@@ -117,8 +117,15 @@ async function fetchCitySuggestions(query) {
   loadingCitySuggestions.value = true;
   
   try {
+    /*
     //Search for Italian cities with simplified approach
     const url = `/nominatim/search?format=json&q=${encodeURIComponent(query + ', Italia')}&addressdetails=1&limit=8&countrycodes=it`;
+    */
+   // Use full Nominatim API URL in production, relative path in development
+   const url =
+      import.meta.env.PROD
+        ? `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Italia')}&addressdetails=1&limit=8&countrycodes=it`
+        : `/nominatim/search?format=json&q=${encodeURIComponent(query + ', Italia')}&addressdetails=1&limit=8&countrycodes=it`;
     console.log('City API URL:', url);
     
     const res = await fetch(url);
