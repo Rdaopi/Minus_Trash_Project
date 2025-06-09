@@ -7,7 +7,7 @@
   },
   "servers": [
     {
-      "url": "undefined",
+      "url": "undefined or https://minus-trash-project-webservice.onrender.com",
       "description": "Development server"
     }
   ],

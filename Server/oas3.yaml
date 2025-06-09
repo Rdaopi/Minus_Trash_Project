@@ -4,7 +4,7 @@ info:
   version: 1.0.0
   description: Documentazione API per Minus Trash
 servers:
-  - url: undefined
+  - url: undefined or https://minus-trash-project-webservice.onrender.com
     description: Development server
 components:
   schemas:

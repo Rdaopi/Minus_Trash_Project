@@ -10,7 +10,7 @@ class AuthService {
                 role: user.role 
             },
             process.env.JWT_ACCESS_SECRET,
-            { expiresIn: '1m' }
+            { expiresIn: '15m' }
             //1m for testing
         );
 

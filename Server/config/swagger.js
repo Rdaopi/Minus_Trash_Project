@@ -122,7 +122,7 @@ const options = {
     },
     servers: [
       { 
-        url: `${process.env.BACKEND_URL}`,
+        url: `${process.env.BACKEND_URL} or https://minus-trash-project-webservice.onrender.com`,
         description: 'Development server'
       }
     ],
