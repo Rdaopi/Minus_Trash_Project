@@ -666,7 +666,7 @@ describe('UserController', () => {
       await refreshTokenHandler(req, res);
 
       expect(res.status).toHaveBeenCalledWith(401);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Refresh token non valido' });
+      expect(res.json).toHaveBeenCalledWith({ error: 'Token non valido' });
     });
   });
 
