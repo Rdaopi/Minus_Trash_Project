@@ -110,7 +110,8 @@ Accesso personalizzato per cittadini e operatori, con funzionalità dedicate:
    VITE_GOOGLE_CLIENT_ID=...
    ```
 5. set rewrite role 
-   Source= /.*    Destination=  /index.html  Action=Rewrite
+   Source= /.*    Destination=  /index.html  Action=Rewrite    or
+   Source= /*    Destination=  /index.html  Action=Rewrite
 ## Troubleshooting OAuth Problems
 - If Google login works locally but not in production, check the environment variables
 - If you get a 404 error after login, check the SPA routing configuration
@@ -119,20 +120,11 @@ Accesso personalizzato per cittadini e operatori, con funzionalità dedicate:
 - Use browser developer tools to inspect the network requests and identify the exact issue
 
 # Static Site Routing with Render
-
-Render static sites require special configuration for SPA routing:
-
-1. Create a `/public/_redirects` file:
-   ```
-   /* /index.html 200
-   ```
-
-2. Create a `/public/render.yaml` file:
-   ```yaml
-   routes:
-     - type: rewrite
-       source: /*
-       destination: /index.html
+ - Root Directory=FrontEnd
+ - Build Command=npm install && npm run build
+ - Publish Directory=dist
+ - Source= /.*    Destination=  /index.html  Action=Rewrite    or
+ - Source= /*    Destination=  /index.html  Action=Rewrite
    ```
 
 ### Backend Setup Commands
