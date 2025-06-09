@@ -181,4 +181,7 @@ remember to ignore this command at the start of server otherwise the server will
  
    npm install js-yaml
 
+# supertest
+   npm install --save-dev supertest
+   npm install --save-dev jest
 
