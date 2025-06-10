@@ -18,7 +18,7 @@ info:
     Alcuni endpoint di login utilizzano **Basic Authentication**.
     
     ## Tipi di utente
-    - **Cittadino**: Può creare segnalazioni e visualizzare i propri report
+    - **Cittadino**: Può creare segnalazioni e visualizzare la mappa
     - **Operatore Comunale**: Può gestire segnalazioni e cestini
     - **Amministratore**: Ha accesso completo a tutte le funzionalità
   contact:
@@ -28,7 +28,9 @@ info:
     name: MIT
     url: https://opensource.org/licenses/MIT
 servers:
-  - url: undefined
+  - url: >-
+      http://localhost:5000 or
+      https://minus-trash-project-webservice.onrender.com
     description: Development server
 components:
   schemas:
@@ -79,7 +81,7 @@ components:
           type: string
         password:
           type: string
-          description: 'Password dell''utente (hash, non mostrata nelle risposte)'
+          description: Password dell'utente (hash, non mostrata nelle risposte)
           minLength: 8
           writeOnly: true
           example: SecurePass123!
@@ -219,7 +221,7 @@ components:
               example: Point
             coordinates:
               type: array
-              description: 'Coordinate geografiche [longitudine, latitudine]'
+              description: Coordinate geografiche [longitudine, latitudine]
               minItems: 2
               maxItems: 2
               items:
@@ -230,7 +232,7 @@ components:
         address:
           type: string
           description: Indirizzo leggibile della segnalazione
-          example: 'Via Roma 123, 00100 Roma RM'
+          example: Via Roma 123, 00100 Roma RM
         type:
           type: string
           description: |
@@ -278,7 +280,7 @@ components:
             type: string
             description: URL dell'immagine
           example:
-            - 'https://api.minustrash.com/images/report123_1.jpg'
+            - https://api.minustrash.com/images/report123_1.jpg
         urgency:
           type: string
           description: |
@@ -320,7 +322,7 @@ components:
           coordinates:
             - 12.4964
             - 41.9028
-        address: 'Via Roma 123, 00100 Roma RM'
+        address: Via Roma 123, 00100 Roma RM
     Bin:
       title: Bin
       description: Cestino pubblico per la raccolta differenziata dei rifiuti
@@ -343,7 +345,7 @@ components:
               example: Point
             coordinates:
               type: array
-              description: 'Coordinate geografiche [longitudine, latitudine]'
+              description: Coordinate geografiche [longitudine, latitudine]
               minItems: 2
               maxItems: 2
               items:
@@ -354,7 +356,7 @@ components:
         address:
           type: string
           description: Indirizzo leggibile del cestino
-          example: 'Via Roma 45, 00100 Roma RM'
+          example: Via Roma 45, 00100 Roma RM
         type:
           type: string
           description: |
@@ -422,7 +424,7 @@ components:
           coordinates:
             - 12.4964
             - 41.9028
-        address: 'Via Roma 45, 00100 Roma RM'
+        address: Via Roma 45, 00100 Roma RM
         type: INDIFFERENZIATO
         status: ATTIVO
         capacity: 120
@@ -648,77 +650,6 @@ paths:
                   value:
                     error: Authorization richiesto
                     message: Header Authorization richiesto per il login
-  /api/auth/login-test:
-    post:
-      summary: Login di test (senza Basic Auth)
-      description: |
-        **ENDPOINT DI TEST - Non usare in produzione!**
-
-        Endpoint temporaneo per testare il login senza l'autenticazione Basic.
-        Accetta direttamente email e password nel body della richiesta.
-
-        **Nota:** Questo endpoint dovrebbe essere rimosso in produzione
-        e sostituito con il login standard che usa Basic Authentication.
-      operationId: loginTest
-      requestBody:
-        description: Credenziali di login
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                email:
-                  type: string
-                  description: Email dell'utente registrato
-                  example: mario.rossi@email.com
-                password:
-                  type: string
-                  minLength: 8
-                  description: Password dell'utente
-                  example: SecurePass123!
-            examples:
-              test_login:
-                summary: Login di test
-                value:
-                  email: mario.rossi@email.com
-                  password: SecurePass123!
-      responses:
-        '200':
-          description: Login effettuato con successo
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LoginResponse'
-              examples:
-                success:
-                  summary: Login riuscito
-                  value:
-                    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-                    user:
-                      _id: 507f1f77bcf86cd799439011
-                      username: mario_rossi
-                      email: mario.rossi@email.com
-                      role: cittadino
-                      isActive: true
-                    expiresIn: 24h
-        '401':
-          description: Credenziali non valide
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                invalid_credentials:
-                  summary: Login fallito
-                  value:
-                    error: Credenziali non valide
-                    message: Email o password non corretti
-        '500':
-          description: Errore interno del server
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
   /api/auth/googleOAuth/login:
     get:
       summary: Inizia autenticazione Google OAuth
@@ -764,7 +695,7 @@ paths:
               schema:
                 type: string
                 format: uri
-                example: 'https://accounts.google.com/oauth/authorize?client_id=...'
+                example: https://accounts.google.com/oauth/authorize?client_id=...
         '500':
           description: Errore nella configurazione OAuth
           content:
@@ -850,7 +781,7 @@ paths:
               schema:
                 type: string
                 format: uri
-                example: 'https://app.minustrash.com/dashboard?token=eyJhbGci...'
+                example: https://app.minustrash.com/dashboard?token=eyJhbGci...
             Set-Cookie:
               description: Cookie con JWT token (opzionale)
               schema:
@@ -883,7 +814,139 @@ paths:
                 example: >-
                   <html><body><h1>Errore del server</h1><p>Si è verificato un
                   errore tecnico</p></body></html>
-  /api/auth/change_password:
+  /api/users/me:
+    patch:
+      summary: Aggiorna il profilo dell'utente autenticato
+      description: >
+        Permette all'utente autenticato di aggiornare le proprie informazioni di
+        profilo (nome, cognome, username).
+
+
+        **Campi modificabili:**
+
+        - Nome e cognome
+
+        - Username (deve essere unico nel sistema)
+
+
+        **Campi NON modificabili:**
+
+        - Email (richiede processo di verifica separato)
+
+        - Ruolo (solo gli amministratori possono modificarlo)
+
+        - Password (usa endpoint dedicato)
+      operationId: updateOwnProfile
+      security:
+        - BearerAuth: []
+      requestBody:
+        description: Dati del profilo da aggiornare
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fullName:
+                  type: object
+                  description: Nome completo dell'utente
+                  properties:
+                    name:
+                      type: string
+                      minLength: 2
+                      maxLength: 50
+                      example: Mario
+                    surname:
+                      type: string
+                      minLength: 2
+                      maxLength: 50
+                      example: Rossi
+                username:
+                  type: string
+                  minLength: 3
+                  maxLength: 30
+                  pattern: ^[a-zA-Z0-9_]+$
+                  example: mario_rossi_2024
+            examples:
+              update_name:
+                summary: Aggiorna solo il nome
+                value:
+                  fullName:
+                    name: Mario Giuseppe
+                    surname: Rossi
+              update_username:
+                summary: Aggiorna solo username
+                value:
+                  username: mario_rossi_new
+              update_all:
+                summary: Aggiorna tutto
+                value:
+                  fullName:
+                    name: Mario Giuseppe
+                    surname: Verdi
+                  username: mario_verdi
+      responses:
+        '200':
+          description: Profilo aggiornato con successo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Profilo aggiornato con successo
+                  user:
+                    $ref: '#/components/schemas/User'
+              examples:
+                success:
+                  summary: Aggiornamento riuscito
+                  value:
+                    message: Profilo aggiornato con successo
+                    user:
+                      _id: 507f1f77bcf86cd799439011
+                      username: mario_verdi
+                      email: mario.rossi@email.com
+                      fullName:
+                        name: Mario Giuseppe
+                        surname: Verdi
+                      role: cittadino
+                      updatedAt: '2023-12-01T16:30:00Z'
+        '400':
+          description: Dati non validi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                validation_error:
+                  summary: Errore di validazione
+                  value:
+                    error: Dati non validi
+                    message: I dati forniti non rispettano i requisiti
+                    errors:
+                      username:
+                        - Username già in uso da un altro utente
+                      fullName.name:
+                        - Il nome deve avere almeno 2 caratteri
+        '401':
+          description: Token di autenticazione mancante o non valido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflitto - Username già esistente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                username_taken:
+                  summary: Username non disponibile
+                  value:
+                    error: Username non disponibile
+                    message: L'username scelto è già utilizzato da un altro utente
+  /api/users/me/password:
     patch:
       summary: Cambia password utente
       description: >
@@ -911,8 +974,6 @@ paths:
         - Almeno un numero
 
         - Almeno un carattere speciale
-
-        - Non deve essere uguale alla password precedente
 
 
         **Sicurezza:**
@@ -1043,7 +1104,7 @@ paths:
                   value:
                     error: Troppi tentativi
                     message: Puoi cambiare la password massimo 3 volte ogni 24 ore
-  /api/auth/users:
+  /api/users:
     get:
       summary: Lista tutti gli utenti (Admin)
       description: |
@@ -1106,7 +1167,7 @@ paths:
             example: true
         - name: search
           in: query
-          description: 'Ricerca per username, email o nome'
+          description: Ricerca per username, email o nome
           schema:
             type: string
             example: mario
@@ -1191,7 +1252,6 @@ paths:
         **Differenze dalla registrazione pubblica:**
         - L'amministratore può assegnare qualsiasi ruolo
         - Può creare account direttamente attivi
-        - Può impostare password temporanee
         - Bypass di alcune validazioni standard
 
         **Use Cases:**
@@ -1309,58 +1369,83 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  '/api/auth/users/{userId}':
-    put:
-      summary: Aggiorna un utente tramite ID (Solo amministratore)
-      security:
-        - BearerAuth: []
-      parameters:
-        - in: path
-          name: userId
-          required: true
-          description: L'ID dell'utente da aggiornare
-          schema:
-            type: string
+  /api/forgot-password:
+    post:
+      summary: Request password reset
+      description: Send a password reset email to the user.
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/User'
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: user@example.com
       responses:
         '200':
-          description: Utente aggiornato con successo
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
+          description: Password reset email sent
         '400':
-          description: Dati non validi
-        '401':
-          description: Non autorizzato - Token mancante o non valido
-        '403':
-          description: Vietato - L'utente non ha privilegi di amministratore
-        '404':
-          description: Utente non trovato
-    delete:
-      summary: Elimina un utente tramite ID (Solo amministratore)
+          description: Invalid email
+  /api/reset-password:
+    post:
+      summary: Reimposta la password dell'utente
+      description: Reimposta la password dell'utente utilizzando un token di reset valido.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+                newPassword:
+                  type: string
+                  minLength: 8
+      responses:
+        '200':
+          description: Password reset successful
+        '400':
+          description: Invalid token or password
+  /api/logout:
+    post:
+      summary: Logout utente
+      description: Invalida la sessione o il token dell'utente corrente.
       security:
         - BearerAuth: []
-      parameters:
-        - in: path
-          name: userId
-          required: true
-          description: L'ID dell'utente da eliminare
-          schema:
-            type: string
       responses:
         '200':
-          description: Utente eliminato con successo
+          description: Logout successful
         '401':
-          description: Non autorizzato - Token mancante o non valido
-        '403':
-          description: Vietato - L'utente non ha privilegi di amministratore
-        '404':
-          description: Utente non trovato
+          description: Unauthorized
+  /api/profile:
+    delete:
+      summary: Elimina il proprio profilo utente
+      description: Elimina l'account dell'utente autenticato.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Profile deleted
+        '401':
+          description: Unauthorized
+  /api/auth/refresh-token:
+    post:
+      summary: Rigenera il token JWT
+      description: Ottieni un nuovo access token utilizzando un refresh token valido.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: Token refreshed
+        '400':
+          description: Invalid refresh token
   /api/reports:
     get:
       summary: Elenca tutte le segnalazioni
@@ -1510,7 +1595,7 @@ paths:
                     type: string
                     example: Accesso negato
     post:
-      summary: Crea nuova segnalazione
+      summary: Crea una nuova segnalazione
       description: |
         Crea una nuova segnalazione di problema legato ai rifiuti.
 
@@ -1560,7 +1645,7 @@ paths:
                         - 41.903
                 address:
                   type: string
-                  example: 'Piazza Garibaldi 1, 00100 Roma RM'
+                  example: Piazza Garibaldi 1, 00100 Roma RM
                 type:
                   type: string
                   enum:
@@ -1578,7 +1663,7 @@ paths:
                   items:
                     type: string
                   example:
-                    - 'https://example.com/image1.jpg'
+                    - https://example.com/image1.jpg
                 urgency:
                   type: string
                   enum:
@@ -1600,9 +1685,9 @@ paths:
                     coordinates:
                       - 12.4965
                       - 41.903
-                  address: 'Piazza Garibaldi 1, 00100 Roma RM'
+                  address: Piazza Garibaldi 1, 00100 Roma RM
                   images:
-                    - 'https://example.com/cestino_rotto.jpg'
+                    - https://example.com/cestino_rotto.jpg
               rifiuti_abbandonati:
                 summary: Segnalazione rifiuti abbandonati
                 value:
@@ -1616,7 +1701,7 @@ paths:
                     coordinates:
                       - 12.497
                       - 41.9025
-                  address: 'Parco della Rimembranza, 00100 Roma RM'
+                  address: Parco della Rimembranza, 00100 Roma RM
       responses:
         '201':
           description: Segnalazione creata con successo
@@ -1639,9 +1724,9 @@ paths:
                       coordinates:
                         - 12.4965
                         - 41.903
-                    address: 'Piazza Garibaldi 1, 00100 Roma RM'
+                    address: Piazza Garibaldi 1, 00100 Roma RM
                     images:
-                      - 'https://example.com/cestino_rotto.jpg'
+                      - https://example.com/cestino_rotto.jpg
                     reportedBy: 507f1f77bcf86cd799439011
                     createdAt: '2023-12-01T15:30:00Z'
         '400':
@@ -1672,9 +1757,9 @@ paths:
                   message:
                     type: string
                     example: Puoi creare massimo 5 segnalazioni all'ora
-  '/api/reports/{id}':
+  /api/reports/{id}:
     get:
-      summary: Recupera segnalazione per ID
+      summary: Recupera una segnalazione per ID
       description: Ottiene i dettagli di una singola segnalazione tramite il suo ID univoco
       operationId: getReportById
       security:
@@ -1707,7 +1792,7 @@ paths:
                     type: string
                     example: Segnalazione non trovata
     patch:
-      summary: Aggiorna segnalazione
+      summary: Aggiorna una segnalazione
       description: >
         Aggiorna i dati di una segnalazione esistente.
 
@@ -1771,7 +1856,7 @@ paths:
         '404':
           description: Segnalazione non trovata
     delete:
-      summary: Elimina segnalazione
+      summary: Elimina una segnalazione
       description: |
         Elimina definitivamente una segnalazione dal sistema.
         Solo il creatore della segnalazione o un amministratore può eliminarla.
@@ -1803,9 +1888,9 @@ paths:
           description: Non autorizzato a eliminare questa segnalazione
         '404':
           description: Segnalazione non trovata
-  '/api/reports/{id}/status':
+  /api/reports/{id}/status:
     patch:
-      summary: Aggiorna stato segnalazione
+      summary: Aggiorna lo stato di una segnalazione
       description: >
         Modifica lo stato di una segnalazione esistente.
 
@@ -1894,7 +1979,7 @@ paths:
                 summary: Verifica segnalazione
                 value:
                   status: VERIFICATO
-                  notes: 'Confermato il problema sul posto, necessario intervento'
+                  notes: Confermato il problema sul posto, necessario intervento
                   assignedTo: 507f1f77bcf86cd799439013
               start_work:
                 summary: Inizia lavorazione
@@ -2084,7 +2169,7 @@ paths:
                         coordinates:
                           - 12.4964
                           - 41.9028
-                      address: 'Via Roma 45, 00100 Roma RM'
+                      address: Via Roma 45, 00100 Roma RM
                       type: INDIFFERENZIATO
                       status: ATTIVO
                       capacity: 120
@@ -2096,7 +2181,7 @@ paths:
                         coordinates:
                           - 12.497
                           - 41.9025
-                      address: 'Piazza Garibaldi 1, 00100 Roma RM'
+                      address: Piazza Garibaldi 1, 00100 Roma RM
                       type: CARTA
                       status: ATTIVO
                       capacity: 100
@@ -2137,7 +2222,7 @@ paths:
                         - 41.9035
                 address:
                   type: string
-                  example: 'Via Nazionale 10, 00100 Roma RM'
+                  example: Via Nazionale 10, 00100 Roma RM
                 type:
                   type: string
                   enum:
@@ -2165,7 +2250,7 @@ paths:
                     coordinates:
                       - 12.498
                       - 41.9035
-                  address: 'Via Nazionale 10, 00100 Roma RM'
+                  address: Via Nazionale 10, 00100 Roma RM
                   type: PLASTICA
                   capacity: 150
                   zone: Centro Storico
@@ -2186,7 +2271,7 @@ paths:
                       coordinates:
                         - 12.498
                         - 41.9035
-                    address: 'Via Nazionale 10, 00100 Roma RM'
+                    address: Via Nazionale 10, 00100 Roma RM
                     type: PLASTICA
                     status: ATTIVO
                     capacity: 150
@@ -2199,7 +2284,7 @@ paths:
           description: Token di autenticazione richiesto
         '403':
           description: Privilegi insufficienti - Solo operatori e amministratori
-  '/api/bins/{id}':
+  /api/bins/{id}:
     get:
       summary: Recupera cestino per ID
       description: >
@@ -2255,7 +2340,7 @@ paths:
                       coordinates:
                         - 12.4964
                         - 41.9028
-                    address: 'Via Roma 45, 00100 Roma RM'
+                    address: Via Roma 45, 00100 Roma RM
                     type: INDIFFERENZIATO
                     status: ATTIVO
                     capacity: 120
@@ -2278,7 +2363,28 @@ paths:
                     example: Nessun cestino trovato con l'ID specificato
     patch:
       summary: Aggiorna cestino
-      description: "Modifica i dati di un cestino esistente.\n\n**\U0001F510 Richiede autenticazione e privilegi di operatore/amministratore**\n\n**Campi modificabili:**\n- Posizione geografica (se il cestino viene spostato)\n- Capacità (se viene sostituito con un modello diverso)\n- Livello di riempimento (aggiornamento manuale)\n- Zona di appartenenza\n- Tipo di raccolta (se cambia destinazione d'uso)\n\n**Campi NON modificabili:**\n- ID del cestino\n- Data di creazione\n- Stato (usa endpoint dedicato `/status`)\n\n**Use Cases:**\n- Aggiornamento dati dopo manutenzione\n- Correzione informazioni errate\n- Cambio tipo di raccolta\n- Spostamento fisico del cestino\n"
+      description: |
+        Modifica i dati di un cestino esistente.
+
+        **🔐 Richiede autenticazione e privilegi di operatore/amministratore**
+
+        **Campi modificabili:**
+        - Posizione geografica (se il cestino viene spostato)
+        - Capacità (se viene sostituito con un modello diverso)
+        - Livello di riempimento (aggiornamento manuale)
+        - Zona di appartenenza
+        - Tipo di raccolta (se cambia destinazione d'uso)
+
+        **Campi NON modificabili:**
+        - ID del cestino
+        - Data di creazione
+        - Stato (usa endpoint dedicato `/status`)
+
+        **Use Cases:**
+        - Aggiornamento dati dopo manutenzione
+        - Correzione informazioni errate
+        - Cambio tipo di raccolta
+        - Spostamento fisico del cestino
       operationId: updateBin
       security:
         - BearerAuth: []
@@ -2311,7 +2417,7 @@ paths:
                         - 41.9029
                 address:
                   type: string
-                  example: 'Via Roma 47, 00100 Roma RM'
+                  example: Via Roma 47, 00100 Roma RM
                 type:
                   type: string
                   enum:
@@ -2344,7 +2450,7 @@ paths:
                     coordinates:
                       - 12.4965
                       - 41.9029
-                  address: 'Via Roma 47, 00100 Roma RM'
+                  address: Via Roma 47, 00100 Roma RM
               change_type:
                 summary: Cambia tipo raccolta
                 value:
@@ -2379,7 +2485,7 @@ paths:
                         coordinates:
                           - 12.4965
                           - 41.9029
-                      address: 'Via Roma 47, 00100 Roma RM'
+                      address: Via Roma 47, 00100 Roma RM
                       type: CARTA
                       status: ATTIVO
                       capacity: 100
@@ -2445,7 +2551,7 @@ paths:
                         example: 507f1f77bcf86cd799439014
                       address:
                         type: string
-                        example: 'Via Roma 45, 00100 Roma RM'
+                        example: Via Roma 45, 00100 Roma RM
                       deletedAt:
                         type: string
                         format: date-time
@@ -2457,7 +2563,7 @@ paths:
                     message: Cestino eliminato con successo
                     deletedBin:
                       _id: 507f1f77bcf86cd799439014
-                      address: 'Via Roma 45, 00100 Roma RM'
+                      address: Via Roma 45, 00100 Roma RM
                       deletedAt: '2023-12-01T17:45:00Z'
         '401':
           description: Token di autenticazione richiesto
@@ -2476,27 +2582,1057 @@ paths:
                     example: Solo gli amministratori possono eliminare i cestini
         '404':
           description: Cestino non trovato
+  /api/bins/{id}/status:
+    patch:
+      summary: Aggiorna stato cestino
+      description: >
+        Modifica lo stato operativo di un cestino pubblico.
+
+
+        **Richiede privilegi di operatore comunale o amministratore**
+
+
+        **Stati disponibili:**
+
+        - **ATTIVO**: Cestino funzionante e utilizzabile dal pubblico
+
+        - **MANUTENZIONE**: Cestino temporaneamente fuori servizio per
+        manutenzione
+
+        - **INATTIVO**: Cestino definitivamente disattivato o rimosso
+
+
+        **Workflow tipico:**
+
+        ATTIVO ↔ MANUTENZIONE (per interventi temporanei)
+
+        ATTIVO → INATTIVO (per disattivazione definitiva)
+
+
+        **Effetti del cambio stato:**
+
+        - **MANUTENZIONE**: Il cestino non appare nelle ricerche pubbliche
+
+        - **INATTIVO**: Le notifiche di riempimento vengono disabilitate
+
+        - **ATTIVO**: Riprende il monitoraggio e la visibilità pubblica
+
+
+        **Use Cases:**
+
+        - Manutenzione programmata o straordinaria
+
+        - Guasto temporaneo o danneggiamento
+
+        - Disattivazione per rimozione definitiva
+
+        - Riattivazione dopo riparazione/sostituzione
+      operationId: updateBinStatus
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: ID univoco del cestino
+          schema:
+            type: string
+            example: 507f1f77bcf86cd799439014
+      requestBody:
+        description: Nuovo stato del cestino e informazioni aggiuntive
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  description: Nuovo stato operativo del cestino
+                  enum:
+                    - ATTIVO
+                    - MANUTENZIONE
+                    - INATTIVO
+                  example: MANUTENZIONE
+                reason:
+                  type: string
+                  description: Motivo del cambio di stato (opzionale ma consigliato)
+                  maxLength: 200
+                  example: >-
+                    Cestino danneggiato da atti vandalici, necessaria
+                    sostituzione
+                estimatedDuration:
+                  type: string
+                  description: Durata stimata per MANUTENZIONE (formato ISO 8601 duration)
+                  pattern: >-
+                    ^P(?!$)(\d+Y)?(\d+M)?(\d+W)?(\d+D)?(T(?=\d)(\d+H)?(\d+M)?(\d+S)?)?$
+                  example: P2D
+                scheduledReactivation:
+                  type: string
+                  description: Data programmata per riattivazione (per stato MANUTENZIONE)
+                  example: '2023-12-05T08:00:00Z'
+                maintenanceType:
+                  type: string
+                  description: Tipo di manutenzione (se status = MANUTENZIONE)
+                  enum:
+                    - PROGRAMMATA
+                    - STRAORDINARIA
+                    - GUASTO
+                    - VANDALISMO
+                    - SOSTITUZIONE
+                  example: STRAORDINARIA
+            examples:
+              maintenance_scheduled:
+                summary: Manutenzione programmata
+                value:
+                  status: MANUTENZIONE
+                  reason: Manutenzione programmata settimanale
+                  maintenanceType: PROGRAMMATA
+                  estimatedDuration: P1D
+                  scheduledReactivation: '2023-12-03T08:00:00Z'
+              emergency_repair:
+                summary: Riparazione urgente
+                value:
+                  status: MANUTENZIONE
+                  reason: Cestino danneggiato da atti vandalici
+                  maintenanceType: STRAORDINARIA
+                  estimatedDuration: P3D
+              deactivate_permanently:
+                summary: Disattivazione definitiva
+                value:
+                  status: INATTIVO
+                  reason: Cestino rimosso per ristrutturazione area
+              reactivate_after_repair:
+                summary: Riattivazione dopo riparazione
+                value:
+                  status: ATTIVO
+                  reason: Riparazione completata, cestino nuovamente operativo
+      responses:
+        '200':
+          description: Stato del cestino aggiornato con successo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Stato cestino aggiornato con successo
+                  bin:
+                    $ref: '#/components/schemas/Bin'
+                  statusHistory:
+                    type: array
+                    description: Cronologia dei cambi di stato
+                    items:
+                      type: object
+                      properties:
+                        status:
+                          type: string
+                          example: MANUTENZIONE
+                        changedBy:
+                          type: string
+                          description: ID dell'operatore che ha effettuato il cambio
+                          example: 507f1f77bcf86cd799439013
+                        changedAt:
+                          type: string
+                          format: date-time
+                          example: '2023-12-01T18:00:00Z'
+                        reason:
+                          type: string
+                          example: Manutenzione programmata settimanale
+                        maintenanceType:
+                          type: string
+                          example: PROGRAMMATA
+              examples:
+                success:
+                  summary: Stato aggiornato
+                  value:
+                    message: Stato cestino aggiornato con successo
+                    bin:
+                      _id: 507f1f77bcf86cd799439014
+                      status: MANUTENZIONE
+                      location:
+                        type: Point
+                        coordinates:
+                          - 12.4964
+                          - 41.9028
+                      address: Via Roma 45, 00100 Roma RM
+                      type: INDIFFERENZIATO
+                      updatedAt: '2023-12-01T18:00:00Z'
+                    statusHistory:
+                      - status: ATTIVO
+                        changedBy: system
+                        changedAt: '2023-01-15T10:00:00Z'
+                        reason: Installazione iniziale
+                      - status: MANUTENZIONE
+                        changedBy: 507f1f77bcf86cd799439013
+                        changedAt: '2023-12-01T18:00:00Z'
+                        reason: Manutenzione programmata settimanale
+                        maintenanceType: PROGRAMMATA
+        '400':
+          description: Dati non validi o transizione di stato non permessa
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Transizione non valida
+                  message:
+                    type: string
+                    example: Non è possibile passare da INATTIVO a MANUTENZIONE
+                  allowedTransitions:
+                    type: array
+                    items:
+                      type: string
+                    example:
+                      - ATTIVO
+                      - INATTIVO
+        '401':
+          description: Token di autenticazione richiesto
+        '403':
+          description: Privilegi insufficienti per modificare lo stato del cestino
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Accesso negato
+                  message:
+                    type: string
+                    example: >-
+                      Solo operatori comunali e amministratori possono
+                      modificare lo stato dei cestini
+        '404':
+          description: Cestino non trovato
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Cestino non trovato
+                  message:
+                    type: string
+                    example: Nessun cestino trovato con l'ID specificato
+
+servers:
+  - url: >-
+      http://localhost:5000 or
+      https://minus-trash-project-webservice.onrender.com
+    description: Development server
+components:
+  schemas:
+    User:
+      title: User
+      properties:
+        username:
+          type: string
+          description: Nome utente unico per il login
+          minLength: 3
+          maxLength: 30
+          example: mario_rossi
+        fullName:
+          type: object
+          properties:
+            name:
+              type: string
+              description: Nome dell'utente
+              minLength: 2
+              maxLength: 50
+              example: Mario
+            surname:
+              type: string
+              description: Cognome dell'utente
+              minLength: 2
+              maxLength: 50
+              example: Rossi
+          description: Nome completo dell'utente
+        email:
+          type: string
+          description: Indirizzo email dell'utente (deve essere unico)
+          example: mario.rossi@email.com
+        role:
+          type: string
+          enum:
+            - cittadino
+            - operatore_comunale
+            - amministratore
+          description: Ruolo dell'utente nel sistema
+          default: cittadino
+          example: cittadino
+        isActive:
+          type: boolean
+          description: Indica se l'account è attivo
+          default: true
+          example: true
+        blockedAt:
+          type: string
+        password:
+          type: string
+          description: Password dell'utente (hash, non mostrata nelle risposte)
+          minLength: 8
+          writeOnly: true
+          example: SecurePass123!
+        authMethods:
+          type: object
+          properties:
+            local:
+              type: boolean
+            google:
+              type: object
+              properties:
+                email:
+                  type: string
+                enabled:
+                  type: boolean
+        lastLogin:
+          type: string
+        activeSessions:
+          type: array
+          items:
+            type: object
+            properties:
+              device:
+                type: string
+              ip:
+                type: string
+              createdAt:
+                type: string
+        passwordChangedAt:
+          type: string
+        passwordResetToken:
+          type: string
+        passwordResetExpires:
+          type: string
+        _id:
+          type: string
+          description: ID unico dell'utente
+          example: 507f1f77bcf86cd799439011
+        createdAt:
+          type: string
+          description: Data di creazione dell'account
+          example: '2023-12-01T10:00:00Z'
+        updatedAt:
+          type: string
+          description: Data ultimo aggiornamento
+          example: '2023-12-01T14:30:00Z'
+      description: Rappresenta un utente del sistema Minus Trash
+      type: object
+      example:
+        email: mario.rossi@email.com
+        password: SecurePass123!
+        fullName:
+          name: Mario
+          surname: Rossi
+        username: mario_rossi
+        role: cittadino
+    LoginResponse:
+      title: Login Response
+      description: Risposta del login con token JWT
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT token per l'autenticazione
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        user:
+          $ref: '#/components/schemas/User'
+        expiresIn:
+          type: string
+          description: Durata del token
+          example: 24h
+      example:
+        token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        user:
+          _id: 507f1f77bcf86cd799439011
+          username: mario_rossi
+          email: mario.rossi@email.com
+          role: cittadino
+          isActive: true
+        expiresIn: 24h
+    ErrorResponse:
+      title: Error Response
+      description: Risposta di errore standard
+      type: object
+      properties:
+        error:
+          type: string
+          description: Messaggio di errore
+          example: Credenziali non valide
+        message:
+          type: string
+          description: Messaggio dettagliato
+          example: Email o password non corretti
+        errors:
+          type: object
+          description: Errori di validazione specifici per campo
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          example:
+            email:
+              - Email già registrata
+            username:
+              - Username già in uso
+    Report:
+      title: Report
+      description: Segnalazione di un problema legato ai rifiuti
+      type: object
+      properties:
+        _id:
+          type: string
+          description: ID univoco della segnalazione
+          example: 507f1f77bcf86cd799439012
+        title:
+          type: string
+          description: Titolo breve e descrittivo della segnalazione
+          minLength: 5
+          maxLength: 100
+          example: Cestino pieno in Via Roma
+        description:
+          type: string
+          description: Descrizione dettagliata del problema riscontrato
+          minLength: 10
+          maxLength: 500
+          example: Il cestino è completamente pieno e i rifiuti traboccano
+        location:
+          type: object
+          description: Posizione geografica della segnalazione (formato GeoJSON)
+          properties:
+            type:
+              type: string
+              enum:
+                - Point
+              default: Point
+              description: Tipo di geometria (sempre Point)
+              example: Point
+            coordinates:
+              type: array
+              description: Coordinate geografiche [longitudine, latitudine]
+              minItems: 2
+              maxItems: 2
+              items:
+                type: number
+              example:
+                - 12.4964
+                - 41.9028
+        address:
+          type: string
+          description: Indirizzo leggibile della segnalazione
+          example: Via Roma 123, 00100 Roma RM
+        type:
+          type: string
+          description: |
+            Categoria del problema segnalato:
+            - **RIFIUTI_ABBANDONATI**: Rifiuti abbandonati per strada
+            - **AREA_SPORCA**: Area che necessita pulizia
+            - **PROBLEMA_CESTINO**: Cestino danneggiato o malfunzionante
+            - **RACCOLTA_SALTATA**: Raccolta rifiuti non effettuata
+            - **VANDALISMO**: Atti di vandalismo a strutture pubbliche
+            - **SCARICO_ILLEGALE**: Scarico illegale di rifiuti
+            - **ALTRO**: Altri problemi legati ai rifiuti
+          enum:
+            - RIFIUTI_ABBANDONATI
+            - AREA_SPORCA
+            - PROBLEMA_CESTINO
+            - RACCOLTA_SALTATA
+            - VANDALISMO
+            - SCARICO_ILLEGALE
+            - ALTRO
+          example: PROBLEMA_CESTINO
+        status:
+          type: string
+          description: |
+            Stato corrente della segnalazione:
+            - **IN_ATTESA**: Appena creata, in attesa di verifica
+            - **VERIFICATO**: Confermata dal personale comunale
+            - **IN_LAVORAZIONE**: Intervento in corso di esecuzione
+            - **RISOLTO**: Problema risolto con successo
+            - **RIFIUTATO**: Segnalazione respinta
+            - **PROGRAMMATO**: Intervento programmato
+          enum:
+            - IN_ATTESA
+            - VERIFICATO
+            - IN_LAVORAZIONE
+            - RISOLTO
+            - RIFIUTATO
+            - PROGRAMMATO
+          default: IN_ATTESA
+          example: IN_ATTESA
+        images:
+          type: array
+          description: URL delle immagini allegate alla segnalazione
+          maxItems: 5
+          items:
+            type: string
+            description: URL dell'immagine
+          example:
+            - https://api.minustrash.com/images/report123_1.jpg
+        urgency:
+          type: string
+          description: |
+            Livello di urgenza della segnalazione:
+            - **BASSA**: Problema non urgente
+            - **MEDIA**: Richiede attenzione nei prossimi giorni
+            - **ALTA**: Richiede intervento prioritario
+            - **URGENTE**: Richiede intervento immediato
+          enum:
+            - BASSA
+            - MEDIA
+            - ALTA
+            - URGENTE
+          default: MEDIA
+          example: MEDIA
+        reportedBy:
+          type: string
+          description: ID dell'utente che ha creato la segnalazione
+          example: 507f1f77bcf86cd799439011
+        assignedTo:
+          type: string
+          description: ID dell'operatore comunale assegnato
+          example: 507f1f77bcf86cd799439013
+        createdAt:
+          type: string
+          description: Data e ora di creazione della segnalazione
+          example: '2023-12-01T10:15:00Z'
+        updatedAt:
+          type: string
+          description: Data e ora ultimo aggiornamento
+          example: '2023-12-01T15:30:00Z'
+      example:
+        title: Cestino pieno in Via Roma
+        description: Il cestino è completamente pieno e i rifiuti traboccano
+        type: PROBLEMA_CESTINO
+        urgency: MEDIA
+        location:
+          type: Point
+          coordinates:
+            - 12.4964
+            - 41.9028
+        address: Via Roma 123, 00100 Roma RM
+    Bin:
+      title: Bin
+      description: Cestino pubblico per la raccolta differenziata dei rifiuti
+      type: object
+      properties:
+        _id:
+          type: string
+          description: ID univoco del cestino
+          example: 507f1f77bcf86cd799439014
+        location:
+          type: object
+          description: Posizione geografica del cestino (formato GeoJSON)
+          properties:
+            type:
+              type: string
+              enum:
+                - Point
+              default: Point
+              description: Tipo di geometria (sempre Point)
+              example: Point
+            coordinates:
+              type: array
+              description: Coordinate geografiche [longitudine, latitudine]
+              minItems: 2
+              maxItems: 2
+              items:
+                type: number
+              example:
+                - 12.4964
+                - 41.9028
+        address:
+          type: string
+          description: Indirizzo leggibile del cestino
+          example: Via Roma 45, 00100 Roma RM
+        type:
+          type: string
+          description: |
+            Tipo di raccolta del cestino:
+            - **INDIFFERENZIATO**: Rifiuti non differenziabili
+            - **CARTA**: Carta e cartone
+            - **PLASTICA**: Plastica e metalli
+            - **VETRO**: Vetro e materiali vetrosi
+            - **ORGANICO**: Rifiuti organici compostabili
+            - **RAEE**: Rifiuti di apparecchiature elettriche ed elettroniche
+            - **ALTRO**: Altri tipi di rifiuti
+          enum:
+            - INDIFFERENZIATO
+            - CARTA
+            - PLASTICA
+            - VETRO
+            - ORGANICO
+            - RAEE
+            - ALTRO
+          example: INDIFFERENZIATO
+        status:
+          type: string
+          description: |
+            Stato operativo del cestino:
+            - **ATTIVO**: Funzionante e utilizzabile
+            - **MANUTENZIONE**: In manutenzione programmata
+            - **INATTIVO**: Non utilizzabile o rimosso
+          enum:
+            - ATTIVO
+            - MANUTENZIONE
+            - INATTIVO
+          default: ATTIVO
+          example: ATTIVO
+        capacity:
+          type: number
+          description: Capacità massima del cestino in litri
+          minimum: 1
+          maximum: 1000
+          example: 120
+        fillLevel:
+          type: number
+          description: Livello di riempimento attuale (percentuale 0-100)
+          minimum: 0
+          maximum: 100
+          example: 75
+        lastEmptied:
+          type: string
+          description: Data e ora dell'ultimo svuotamento
+          example: '2023-11-30T08:00:00Z'
+        zone:
+          type: string
+          description: Zona o quartiere di appartenenza
+          example: Centro Storico
+        createdAt:
+          type: string
+          description: Data di installazione del cestino
+          example: '2023-01-15T10:00:00Z'
+        updatedAt:
+          type: string
+          description: Data ultimo aggiornamento
+          example: '2023-12-01T15:30:00Z'
+      example:
+        location:
+          type: Point
+          coordinates:
+            - 12.4964
+            - 41.9028
+        address: Via Roma 45, 00100 Roma RM
+        type: INDIFFERENZIATO
+        status: ATTIVO
+        capacity: 120
+        fillLevel: 75
+        zone: Centro Storico
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+    BasicAuth:
+      type: http
+      scheme: basic
+paths:
+  /api/auth/register:
+    post:
+      summary: Registrazione nuovo utente
+      description: |
+        Crea un nuovo account utente nel sistema Minus Trash.
+
+        **Note importanti:**
+        - L'email deve essere unica nel sistema
+        - L'username deve essere unico nel sistema
+        - La password deve soddisfare i requisiti di sicurezza (min 8 caratteri)
+        - Il ruolo predefinito è "cittadino"
+        - L'account viene attivato automaticamente
+      operationId: registerUser
+      requestBody:
+        description: Dati del nuovo utente da registrare
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  description: Indirizzo email (deve essere unico)
+                  example: mario.rossi@email.com
+                password:
+                  type: string
+                  minLength: 8
+                  description: Password (min 8 caratteri)
+                  example: SecurePass123!
+                fullName:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      minLength: 2
+                      maxLength: 50
+                      example: Mario
+                    surname:
+                      type: string
+                      minLength: 2
+                      maxLength: 50
+                      example: Rossi
+                username:
+                  type: string
+                  minLength: 3
+                  maxLength: 30
+                  description: Nome utente (deve essere unico)
+                  example: mario_rossi
+                role:
+                  type: string
+                  enum:
+                    - cittadino
+                    - operatore_comunale
+                    - amministratore
+                  default: cittadino
+                  example: cittadino
+            examples:
+              cittadino:
+                summary: Registrazione cittadino
+                description: Esempio di registrazione per un cittadino normale
+                value:
+                  email: mario.rossi@email.com
+                  password: SecurePass123!
+                  fullName:
+                    name: Mario
+                    surname: Rossi
+                  username: mario_rossi
+              operatore:
+                summary: Registrazione operatore
+                description: Esempio di registrazione per un operatore comunale
+                value:
+                  email: giuseppe.verdi@comune.roma.it
+                  password: OperatorPass456!
+                  fullName:
+                    name: Giuseppe
+                    surname: Verdi
+                  username: g_verdi_op
+                  role: operatore_comunale
+      responses:
+        '201':
+          description: Utente registrato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              examples:
+                success:
+                  summary: Registrazione completata
+                  value:
+                    _id: 507f1f77bcf86cd799439011
+                    username: mario_rossi
+                    email: mario.rossi@email.com
+                    fullName:
+                      name: Mario
+                      surname: Rossi
+                    role: cittadino
+                    isActive: true
+                    createdAt: '2023-12-01T10:15:00Z'
+        '400':
+          description: Dati di registrazione non validi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                validation_error:
+                  summary: Errori di validazione
+                  value:
+                    message: Dati di registrazione non validi
+                    errors:
+                      email:
+                        - Email già registrata nel sistema
+                      username:
+                        - Username già in uso
+                      password:
+                        - La password deve contenere almeno 8 caratteri
+        '409':
+          description: Conflitto - Utente già esistente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                conflict:
+                  summary: Utente esistente
+                  value:
+                    error: Utente già esistente
+                    message: Un utente con questa email è già registrato
+        '500':
+          description: Errore interno del server
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/auth/login:
+    post:
+      summary: Login utente
+      description: >
+        Effettua il login di un utente esistente utilizzando **Basic
+        Authentication**.
+
+
+        **Come usare questo endpoint:**
+
+        1. Codifica le credenziali in formato `email:password` in Base64
+
+        2. Includi l'header: `Authorization: Basic <credenziali_base64>`
+
+        3. Riceverai un JWT token per le successive chiamate API
+
+
+        **Esempio di codifica Base64:**
+
+        - Credenziali: `mario.rossi@email.com:SecurePass123!`
+
+        - Base64: `bWFyaW8ucm9zc2lAZW1haWwuY29tOlNlY3VyZVBhc3MxMjMh`
+
+        - Header: `Authorization: Basic
+        bWFyaW8ucm9zc2lAZW1haWwuY29tOlNlY3VyZVBhc3MxMjMh`
+      operationId: loginUser
+      security:
+        - BasicAuth: []
+      responses:
+        '200':
+          description: Login effettuato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+              examples:
+                success_login:
+                  summary: Login completato
+                  value:
+                    token: >-
+                      eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjUwN2YxZjc3YmNmODZjZDc5OTQzOTAxMSJ9...
+                    user:
+                      _id: 507f1f77bcf86cd799439011
+                      username: mario_rossi
+                      email: mario.rossi@email.com
+                      role: cittadino
+                      isActive: true
+                      lastLogin: '2023-12-01T14:30:00Z'
+                    expiresIn: 24h
+        '401':
+          description: Credenziali non valide o account disattivato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_credentials:
+                  summary: Credenziali errate
+                  value:
+                    error: Credenziali non valide
+                    message: Email o password non corretti
+                account_blocked:
+                  summary: Account bloccato
+                  value:
+                    error: Account bloccato
+                    message: Il tuo account è stato temporaneamente sospeso
+        '422':
+          description: Header Authorization mancante o malformato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missing_auth:
+                  summary: Autenticazione mancante
+                  value:
+                    error: Authorization richiesto
+                    message: Header Authorization richiesto per il login
+  /api/auth/googleOAuth/login:
+    get:
+      summary: Inizia autenticazione Google OAuth
+      description: >
+        Avvia il flusso di autenticazione OAuth 2.0 con Google.
+
+
+        **Funzionamento:**
+
+        1. L'utente viene reindirizzato alla pagina di autorizzazione Google
+
+        2. L'utente accetta i permessi richiesti
+
+        3. Google reindirizza al callback con un codice di autorizzazione
+
+        4. Il sistema scambia il codice con un token di accesso
+
+        5. Viene creato o aggiornato l'account utente
+
+
+        **Scopes richiesti:**
+
+        - `profile`: Informazioni di base del profilo
+
+        - `email`: Indirizzo email dell'utente
+
+
+        **Note:**
+
+        - Se l'email Google è già associata a un account, viene effettuato il
+        login
+
+        - Se è un nuovo utente, viene creato automaticamente un account
+
+        - Il ruolo predefinito per nuovi utenti Google è "cittadino"
+      operationId: initiateGoogleAuth
+      responses:
+        '302':
+          description: Redirect alla pagina di autorizzazione Google
+          headers:
+            Location:
+              description: URL di autorizzazione Google OAuth
+              schema:
+                type: string
+                format: uri
+                example: https://accounts.google.com/oauth/authorize?client_id=...
+        '500':
+          description: Errore nella configurazione OAuth
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                config_error:
+                  summary: Errore configurazione
+                  value:
+                    error: OAuth non configurato
+                    message: >-
+                      Le credenziali Google OAuth non sono configurate
+                      correttamente
+  /api/auth/googleOAuth/callback:
+    get:
+      summary: Callback autenticazione Google
+      description: >
+        Endpoint di callback per completare il flusso OAuth 2.0 con Google.
+
+
+        **IMPORTANTE:** Questo endpoint NON deve essere chiamato direttamente!
+
+        Viene chiamato automaticamente da Google dopo l'autorizzazione.
+
+
+        **Processo automatico:**
+
+        1. Google reindirizza qui con un codice di autorizzazione
+
+        2. Il sistema scambia il codice con i token di accesso Google
+
+        3. Vengono recuperate le informazioni dell'utente da Google
+
+        4. L'utente viene creato/aggiornato nel database
+
+        5. Viene generato un JWT token per l'autenticazione
+
+        6. L'utente viene reindirizzato alla dashboard o pagina di successo
+
+
+        **Gestione errori:**
+
+        - Se l'utente nega i permessi, viene reindirizzato a una pagina di
+        errore
+
+        - Se ci sono problemi tecnici, viene mostrato un messaggio di errore
+      operationId: googleAuthCallback
+      parameters:
+        - in: query
+          name: code
+          required: false
+          description: >-
+            Codice di autorizzazione fornito da Google (presente solo se
+            l'utente ha autorizzato)
+          schema:
+            type: string
+            example: 4/0AX4XfWjYQZ1X2Y3Z4...
+        - in: query
+          name: error
+          required: false
+          description: >-
+            Codice di errore (presente solo se l'utente ha negato
+            l'autorizzazione)
+          schema:
+            type: string
+            enum:
+              - access_denied
+            example: access_denied
+        - in: query
+          name: state
+          required: false
+          description: Parametro di stato per prevenire attacchi CSRF
+          schema:
+            type: string
+            example: random_state_value
+      responses:
+        '302':
+          description: Redirect dopo autenticazione completata
+          headers:
+            Location:
+              description: URL di destinazione post-login
+              schema:
+                type: string
+                format: uri
+                example: https://app.minustrash.com/dashboard?token=eyJhbGci...
+            Set-Cookie:
+              description: Cookie con JWT token (opzionale)
+              schema:
+                type: string
+                example: auth_token=eyJhbGciOiJIUzI1NiI...; HttpOnly; Secure
+        '400':
+          description: Parametri di callback non validi
+          content:
+            text/html:
+              schema:
+                type: string
+                example: >-
+                  <html><body><h1>Errore di autenticazione</h1><p>Parametri non
+                  validi</p></body></html>
+        '401':
+          description: Autenticazione Google fallita
+          content:
+            text/html:
+              schema:
+                type: string
+                example: >-
+                  <html><body><h1>Accesso negato</h1><p>Autorizzazione Google
+                  non riuscita</p></body></html>
+        '500':
+          description: Errore interno durante l'elaborazione del callback
+          content:
+            text/html:
+              schema:
+                type: string
+                example: >-
+                  <html><body><h1>Errore del server</h1><p>Si è verificato un
+                  errore tecnico</p></body></html>
   /api/users/me:
     patch:
       summary: Aggiorna il profilo dell'utente autenticato
-      description: |
-        Permette all'utente autenticato di aggiornare le proprie informazioni di profilo (nome, cognome, username).
-        
+      description: >
+        Permette all'utente autenticato di aggiornare le proprie informazioni di
+        profilo (nome, cognome, username).
+
+
         **Campi modificabili:**
+
         - Nome e cognome
+
         - Username (deve essere unico nel sistema)
-        
+
+
         **Campi NON modificabili:**
+
         - Email (richiede processo di verifica separato)
+
         - Ruolo (solo gli amministratori possono modificarlo)
+
         - Password (usa endpoint dedicato)
-      tags: [Utente]
       operationId: updateOwnProfile
       security:
         - BearerAuth: []
       requestBody:
         description: Dati del profilo da aggiornare
-        required: true
         content:
           application/json:
             schema:
@@ -2510,36 +3646,36 @@ paths:
                       type: string
                       minLength: 2
                       maxLength: 50
-                      example: "Mario"
+                      example: Mario
                     surname:
                       type: string
                       minLength: 2
                       maxLength: 50
-                      example: "Rossi"
+                      example: Rossi
                 username:
                   type: string
                   minLength: 3
                   maxLength: 30
-                  pattern: "^[a-zA-Z0-9_]+$"
-                  example: "mario_rossi_2024"
+                  pattern: ^[a-zA-Z0-9_]+$
+                  example: mario_rossi_2024
             examples:
               update_name:
                 summary: Aggiorna solo il nome
                 value:
                   fullName:
-                    name: "Mario Giuseppe"
-                    surname: "Rossi"
+                    name: Mario Giuseppe
+                    surname: Rossi
               update_username:
                 summary: Aggiorna solo username
                 value:
-                  username: "mario_rossi_new"
+                  username: mario_rossi_new
               update_all:
                 summary: Aggiorna tutto
                 value:
                   fullName:
-                    name: "Mario Giuseppe"
-                    surname: "Verdi"
-                  username: "mario_verdi"
+                    name: Mario Giuseppe
+                    surname: Verdi
+                  username: mario_verdi
       responses:
         '200':
           description: Profilo aggiornato con successo
@@ -2602,3 +3738,1860 @@ paths:
                   value:
                     error: Username non disponibile
                     message: L'username scelto è già utilizzato da un altro utente
+  /api/users/me/password:
+    patch:
+      summary: Cambia password utente
+      description: >
+        Permette all'utente autenticato di modificare la propria password.
+
+
+        **Requisiti di sicurezza:**
+
+        - Deve fornire la password attuale corretta
+
+        - La nuova password deve rispettare i criteri di sicurezza
+
+        - Dopo il cambio, tutte le sessioni attive vengono invalidate (tranne
+        quella corrente)
+
+
+        **Criteri password:**
+
+        - Minimo 8 caratteri
+
+        - Almeno una lettera maiuscola
+
+        - Almeno una lettera minuscola  
+
+        - Almeno un numero
+
+        - Almeno un carattere speciale
+
+
+        **Sicurezza:**
+
+        - La password viene hashata con bcrypt
+
+        - Viene registrato l'evento nei log di sicurezza
+
+        - Viene aggiornata la data di cambio password
+      operationId: changePassword
+      security:
+        - BearerAuth: []
+      requestBody:
+        description: Password attuale e nuova password
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                oldPassword:
+                  type: string
+                  description: Password attuale dell'utente
+                  example: OldSecurePass123!
+                newPassword:
+                  type: string
+                  minLength: 8
+                  pattern: >-
+                    ^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]
+                  description: |
+                    Nuova password che deve contenere:
+                    - Almeno 8 caratteri
+                    - Una lettera maiuscola
+                    - Una lettera minuscola
+                    - Un numero
+                    - Un carattere speciale (@$!%*?&)
+                  example: NewSecurePass456!
+                confirmPassword:
+                  type: string
+                  description: >-
+                    Conferma della nuova password (opzionale, per sicurezza lato
+                    client)
+                  example: NewSecurePass456!
+            examples:
+              password_change:
+                summary: Cambio password standard
+                value:
+                  oldPassword: OldSecurePass123!
+                  newPassword: NewSecurePass456!
+                  confirmPassword: NewSecurePass456!
+      responses:
+        '200':
+          description: Password cambiata con successo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Password cambiata con successo
+                  passwordChangedAt:
+                    type: string
+                    format: date-time
+                    description: Data e ora del cambio password
+                    example: '2023-12-01T16:45:00Z'
+                  warning:
+                    type: string
+                    description: Avviso importante per l'utente
+                    example: >-
+                      Tutte le altre sessioni sono state invalidate per
+                      sicurezza
+              examples:
+                success:
+                  summary: Cambio riuscito
+                  value:
+                    message: Password cambiata con successo
+                    passwordChangedAt: '2023-12-01T16:45:00Z'
+                    warning: >-
+                      Tutte le altre sessioni sono state invalidate per
+                      sicurezza
+        '400':
+          description: Errore nella validazione della password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                weak_password:
+                  summary: Password troppo debole
+                  value:
+                    error: Password non valida
+                    message: La nuova password non rispetta i criteri di sicurezza
+                    errors:
+                      newPassword:
+                        - Deve contenere almeno una lettera maiuscola
+                        - Deve contenere almeno un carattere speciale
+                same_password:
+                  summary: Password uguale alla precedente
+                  value:
+                    error: Password non accettabile
+                    message: La nuova password deve essere diversa da quella attuale
+        '401':
+          description: Password attuale non corretta o token non valido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                wrong_current_password:
+                  summary: Password attuale errata
+                  value:
+                    error: Password attuale non corretta
+                    message: La password attuale fornita non è corretta
+                invalid_token:
+                  summary: Token non valido
+                  value:
+                    error: Token non valido
+                    message: Token di autenticazione scaduto o non valido
+        '429':
+          description: Troppi tentativi di cambio password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                rate_limit:
+                  summary: Rate limit superato
+                  value:
+                    error: Troppi tentativi
+                    message: Puoi cambiare la password massimo 3 volte ogni 24 ore
+  /api/users:
+    get:
+      summary: Lista tutti gli utenti (Admin)
+      description: |
+        Recupera l'elenco completo di tutti gli utenti registrati nel sistema.
+
+        **RICHIEDE PRIVILEGI DI AMMINISTRATORE**
+
+        **Funzionalità:**
+        - Visualizza tutti gli utenti del sistema
+        - Include informazioni sensibili (email, ruoli, stato account)
+
+        **Use Cases:**
+        - Dashboard amministrativa
+        - Gestione utenti
+        - Audit e monitoring
+
+      operationId: getAllUsers
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Numero di pagina (inizia da 1)
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+            example: 1
+        - name: limit
+          in: query
+          description: Numero di utenti per pagina
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+            example: 20
+        - name: role
+          in: query
+          description: Filtra per ruolo utente
+          schema:
+            type: string
+            enum:
+              - cittadino
+              - operatore_comunale
+              - amministratore
+            example: operatore_comunale
+        - name: isActive
+          in: query
+          description: Filtra per stato account
+          schema:
+            type: boolean
+            example: true
+        - name: search
+          in: query
+          description: Ricerca per username, email o nome
+          schema:
+            type: string
+            example: mario
+      responses:
+        '200':
+          description: Lista utenti recuperata con successo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  pagination:
+                    type: object
+                    properties:
+                      current:
+                        type: integer
+                        example: 1
+                      total:
+                        type: integer
+                        example: 5
+                      count:
+                        type: integer
+                        example: 150
+              examples:
+                success:
+                  summary: Lista utenti
+                  value:
+                    users:
+                      - _id: 507f1f77bcf86cd799439011
+                        username: mario_rossi
+                        email: mario.rossi@email.com
+                        fullName:
+                          name: Mario
+                          surname: Rossi
+                        role: cittadino
+                        isActive: true
+                        createdAt: '2023-10-01T12:00:00Z'
+                      - _id: 507f1f77bcf86cd799439012
+                        username: g_verdi_op
+                        email: g.verdi@comune.roma.it
+                        fullName:
+                          name: Giuseppe
+                          surname: Verdi
+                        role: operatore_comunale
+                        isActive: true
+                        createdAt: '2023-10-15T09:30:00Z'
+                    pagination:
+                      current: 1
+                      total: 5
+                      count: 150
+        '401':
+          description: Token di autenticazione mancante o non valido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Privilegi insufficienti - Solo amministratori
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                insufficient_privileges:
+                  summary: Accesso negato
+                  value:
+                    error: Accesso negato
+                    message: >-
+                      Solo gli amministratori possono visualizzare tutti gli
+                      utenti
+    post:
+      summary: Crea nuovo utente (Admin)
+      description: |
+        Crea un nuovo account utente con privilegi amministrativi.
+
+        **RICHIEDE PRIVILEGI DI AMMINISTRATORE**
+
+        **Differenze dalla registrazione pubblica:**
+        - L'amministratore può assegnare qualsiasi ruolo
+        - Può creare account direttamente attivi
+
+        **Use Cases:**
+        - Creazione account operatori comunali
+        - Setup account amministratori
+        - Account di servizio/test
+      operationId: createUserByAdmin
+      security:
+        - BearerAuth: []
+      requestBody:
+        description: Dati del nuovo utente da creare
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: operatore1@comune.roma.it
+                password:
+                  type: string
+                  minLength: 8
+                  example: TempPass123!
+                fullName:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      example: Luigi
+                    surname:
+                      type: string
+                      example: Bianchi
+                username:
+                  type: string
+                  example: luigi_bianchi_op
+                role:
+                  type: string
+                  enum:
+                    - cittadino
+                    - operatore_comunale
+                    - amministratore
+                  example: operatore_comunale
+                isActive:
+                  type: boolean
+                  default: true
+                  example: true
+                zone:
+                  type: string
+                  description: Zona di competenza (per operatori)
+                  example: Centro Storico
+            examples:
+              create_operator:
+                summary: Crea operatore comunale
+                value:
+                  email: operatore1@comune.roma.it
+                  password: TempPass123!
+                  fullName:
+                    name: Luigi
+                    surname: Bianchi
+                  username: luigi_bianchi_op
+                  role: operatore_comunale
+                  zone: Centro Storico
+              create_admin:
+                summary: Crea amministratore
+                value:
+                  email: admin2@minustrash.com
+                  password: SuperSecure456!
+                  fullName:
+                    name: Anna
+                    surname: Verdi
+                  username: anna_verdi_admin
+                  role: amministratore
+      responses:
+        '201':
+          description: Utente creato con successo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Utente creato con successo
+                  user:
+                    $ref: '#/components/schemas/User'
+              examples:
+                success:
+                  summary: Utente creato
+                  value:
+                    message: Utente creato con successo
+                    user:
+                      _id: 507f1f77bcf86cd799439013
+                      username: luigi_bianchi_op
+                      email: operatore1@comune.roma.it
+                      fullName:
+                        name: Luigi
+                        surname: Bianchi
+                      role: operatore_comunale
+                      isActive: true
+                      createdAt: '2023-12-01T17:00:00Z'
+        '400':
+          description: Dati non validi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Token di autenticazione mancante o non valido
+        '403':
+          description: Privilegi insufficienti - Solo amministratori
+        '409':
+          description: Email o username già esistenti
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/forgot-password:
+    post:
+      summary: Request password reset
+      description: Send a password reset email to the user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: user@example.com
+      responses:
+        '200':
+          description: Password reset email sent
+        '400':
+          description: Invalid email
+  /api/reset-password:
+    post:
+      summary: Reimposta la password dell'utente
+      description: Reimposta la password dell'utente utilizzando un token di reset valido.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+                newPassword:
+                  type: string
+                  minLength: 8
+      responses:
+        '200':
+          description: Password reset successful
+        '400':
+          description: Invalid token or password
+  /api/logout:
+    post:
+      summary: Logout utente
+      description: Invalida la sessione o il token dell'utente corrente.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Logout successful
+        '401':
+          description: Unauthorized
+  /api/profile:
+    delete:
+      summary: Elimina il proprio profilo utente
+      description: Elimina l'account dell'utente autenticato.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Profile deleted
+        '401':
+          description: Unauthorized
+  /api/auth/refresh-token:
+    post:
+      summary: Rigenera il token JWT
+      description: Ottieni un nuovo access token utilizzando un refresh token valido.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: Token refreshed
+        '400':
+          description: Invalid refresh token
+  /api/reports:
+    get:
+      summary: Elenca tutte le segnalazioni
+      description: >
+        Recupera l'elenco di tutte le segnalazioni presenti nel sistema.
+
+
+        **Filtri disponibili:**
+
+        - Filtra per stato (IN_ATTESA, VERIFICATO, IN_LAVORAZIONE, RISOLTO,
+        etc.)
+
+        - Filtra per tipo (RIFIUTI_ABBANDONATI, PROBLEMA_CESTINO, etc.)
+
+        - Filtra per urgenza (BASSA, MEDIA, ALTA, URGENTE)
+
+        - Filtra per zona geografica
+
+
+        **Permessi richiesti:**
+
+        - **Operatore**: Vede le segnalazioni 
+
+        - **Amministratore**: Vede tutte le segnalazioni
+      operationId: getAllReports
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Numero di pagina (inizia da 1)
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+            example: 1
+        - name: limit
+          in: query
+          description: Numero di elementi per pagina
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+            example: 20
+        - name: status
+          in: query
+          description: Filtra per stato della segnalazione
+          schema:
+            type: string
+            enum:
+              - IN_ATTESA
+              - VERIFICATO
+              - IN_LAVORAZIONE
+              - RISOLTO
+              - RIFIUTATO
+              - PROGRAMMATO
+            example: IN_ATTESA
+        - name: type
+          in: query
+          description: Filtra per tipo di segnalazione
+          schema:
+            type: string
+            enum:
+              - RIFIUTI_ABBANDONATI
+              - AREA_SPORCA
+              - PROBLEMA_CESTINO
+              - RACCOLTA_SALTATA
+              - VANDALISMO
+              - SCARICO_ILLEGALE
+              - ALTRO
+            example: PROBLEMA_CESTINO
+        - name: urgency
+          in: query
+          description: Filtra per livello di urgenza
+          schema:
+            type: string
+            enum:
+              - BASSA
+              - MEDIA
+              - ALTA
+              - URGENTE
+            example: ALTA
+        - name: zone
+          in: query
+          description: Filtra per zona/quartiere
+          schema:
+            type: string
+            example: Centro Storico
+      responses:
+        '200':
+          description: Lista di segnalazioni recuperata con successo
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Report'
+              examples:
+                success:
+                  summary: Lista segnalazioni
+                  value:
+                    - _id: 507f1f77bcf86cd799439012
+                      title: Cestino pieno in Via Roma
+                      description: Il cestino è completamente pieno
+                      type: PROBLEMA_CESTINO
+                      status: IN_ATTESA
+                      urgency: MEDIA
+                      location:
+                        type: Point
+                        coordinates:
+                          - 12.4964
+                          - 41.9028
+                      createdAt: '2023-12-01T10:15:00Z'
+                    - _id: 507f1f77bcf86cd799439013
+                      title: Rifiuti abbandonati nel parco
+                      description: Sacchi di spazzatura vicino alla panchina
+                      type: RIFIUTI_ABBANDONATI
+                      status: VERIFICATO
+                      urgency: ALTA
+                      location:
+                        type: Point
+                        coordinates:
+                          - 12.497
+                          - 41.9025
+                      createdAt: '2023-12-01T09:30:00Z'
+        '401':
+          description: Token di autenticazione mancante o non valido
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Token richiesto
+        '403':
+          description: Permessi insufficienti
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Accesso negato
+    post:
+      summary: Crea una nuova segnalazione
+      description: |
+        Crea una nuova segnalazione di problema legato ai rifiuti.
+
+        **Informazioni richieste:**
+        - Titolo descrittivo del problema
+        - Descrizione dettagliata
+        - Posizione geografica (coordinate GPS)
+        - Tipo di problema
+        - Opzionalmente: immagini, livello di urgenza
+
+        **Note:**
+        - Le coordinate devono essere nel formato [longitudine, latitudine]
+        - È possibile allegare fino a 5 immagini(in sviluppo)
+        - Lo stato iniziale sarà sempre "IN_ATTESA"
+        - L'urgenza predefinita è "MEDIA"
+      operationId: createReport
+      security:
+        - BearerAuth: []
+      requestBody:
+        description: Dati della nuova segnalazione
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  minLength: 5
+                  maxLength: 100
+                  example: Cestino danneggiato in Piazza Garibaldi
+                description:
+                  type: string
+                  minLength: 10
+                  maxLength: 500
+                  example: Il cestino ha un buco sul lato e i rifiuti escono
+                location:
+                  type: object
+                  properties:
+                    coordinates:
+                      type: array
+                      minItems: 2
+                      maxItems: 2
+                      items:
+                        type: number
+                      example:
+                        - 12.4965
+                        - 41.903
+                address:
+                  type: string
+                  example: Piazza Garibaldi 1, 00100 Roma RM
+                type:
+                  type: string
+                  enum:
+                    - RIFIUTI_ABBANDONATI
+                    - AREA_SPORCA
+                    - PROBLEMA_CESTINO
+                    - RACCOLTA_SALTATA
+                    - VANDALISMO
+                    - SCARICO_ILLEGALE
+                    - ALTRO
+                  example: PROBLEMA_CESTINO
+                images:
+                  type: array
+                  maxItems: 5
+                  items:
+                    type: string
+                  example:
+                    - https://example.com/image1.jpg
+                urgency:
+                  type: string
+                  enum:
+                    - BASSA
+                    - MEDIA
+                    - ALTA
+                    - URGENTE
+                  default: MEDIA
+                  example: ALTA
+            examples:
+              problema_cestino:
+                summary: Segnalazione cestino danneggiato
+                value:
+                  title: Cestino danneggiato in Piazza Garibaldi
+                  description: Il cestino ha un buco sul lato e i rifiuti escono
+                  type: PROBLEMA_CESTINO
+                  urgency: ALTA
+                  location:
+                    coordinates:
+                      - 12.4965
+                      - 41.903
+                  address: Piazza Garibaldi 1, 00100 Roma RM
+                  images:
+                    - https://example.com/cestino_rotto.jpg
+              rifiuti_abbandonati:
+                summary: Segnalazione rifiuti abbandonati
+                value:
+                  title: Rifiuti abbandonati nel parco
+                  description: >-
+                    Sacchi di spazzatura abbandonati vicino alla panchina
+                    principale
+                  type: RIFIUTI_ABBANDONATI
+                  urgency: MEDIA
+                  location:
+                    coordinates:
+                      - 12.497
+                      - 41.9025
+                  address: Parco della Rimembranza, 00100 Roma RM
+      responses:
+        '201':
+          description: Segnalazione creata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Report'
+              examples:
+                success:
+                  summary: Segnalazione creata
+                  value:
+                    _id: 507f1f77bcf86cd799439012
+                    title: Cestino danneggiato in Piazza Garibaldi
+                    description: Il cestino ha un buco sul lato e i rifiuti escono
+                    type: PROBLEMA_CESTINO
+                    status: IN_ATTESA
+                    urgency: ALTA
+                    location:
+                      type: Point
+                      coordinates:
+                        - 12.4965
+                        - 41.903
+                    address: Piazza Garibaldi 1, 00100 Roma RM
+                    images:
+                      - https://example.com/cestino_rotto.jpg
+                    reportedBy: 507f1f77bcf86cd799439011
+                    createdAt: '2023-12-01T15:30:00Z'
+        '400':
+          description: Dati della segnalazione non validi
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Dati non validi
+                  message:
+                    type: string
+                    example: Il titolo deve essere lungo almeno 5 caratteri
+        '401':
+          description: Token di autenticazione mancante o non valido
+        '429':
+          description: Troppo molte richieste - Rate limit superato
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Rate limit superato
+                  message:
+                    type: string
+                    example: Puoi creare massimo 5 segnalazioni all'ora
+  /api/reports/{id}:
+    get:
+      summary: Recupera una segnalazione per ID
+      description: Ottiene i dettagli di una singola segnalazione tramite il suo ID univoco
+      operationId: getReportById
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: ID univoco della segnalazione
+          schema:
+            type: string
+            example: 507f1f77bcf86cd799439012
+      responses:
+        '200':
+          description: Dettaglio della segnalazione recuperato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Report'
+        '401':
+          description: Token di autenticazione richiesto
+        '404':
+          description: Segnalazione non trovata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Segnalazione non trovata
+    patch:
+      summary: Aggiorna una segnalazione
+      description: >
+        Aggiorna i dati di una segnalazione esistente.
+
+        Solo il creatore della segnalazione o un operatore/amministratore può
+        modificarla.
+      operationId: updateReport
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: ID univoco della segnalazione da aggiornare
+          schema:
+            type: string
+            example: 507f1f77bcf86cd799439012
+      requestBody:
+        description: Dati aggiornati della segnalazione
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  minLength: 5
+                  maxLength: 100
+                description:
+                  type: string
+                  minLength: 10
+                  maxLength: 500
+                urgency:
+                  type: string
+                  enum:
+                    - BASSA
+                    - MEDIA
+                    - ALTA
+                    - URGENTE
+                images:
+                  type: array
+                  maxItems: 5
+                  items:
+                    type: string
+            example:
+              title: Cestino completamente distrutto
+              description: Il cestino è stato vandalizzato e non è più utilizzabile
+              urgency: URGENTE
+      responses:
+        '200':
+          description: Segnalazione aggiornata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Report'
+        '400':
+          description: Dati di aggiornamento non validi
+        '401':
+          description: Token di autenticazione richiesto
+        '403':
+          description: Non autorizzato a modificare questa segnalazione
+        '404':
+          description: Segnalazione non trovata
+    delete:
+      summary: Elimina una segnalazione
+      description: |
+        Elimina definitivamente una segnalazione dal sistema.
+        Solo operatore e amministratore possono eliminarla.
+      operationId: deleteReport
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: ID univoco della segnalazione da eliminare
+          schema:
+            type: string
+            example: 507f1f77bcf86cd799439012
+      responses:
+        '200':
+          description: Segnalazione eliminata con successo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Segnalazione eliminata con successo
+        '401':
+          description: Token di autenticazione richiesto
+        '403':
+          description: Non autorizzato a eliminare questa segnalazione
+        '404':
+          description: Segnalazione non trovata
+  /api/reports/{id}/status:
+    patch:
+      summary: Aggiorna lo stato di una segnalazione
+      description: >
+        Modifica lo stato di una segnalazione esistente.
+
+
+        **Permessi richiesti:**
+
+        - **Operatore comunale**: Può modificare le segnalazioni 
+
+        - **Amministratore**: Può modificare qualsiasi segnalazione
+
+        - **Cittadino**: Non può modificare gli stati (solo creare segnalazioni)
+
+
+        **Stati disponibili:**
+
+        - **IN_ATTESA**: Segnalazione appena creata, in attesa di verifica
+
+        - **VERIFICATO**: Confermata dal personale, problema reale
+
+        - **IN_LAVORAZIONE**: Intervento attualmente in corso
+
+        - **RISOLTO**: Problema risolto con successo
+
+        - **RIFIUTATO**: Segnalazione non valida o duplicata
+
+        - **PROGRAMMATO**: Intervento programmato per una data futura
+
+
+        **Note operative:**
+
+        - L'utente che ha creato la segnalazione riceve notifiche
+
+        - Alcuni stati richiedono informazioni aggiuntive (note, data
+        programmata)
+      operationId: updateReportStatus
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: ID univoco della segnalazione
+          schema:
+            type: string
+            example: 507f1f77bcf86cd799439012
+      requestBody:
+        description: Nuovo stato e informazioni aggiuntive
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  description: Nuovo stato della segnalazione
+                  enum:
+                    - IN_ATTESA
+                    - VERIFICATO
+                    - IN_LAVORAZIONE
+                    - RISOLTO
+                    - RIFIUTATO
+                    - PROGRAMMATO
+                  example: VERIFICATO
+                notes:
+                  type: string
+                  description: Note dell'operatore (opzionali ma consigliate)
+                  maxLength: 500
+                  example: >-
+                    Verificato sul posto, il cestino è effettivamente
+                    danneggiato
+                scheduledDate:
+                  type: string
+                  description: >-
+                    Data programmata per l'intervento (richiesta se status =
+                    PROGRAMMATO)
+                  example: '2023-12-05T09:00:00Z'
+                assignedTo:
+                  type: string
+                  description: ID dell'operatore assegnato all'intervento
+                  example: 507f1f77bcf86cd799439013
+            examples:
+              verify_report:
+                summary: Verifica segnalazione
+                value:
+                  status: VERIFICATO
+                  notes: Confermato il problema sul posto, necessario intervento
+                  assignedTo: 507f1f77bcf86cd799439013
+              start_work:
+                summary: Inizia lavorazione
+                value:
+                  status: IN_LAVORAZIONE
+                  notes: Squadra tecnica inviata sul posto
+              schedule_work:
+                summary: Programma intervento
+                value:
+                  status: PROGRAMMATO
+                  notes: Intervento programmato per lunedì mattina
+                  scheduledDate: '2023-12-05T09:00:00Z'
+                  assignedTo: 507f1f77bcf86cd799439013
+              resolve_report:
+                summary: Risolvi segnalazione
+                value:
+                  status: RISOLTO
+                  notes: Cestino riparato e ripristinato il servizio
+              reject_report:
+                summary: Rifiuta segnalazione
+                value:
+                  status: RIFIUTATO
+                  notes: 'Segnalazione duplicata, già risolta in ticket #123'
+      responses:
+        '200':
+          description: Stato aggiornato con successo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Stato segnalazione aggiornato con successo
+                  report:
+                    $ref: '#/components/schemas/Report'
+                  statusHistory:
+                    type: array
+                    description: Cronologia dei cambi di stato
+                    items:
+                      type: object
+                      properties:
+                        status:
+                          type: string
+                        changedBy:
+                          type: string
+                        changedAt:
+                          type: string
+                          format: date-time
+                        notes:
+                          type: string
+              examples:
+                success:
+                  summary: Stato aggiornato
+                  value:
+                    message: Stato segnalazione aggiornato con successo
+                    report:
+                      _id: 507f1f77bcf86cd799439012
+                      title: Cestino danneggiato in Piazza Garibaldi
+                      status: VERIFICATO
+                      assignedTo: 507f1f77bcf86cd799439013
+                      updatedAt: '2023-12-01T16:15:00Z'
+                    statusHistory:
+                      - status: IN_ATTESA
+                        changedBy: 507f1f77bcf86cd799439011
+                        changedAt: '2023-12-01T10:15:00Z'
+                        notes: Segnalazione creata
+                      - status: VERIFICATO
+                        changedBy: 507f1f77bcf86cd799439013
+                        changedAt: '2023-12-01T16:15:00Z'
+                        notes: Confermato il problema sul posto
+        '400':
+          description: Dati non validi o transizione di stato non permessa
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Transizione non valida
+                  message:
+                    type: string
+                    example: Non è possibile passare da RISOLTO a IN_ATTESA
+        '401':
+          description: Token di autenticazione richiesto
+        '403':
+          description: Permessi insufficienti per modificare questa segnalazione
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Accesso negato
+                  message:
+                    type: string
+                    example: >-
+                      Solo operatori e amministratori possono modificare lo
+                      stato delle segnalazioni
+        '404':
+          description: Segnalazione non trovata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Segnalazione non trovata
+  /api/bins:
+    get:
+      summary: Recupera tutti i cestini
+      description: >
+        Ottiene l'elenco di tutti i cestini pubblici presenti nel sistema.
+
+        Include informazioni su posizione, tipo di raccolta, stato operativo e
+        livello di riempimento.
+
+
+        **Filtri disponibili tramite query parameters:**
+
+        - Per tipo di raccolta (INDIFFERENZIATO, CARTA, PLASTICA, etc.)
+
+        - Per stato (ATTIVO, MANUTENZIONE, INATTIVO)
+
+        - Per zona geografica
+
+        - Per livello di riempimento
+      operationId: getAllBins
+      parameters:
+        - name: type
+          in: query
+          description: Filtra per tipo di raccolta
+          schema:
+            type: string
+            enum:
+              - INDIFFERENZIATO
+              - CARTA
+              - PLASTICA
+              - VETRO
+              - ORGANICO
+              - RAEE
+              - ALTRO
+            example: INDIFFERENZIATO
+        - name: status
+          in: query
+          description: Filtra per stato operativo
+          schema:
+            type: string
+            enum:
+              - ATTIVO
+              - MANUTENZIONE
+              - INATTIVO
+            example: ATTIVO
+        - name: zone
+          in: query
+          description: Filtra per zona/quartiere
+          schema:
+            type: string
+            example: Centro Storico
+        - name: fillLevel
+          in: query
+          description: Filtra per livello di riempimento minimo
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 100
+            example: 80
+      responses:
+        '200':
+          description: Lista di cestini recuperata con successo
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Bin'
+              examples:
+                success:
+                  summary: Lista cestini
+                  value:
+                    - _id: 507f1f77bcf86cd799439014
+                      location:
+                        type: Point
+                        coordinates:
+                          - 12.4964
+                          - 41.9028
+                      address: Via Roma 45, 00100 Roma RM
+                      type: INDIFFERENZIATO
+                      status: ATTIVO
+                      capacity: 120
+                      fillLevel: 75
+                      zone: Centro Storico
+                    - _id: 507f1f77bcf86cd799439015
+                      location:
+                        type: Point
+                        coordinates:
+                          - 12.497
+                          - 41.9025
+                      address: Piazza Garibaldi 1, 00100 Roma RM
+                      type: CARTA
+                      status: ATTIVO
+                      capacity: 100
+                      fillLevel: 95
+                      zone: Centro Storico
+    post:
+      summary: Crea nuovo cestino
+      description: |
+        Aggiunge un nuovo cestino pubblico al sistema.
+        Richiede privilegi di operatore comunale o amministratore.
+
+        **Informazioni richieste:**
+        - Posizione geografica (coordinate GPS)
+        - Tipo di raccolta
+        - Capacità in litri
+        - Zona di appartenenza
+      operationId: createBin
+      security:
+        - BearerAuth: []
+      requestBody:
+        description: Dati del nuovo cestino
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                location:
+                  type: object
+                  properties:
+                    coordinates:
+                      type: array
+                      minItems: 2
+                      maxItems: 2
+                      items:
+                        type: number
+                      example:
+                        - 12.498
+                        - 41.9035
+                address:
+                  type: string
+                  example: Via Nazionale 10, 00100 Roma RM
+                type:
+                  type: string
+                  enum:
+                    - INDIFFERENZIATO
+                    - CARTA
+                    - PLASTICA
+                    - VETRO
+                    - ORGANICO
+                    - RAEE
+                    - ALTRO
+                  example: PLASTICA
+                capacity:
+                  type: number
+                  minimum: 1
+                  maximum: 1000
+                  example: 150
+                zone:
+                  type: string
+                  example: Centro Storico
+            examples:
+              nuovo_cestino:
+                summary: Nuovo cestino plastica
+                value:
+                  location:
+                    coordinates:
+                      - 12.498
+                      - 41.9035
+                  address: Via Nazionale 10, 00100 Roma RM
+                  type: PLASTICA
+                  capacity: 150
+                  zone: Centro Storico
+      responses:
+        '201':
+          description: Cestino creato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bin'
+              examples:
+                success:
+                  summary: Cestino creato
+                  value:
+                    _id: 507f1f77bcf86cd799439016
+                    location:
+                      type: Point
+                      coordinates:
+                        - 12.498
+                        - 41.9035
+                    address: Via Nazionale 10, 00100 Roma RM
+                    type: PLASTICA
+                    status: ATTIVO
+                    capacity: 150
+                    fillLevel: 0
+                    zone: Centro Storico
+                    createdAt: '2023-12-01T16:00:00Z'
+        '400':
+          description: Dati del cestino non validi
+        '401':
+          description: Token di autenticazione richiesto
+        '403':
+          description: Privilegi insufficienti - Solo operatori e amministratori
+  /api/bins/{id}:
+    get:
+      summary: Recupera cestino per ID
+      description: >
+        Ottiene i dettagli completi di un cestino specifico tramite il suo ID
+        univoco.
+
+
+        **Informazioni fornite:**
+
+        - Posizione geografica e indirizzo
+
+        - Tipo di raccolta e capacità
+
+        - Stato operativo attuale
+
+        - Livello di riempimento in tempo reale
+
+        - Cronologia manutenzioni e svuotamenti
+
+        - Zona di appartenenza
+
+
+        **Accessibilità:**
+
+        - Endpoint pubblico (non richiede autenticazione)
+
+        - Utilizzabile per il web
+
+        - Ottimo per mappe interattive
+      operationId: getBinById
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: ID univoco del cestino
+          schema:
+            type: string
+            example: 507f1f77bcf86cd799439014
+      responses:
+        '200':
+          description: Dettagli del cestino recuperati con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bin'
+              examples:
+                active_bin:
+                  summary: Cestino attivo
+                  value:
+                    _id: 507f1f77bcf86cd799439014
+                    location:
+                      type: Point
+                      coordinates:
+                        - 12.4964
+                        - 41.9028
+                    address: Via Roma 45, 00100 Roma RM
+                    type: INDIFFERENZIATO
+                    status: ATTIVO
+                    capacity: 120
+                    fillLevel: 75
+                    lastEmptied: '2023-11-30T08:00:00Z'
+                    zone: Centro Storico
+                    createdAt: '2023-01-15T10:00:00Z'
+        '404':
+          description: Cestino non trovato
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Cestino non trovato
+                  message:
+                    type: string
+                    example: Nessun cestino trovato con l'ID specificato
+    patch:
+      summary: Aggiorna cestino
+      description: |
+        Modifica i dati di un cestino esistente.
+
+        **🔐 Richiede autenticazione e privilegi di operatore/amministratore**
+
+        **Campi modificabili:**
+        - Posizione geografica (se il cestino viene spostato)
+        - Capacità (se viene sostituito con un modello diverso)
+        - Livello di riempimento (aggiornamento manuale)
+        - Zona di appartenenza
+        - Tipo di raccolta (se cambia destinazione d'uso)
+
+        **Campi NON modificabili:**
+        - ID del cestino
+        - Data di creazione
+        - Stato (usa endpoint dedicato `/status`)
+
+        **Use Cases:**
+        - Aggiornamento dati dopo manutenzione
+        - Correzione informazioni errate
+        - Cambio tipo di raccolta
+        - Spostamento fisico del cestino
+      operationId: updateBin
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: ID univoco del cestino da aggiornare
+          schema:
+            type: string
+            example: 507f1f77bcf86cd799439014
+      requestBody:
+        description: Dati del cestino da aggiornare
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                location:
+                  type: object
+                  properties:
+                    coordinates:
+                      type: array
+                      minItems: 2
+                      maxItems: 2
+                      items:
+                        type: number
+                      example:
+                        - 12.4965
+                        - 41.9029
+                address:
+                  type: string
+                  example: Via Roma 47, 00100 Roma RM
+                type:
+                  type: string
+                  enum:
+                    - INDIFFERENZIATO
+                    - CARTA
+                    - PLASTICA
+                    - VETRO
+                    - ORGANICO
+                    - RAEE
+                    - ALTRO
+                  example: CARTA
+                capacity:
+                  type: number
+                  minimum: 1
+                  maximum: 1000
+                  example: 150
+                fillLevel:
+                  type: number
+                  minimum: 0
+                  maximum: 100
+                  example: 0
+                zone:
+                  type: string
+                  example: Centro Storico
+            examples:
+              update_location:
+                summary: Aggiorna posizione
+                value:
+                  location:
+                    coordinates:
+                      - 12.4965
+                      - 41.9029
+                  address: Via Roma 47, 00100 Roma RM
+              change_type:
+                summary: Cambia tipo raccolta
+                value:
+                  type: CARTA
+                  capacity: 100
+              update_fill:
+                summary: Aggiorna riempimento
+                value:
+                  fillLevel: 0
+      responses:
+        '200':
+          description: Cestino aggiornato con successo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Cestino aggiornato con successo
+                  bin:
+                    $ref: '#/components/schemas/Bin'
+              examples:
+                success:
+                  summary: Aggiornamento riuscito
+                  value:
+                    message: Cestino aggiornato con successo
+                    bin:
+                      _id: 507f1f77bcf86cd799439014
+                      location:
+                        type: Point
+                        coordinates:
+                          - 12.4965
+                          - 41.9029
+                      address: Via Roma 47, 00100 Roma RM
+                      type: CARTA
+                      status: ATTIVO
+                      capacity: 100
+                      fillLevel: 0
+                      updatedAt: '2023-12-01T17:30:00Z'
+        '400':
+          description: Dati non validi
+        '401':
+          description: Token di autenticazione richiesto
+        '403':
+          description: Privilegi insufficienti - Solo operatori e amministratori
+        '404':
+          description: Cestino non trovato
+    delete:
+      summary: Elimina cestino
+      description: |
+        Rimuove definitivamente un cestino dal sistema.
+
+        **Richiede privilegi di amministratore**
+
+           **OPERAZIONE IRREVERSIBILE**
+
+        **Quando utilizzare:**
+        - Cestino fisicamente rimosso
+        - Cestino non più utilizzabile
+        - Errore nella creazione (duplicato)
+
+        **Effetti collaterali:**
+        - Tutte le segnalazioni associate vengono archiviate
+        - Le statistiche vengono aggiornate(in sviluppo)
+
+        **Alternative consigliate:**
+        - Usa stato "INATTIVO" invece di eliminare
+        - Mantieni i dati per analisi storiche
+      operationId: deleteBin
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: ID univoco del cestino da eliminare
+          schema:
+            type: string
+            example: 507f1f77bcf86cd799439014
+      responses:
+        '200':
+          description: Cestino eliminato con successo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Cestino eliminato con successo
+                  deletedBin:
+                    type: object
+                    properties:
+                      _id:
+                        type: string
+                        example: 507f1f77bcf86cd799439014
+                      address:
+                        type: string
+                        example: Via Roma 45, 00100 Roma RM
+                      deletedAt:
+                        type: string
+                        format: date-time
+                        example: '2023-12-01T17:45:00Z'
+              examples:
+                success:
+                  summary: Eliminazione riuscita
+                  value:
+                    message: Cestino eliminato con successo
+                    deletedBin:
+                      _id: 507f1f77bcf86cd799439014
+                      address: Via Roma 45, 00100 Roma RM
+                      deletedAt: '2023-12-01T17:45:00Z'
+        '401':
+          description: Token di autenticazione richiesto
+        '403':
+          description: Privilegi insufficienti - Solo amministratori
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Accesso negato
+                  message:
+                    type: string
+                    example: Solo gli amministratori possono eliminare i cestini
+        '404':
+          description: Cestino non trovato
+  /api/bins/{id}/status:
+    patch:
+      summary: Aggiorna stato cestino
+      description: >
+        Modifica lo stato operativo di un cestino pubblico.
+
+
+        **Richiede privilegi di operatore comunale o amministratore**
+
+
+        **Stati disponibili:**
+
+        - **ATTIVO**: Cestino funzionante e utilizzabile dal pubblico
+
+        - **MANUTENZIONE**: Cestino temporaneamente fuori servizio per
+        manutenzione
+
+        - **INATTIVO**: Cestino definitivamente disattivato o rimosso
+
+
+        **Workflow tipico:**
+
+        ATTIVO ↔ MANUTENZIONE (per interventi temporanei)
+
+        ATTIVO → INATTIVO (per disattivazione definitiva)
+
+
+        **Effetti del cambio stato:**
+
+        - **MANUTENZIONE**: Il cestino non appare nelle ricerche pubbliche
+
+        - **INATTIVO**: Le notifiche di riempimento vengono disabilitate
+
+        - **ATTIVO**: Riprende il monitoraggio e la visibilità pubblica
+
+
+        **Use Cases:**
+
+        - Manutenzione programmata o straordinaria
+
+        - Guasto temporaneo o danneggiamento
+
+        - Disattivazione per rimozione definitiva
+
+        - Riattivazione dopo riparazione/sostituzione
+      operationId: updateBinStatus
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: ID univoco del cestino
+          schema:
+            type: string
+            example: 507f1f77bcf86cd799439014
+      requestBody:
+        description: Nuovo stato del cestino e informazioni aggiuntive
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  description: Nuovo stato operativo del cestino
+                  enum:
+                    - ATTIVO
+                    - MANUTENZIONE
+                    - INATTIVO
+                  example: MANUTENZIONE
+                reason:
+                  type: string
+                  description: Motivo del cambio di stato (opzionale ma consigliato)
+                  maxLength: 200
+                  example: >-
+                    Cestino danneggiato da atti vandalici, necessaria
+                    sostituzione
+                estimatedDuration:
+                  type: string
+                  description: Durata stimata per MANUTENZIONE (formato ISO 8601 duration)
+                  pattern: >-
+                    ^P(?!$)(\d+Y)?(\d+M)?(\d+W)?(\d+D)?(T(?=\d)(\d+H)?(\d+M)?(\d+S)?)?$
+                  example: P2D
+                scheduledReactivation:
+                  type: string
+                  description: Data programmata per riattivazione (per stato MANUTENZIONE)
+                  example: '2023-12-05T08:00:00Z'
+                maintenanceType:
+                  type: string
+                  description: Tipo di manutenzione (se status = MANUTENZIONE)
+                  enum:
+                    - PROGRAMMATA
+                    - STRAORDINARIA
+                    - GUASTO
+                    - VANDALISMO
+                    - SOSTITUZIONE
+                  example: STRAORDINARIA
+            examples:
+              maintenance_scheduled:
+                summary: Manutenzione programmata
+                value:
+                  status: MANUTENZIONE
+                  reason: Manutenzione programmata settimanale
+                  maintenanceType: PROGRAMMATA
+                  estimatedDuration: P1D
+                  scheduledReactivation: '2023-12-03T08:00:00Z'
+              emergency_repair:
+                summary: Riparazione urgente
+                value:
+                  status: MANUTENZIONE
+                  reason: Cestino danneggiato da atti vandalici
+                  maintenanceType: STRAORDINARIA
+                  estimatedDuration: P3D
+              deactivate_permanently:
+                summary: Disattivazione definitiva
+                value:
+                  status: INATTIVO
+                  reason: Cestino rimosso per ristrutturazione area
+              reactivate_after_repair:
+                summary: Riattivazione dopo riparazione
+                value:
+                  status: ATTIVO
+                  reason: Riparazione completata, cestino nuovamente operativo
+      responses:
+        '200':
+          description: Stato del cestino aggiornato con successo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Stato cestino aggiornato con successo
+                  bin:
+                    $ref: '#/components/schemas/Bin'
+                  statusHistory:
+                    type: array
+                    description: Cronologia dei cambi di stato
+                    items:
+                      type: object
+                      properties:
+                        status:
+                          type: string
+                          example: MANUTENZIONE
+                        changedBy:
+                          type: string
+                          description: ID dell'operatore che ha effettuato il cambio
+                          example: 507f1f77bcf86cd799439013
+                        changedAt:
+                          type: string
+                          format: date-time
+                          example: '2023-12-01T18:00:00Z'
+                        reason:
+                          type: string
+                          example: Manutenzione programmata settimanale
+                        maintenanceType:
+                          type: string
+                          example: PROGRAMMATA
+              examples:
+                success:
+                  summary: Stato aggiornato
+                  value:
+                    message: Stato cestino aggiornato con successo
+                    bin:
+                      _id: 507f1f77bcf86cd799439014
+                      status: MANUTENZIONE
+                      location:
+                        type: Point
+                        coordinates:
+                          - 12.4964
+                          - 41.9028
+                      address: Via Roma 45, 00100 Roma RM
+                      type: INDIFFERENZIATO
+                      updatedAt: '2023-12-01T18:00:00Z'
+                    statusHistory:
+                      - status: ATTIVO
+                        changedBy: system
+                        changedAt: '2023-01-15T10:00:00Z'
+                        reason: Installazione iniziale
+                      - status: MANUTENZIONE
+                        changedBy: 507f1f77bcf86cd799439013
+                        changedAt: '2023-12-01T18:00:00Z'
+                        reason: Manutenzione programmata settimanale
+                        maintenanceType: PROGRAMMATA
+        '400':
+          description: Dati non validi o transizione di stato non permessa
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Transizione non valida
+                  message:
+                    type: string
+                    example: Non è possibile passare da INATTIVO a MANUTENZIONE
+                  allowedTransitions:
+                    type: array
+                    items:
+                      type: string
+                    example:
+                      - ATTIVO
+                      - INATTIVO
+        '401':
+          description: Token di autenticazione richiesto
+        '403':
+          description: Privilegi insufficienti per modificare lo stato del cestino
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Accesso negato
+                  message:
+                    type: string
+                    example: >-
+                      Solo operatori comunali e amministratori possono
+                      modificare lo stato dei cestini
+        '404':
+          description: Cestino non trovato
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Cestino non trovato
+                  message:
+                    type: string
+                    example: Nessun cestino trovato con l'ID specificato
