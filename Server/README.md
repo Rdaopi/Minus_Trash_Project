@@ -3,17 +3,15 @@
 Minus Trash è una piattaforma digitale progettata per ottimizzare la gestione dei rifiuti urbani per i cittadini e per il Comune di Trento.
 Nella repository ci sono due cartelle:
 
-## Backend Setup
+- Server
+- Frontend
 
-1. Install dependencies:
-```bash
-npm install
-```
+
 
 ## Funzionalità principali
 
 ## Mappatura dei punti di raccolta
-Visualizzazione in tempo reale dei contenitori dislocati sul territorio, con indicazioni sullo stato di riempimento, posizione GPS e ultimo svuotamento.
+Visualizzazione in tempo reale dei contenitori dislocati sul territorio, con indicazioni sullo stato di riempimento, posizione GPS.
 
 ## Notifiche automatiche (in sviluppo)
 Il sistema genera alert in caso di contenitori pieni, guasti o situazioni anomale, notificando automaticamente gli operatori.
@@ -21,10 +19,13 @@ Il sistema genera alert in caso di contenitori pieni, guasti o situazioni anomal
 ## Statistiche e report (in sviluppo)
 Dashboard con grafici e dati aggregati per monitorare l'andamento della raccolta per ottimizzare i percorsi di raccolta e migliorare l'efficienza del servizio.
 
-## Area utente (in sviluppo)
+## Area utente (fatto)
 Accesso personalizzato per cittadini e operatori, con funzionalità dedicate:
 - I cittadini possono segnalare problemi o consultare i dati ambientali locali.
 - Gli operatori possono pianificare interventi e aggiornare lo stato dei contenitori.
+- Gli amministratori possono gestire gli utenti, assegnare ruoli e fare tutto quello che fa un cittadino e un operatore.
+
+
 
 
 
@@ -37,6 +38,10 @@ Accesso personalizzato per cittadini e operatori, con funzionalità dedicate:
     GOOGLE_CLIENT_ID=...
     GOOGLE_CLIENT_SECRET=...
     JWT_ACCESS_SECRET=...
+    JWT_REFRESH_SECRET=...
+    MAIL_API_KEY=
+    MAIL_API_SECRET
+    NODE_ENV=production
     FRONTEND_URL=http://localhost:5173
     BACKEND_URL=http://localhost:5000   
 
@@ -47,7 +52,7 @@ Accesso personalizzato per cittadini e operatori, con funzionalità dedicate:
 
 # frontend setup
 
-0.npm install
+0. npm install
 1. create new terminal
 2. cd FrontEnd
 3. npm run dev
@@ -61,24 +66,18 @@ Accesso personalizzato per cittadini e operatori, con funzionalità dedicate:
 ## Local Development
 1. Set up a project in Google Cloud Console
 2. Configure OAuth credentials:
-   - Authorized JavaScript origins: `http://localhost:5173`
-   - Authorized redirect URIs: `http://localhost:5000/api/auth/googleOAuth/callback`
+   - Authorized JavaScript origins: `http://localhost:5173` , `https://minus-trash-project-staticsite.onrender.com`,`api/auth/googleOAuth/callback`
+   - Authorized redirect URIs: `http://localhost:5000/api/auth/googleOAuth/callback`, `https://minus-trash-project-webservice.onrender.com/api/auth/googleOAuth/callback`
 3. Add credentials to your backend .env file:
    ```
    GOOGLE_CLIENT_ID=your-client-id
    GOOGLE_CLIENT_SECRET=your-client-secret
-   FRONTEND_URL=http://localhost:5173
-   BACKEND_URL=http://localhost:5000
-   ```
-4. Add API URL to frontend .env:
-   ```
-   VITE_API_URL=http://localhost:5000
    ```
 
 ### Production (Render)
 1. Update OAuth credentials in Google Cloud Console:
-   - Add Authorized JavaScript origins: `https://your-frontend-url.onrender.com`
-   - Add Authorized redirect URIs: `https://your-backend-url.onrender.com/api/auth/googleOAuth/callback`
+   - Add Authorized JavaScript origins: `https://minus-trash-project-staticsite.onrender.com`
+   - Add Authorized redirect URIs: `https://minus-trash-project-webservice.onrender.com/api/auth/googleOAuth/callback`
 
 2. backend setting configuration (https://minus-trash-project-webservice.onrender.com)
    Repository=https://github.com/Rdaopi/Minus_Trash_Project
@@ -112,12 +111,6 @@ Accesso personalizzato per cittadini e operatori, con funzionalità dedicate:
 5. set rewrite role 
    Source= /.*    Destination=  /index.html  Action=Rewrite    or
    Source= /*    Destination=  /index.html  Action=Rewrite
-## Troubleshooting OAuth Problems
-- If Google login works locally but not in production, check the environment variables
-- If you get a 404 error after login, check the SPA routing configuration
-- If you get a "redirect_uri_mismatch" error, verify the redirect URI in Google Cloud Console
-- If you get "Token not received from the server", check the backend response format
-- Use browser developer tools to inspect the network requests and identify the exact issue
 
 # Static Site Routing with Render
  - Root Directory=FrontEnd
@@ -155,33 +148,24 @@ npm install --save-dev prettier # Code formatting
 ```bash
 npm start                    # Start the server
 npm run dev                  # Start server with nodemon (development)
-npm test                     # Run tests
+npm test                     # Run tests  supertest e mock
 npm run test:watch          # Run tests in watch mode
 npm run test:coverage       # Run tests with coverage report
 ```
 
-## Important Notes
-1. Make sure all environment variables are set correctly
-2. For Google OAuth, the callback URL must match exactly in both the code and Google Cloud Console
-3. Check these files for proper configuration:
-   - index.js
-   - swagger.js
-   - googleAuth.js
-   - .env file
 
-
-# auto generate swagger-ooutput.json
-
-npm install swagger-autogen --save-dev
-remember to ignore this command at the start of server otherwise the server will restart constantly
- modify package.json ->> "dev": "nodemon --ignore swagger-output.json index.js",
-
-
- # Generate or Update oas3.yaml
+ # install library for generating oas3.yaml
  
-   npm install js-yaml
+   - npm install js-yaml
+   write code in /config/swagger.js
+   
 
 # supertest
-   npm install --save-dev supertest
-   npm install --save-dev jest
+   - npm install --save-dev supertest
+   - npm install --save-dev jest
+
+
+# npm run swagger:generate
+   - generate both swagger-output.json and oas3.yaml
+   
 
