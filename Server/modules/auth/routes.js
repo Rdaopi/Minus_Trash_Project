@@ -834,7 +834,7 @@ router.patch('/users/me/password', jwtAuth, auditOnSuccess('password_change'), c
  *       **Filtri disponibili:**
  *       - `role`: Filtra per ruolo utente
  *       - `isActive`: Filtra per stato account (attivo/inattivo)
- *       - `search`: Ricerca per username, email o nome
+ *       - `search`: Ricerca per username, email o nome (in sviluppo)
  *       
  *       **Use Cases:**
  *       - Dashboard amministrativa
@@ -962,13 +962,10 @@ router.patch('/users/me/password', jwtAuth, auditOnSuccess('password_change'), c
  *       **Differenze dalla registrazione pubblica:**
  *       - L'amministratore può assegnare qualsiasi ruolo
  *       - Può creare account direttamente attivi
- *       - Bypass di alcune validazioni standard
  *       
  *       **Use Cases:**
  *       - Creazione account operatori comunali
  *       - Setup account amministratori
- *       - Migrazione utenti da altri sistemi
- *       - Account di servizio/test
  *     tags: [Autenticazione]
  *     operationId: createUserByAdmin
  *     security:
