@@ -233,38 +233,48 @@ export const refreshTokenHandler = async (req, res) => {
 
 //Metodo di registrazione
 export const register = async (req, res) => {
+    console.log('--- Register function called ---'); // ENTRY
     try {
         logger.info('Ricevuta richiesta di registrazione:', req.body);
+        console.log('Register input:', req.body); // DEBUG
         const { username, email, password, fullName } = req.body;
 
         // Validazione password
         if (!REGEX_PASSWORD.test(password)) {
             logger.warn('Password non valida durante la registrazione');
+            console.log('Password validation failed:', password); // DEBUG
             return res.status(400).json({
                 error: 'La password deve contenere almeno 8 caratteri, una lettera maiuscola e un carattere speciale[!@#$%^&*]'
             });
         }
+        console.log('Password validation passed'); // DEBUG
 
         // Verifica se l'utente esiste già
         const existingUser = await User.findOne({ $or: [{ email }, { username }] });
         if (existingUser) {
             logger.warn(`Tentativo di registrazione con email/username già esistente: ${email}`);
+            console.log('Existing user found:', existingUser); // DEBUG
             return res.status(400).json({
                 error: 'Un utente con questa email o username esiste già'
             });
         }
+        console.log('No existing user found'); // DEBUG
 
         // Validazione fullName
         if (!fullName || !fullName.name || !fullName.surname) {
             logger.warn('Dati nome/cognome mancanti durante la registrazione');
+            console.log('Full name validation failed:', fullName); // DEBUG
             return res.status(400).json({
                 error: 'Nome e cognome sono obbligatori'
             });
         }
+        console.log('Full name validation passed:', fullName); // DEBUG
 
         // Hash della password
         const salt = await bcrypt.genSalt(10);
+        console.log('Salt generated:', salt); // DEBUG
         const hashedPassword = await bcrypt.hash(password, salt);
+        console.log('Password hashed:', hashedPassword); // DEBUG
 
         // Creazione nuovo utente
         const user = new User({
@@ -282,11 +292,15 @@ export const register = async (req, res) => {
                 }
             }
         });
+        console.log('User instance created:', user); // DEBUG
 
         logger.info('Tentativo di salvare nuovo utente nel database');
+        console.log('Saving user to database...'); // DEBUG
         const savedUser = await user.save();
         logger.info(`Nuovo utente registrato con successo: ${savedUser._id}`);
+        console.log('User saved:', savedUser); // DEBUG
 
+        console.log('--- Register function completed successfully ---'); // EXIT
         return res.status(201).json({
             message: 'Registrazione completata con successo',
             user: {
@@ -299,6 +313,12 @@ export const register = async (req, res) => {
 
     } catch (error) {
         logger.error('Errore durante la registrazione:', error);
+        console.log('--- Register function ERROR ---'); // ERROR ENTRY
+        console.log('Registration error:', error); // DEBUG
+        if (error.errors) {
+            console.log('Validation errors:', error.errors); // DEBUG
+        }
+        console.log('--- Register function EXIT with error ---'); // ERROR EXIT
         return res.status(500).json({
             error: 'Si è verificato un errore durante la registrazione. Riprova più tardi.'
         });

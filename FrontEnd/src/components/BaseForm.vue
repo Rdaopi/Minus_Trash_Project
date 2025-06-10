@@ -69,7 +69,10 @@ async function fetchSuggestions(query) {
   try {
     //Build search query with city context
     const cityQuery = `${query}, ${addressForm.value.city}`;
-    const url = `/nominatim/search?format=json&q=${encodeURIComponent(cityQuery)}&addressdetails=1&limit=10&countrycodes=it`;
+    const url =
+      import.meta.env.PROD
+        ? `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cityQuery)}&addressdetails=1&limit=10&countrycodes=it`
+        : `/nominatim/search?format=json&q=${encodeURIComponent(cityQuery)}&addressdetails=1&limit=10&countrycodes=it`;
     console.log('Address API URL:', url);
     
     const res = await fetch(url);
@@ -117,8 +120,15 @@ async function fetchCitySuggestions(query) {
   loadingCitySuggestions.value = true;
   
   try {
+    /*
     //Search for Italian cities with simplified approach
     const url = `/nominatim/search?format=json&q=${encodeURIComponent(query + ', Italia')}&addressdetails=1&limit=8&countrycodes=it`;
+    */
+   // Use full Nominatim API URL in production, relative path in development
+   const url =
+      import.meta.env.PROD
+        ? `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Italia')}&addressdetails=1&limit=8&countrycodes=it`
+        : `/nominatim/search?format=json&q=${encodeURIComponent(query + ', Italia')}&addressdetails=1&limit=8&countrycodes=it`;
     console.log('City API URL:', url);
     
     const res = await fetch(url);
